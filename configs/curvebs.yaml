@@ -1,0 +1,15 @@
+global:
+  access_log: logs/access.log
+  error_log: logs/error.log
+  pid: logs/pigeon.pid
+  log_level: info
+
+servers:
+  - name: curvebs
+    listen: 127.0.0.1:12000
+    config:
+      mds.address: 127.0.0.1:6666,127.0.0.2:6666,127.0.0.3:6666
+      monitor.prometheus.addr: 127.0.0.1:9090
+      rpc.timeout.ms: 500
+      rpc.retry.times: 3
+      db.sqlite.filepath: db/curvebs.db
