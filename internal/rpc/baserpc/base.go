@@ -74,19 +74,19 @@ func Init(cfg *pigeon.Configure) {
 }
 
 func (cli *BaseRpc) getOrCreateConn(addr string, ctx context.Context) (*grpc.ClientConn, error) {
-	cli.lock.RLock()
-	conn, ok := cli.conns[addr]
-	cli.lock.RUnlock()
-	if ok {
-		return conn, nil
-	}
+	// cli.lock.RLock()
+	// conn, ok := cli.conns[addr]
+	// cli.lock.RUnlock()
+	// if ok {
+	// 	return conn, nil
+	// }
 
-	cli.lock.Lock()
-	defer cli.lock.Unlock()
-	conn, ok = cli.conns[addr]
-	if ok {
-		return conn, nil
-	}
+	// cli.lock.Lock()
+	// defer cli.lock.Unlock()
+	// conn, ok = cli.conns[addr]
+	// if ok {
+	// 	return conn, nil
+	// }
 
 	ctx, cancel := context.WithTimeout(context.Background(), cli.timeout)
 	defer cancel()
@@ -94,7 +94,7 @@ func (cli *BaseRpc) getOrCreateConn(addr string, ctx context.Context) (*grpc.Cli
 	if err != nil {
 		return nil, err
 	}
-	cli.conns[addr] = conn
+	// cli.conns[addr] = conn
 	return conn, nil
 }
 

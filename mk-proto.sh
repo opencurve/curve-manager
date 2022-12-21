@@ -14,7 +14,7 @@ protoc --go_out=internal --proto_path=external/curve \
 
 ## cli.proto
 protoc --go_out=internal --proto_path=external/curve \
-    external/curve/proto/chunkserver.proto
+    external/curve/proto/cli.proto
 
 ## cli2.proto
 protoc --go_out=internal --proto_path=external/curve \
@@ -27,6 +27,7 @@ protoc --go_out=internal --proto_path=external/curve \
 
 ## copyset.proto
 protoc --go_out=internal --proto_path=external/curve \
+    --go_opt=Mproto/common.proto=github.com/opencurve/curve-manager/internal/proto/common \
     external/curve/proto/copyset.proto
 
 ## curve_storage.proto
@@ -40,7 +41,7 @@ protoc --go_out=internal --proto_path=external/curve \
 ## heartbeat.proto
 protoc --go_out=internal --proto_path=external/curve \
     --go_opt=Mproto/common.proto=github.com/opencurve/curve-manager/internal/proto/common \
-    --go_opt=Mproto/common.proto=github.com/opencurve/curve-manager/internal/proto/scan \
+    --go_opt=Mproto/scan.proto=github.com/opencurve/curve-manager/internal/proto/scan \
     external/curve/proto/heartbeat.proto
 
 ## integrity.proto
