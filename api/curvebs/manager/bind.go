@@ -37,6 +37,9 @@ func init() {
 type GetEtcdStatusRequest struct {
 }
 
+type GetMdsStatusRequest struct {
+}
+
 type ListPhysicalPoolRequest struct {
 }
 
@@ -46,6 +49,12 @@ var requests = []Request{
 		"status.etcd",
 		GetEtcdStatusRequest{},
 		GetEtcdStatus,
+	},
+	{
+		"GET",
+		"status.mds",
+		GetMdsStatusRequest{},
+		GetMdsStatus,
 	},
 	{
 		"GET",

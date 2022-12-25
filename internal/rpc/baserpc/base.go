@@ -7,10 +7,9 @@ import (
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	"github.com/opencurve/pigeon"
+	"github.com/shimingyah/pool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -18,9 +17,6 @@ var (
 )
 
 const (
-	RPC_TIMEOUT_MS  = "rpc.timeout.ms"
-	RPC_RETRY_TIMES = "rpc.retry.times"
-
 	DEFAULT_RPC_TIMEOUT_MS  = 500
 	DEFAULT_RPC_RETRY_TIMES = 3
 )
@@ -29,7 +25,7 @@ type BaseRpc struct {
 	timeout    time.Duration
 	retryTimes uint32
 	lock       sync.RWMutex
-	conns      map[string]*grpc.ClientConn
+	connPools  map[string]pool.Pool
 }
 
 type RpcContext struct {
@@ -55,47 +51,49 @@ type RpcResult struct {
 	Result interface{}
 }
 
-func Init(cfg *pigeon.Configure) {
-	timeout := cfg.GetConfig().GetInt(RPC_TIMEOUT_MS)
-	if timeout == 0 {
-		timeout = DEFAULT_RPC_TIMEOUT_MS
-	}
-
-	retry := cfg.GetConfig().GetInt(RPC_RETRY_TIMES)
-	if retry == 0 {
-		retry = DEFAULT_RPC_RETRY_TIMES
-	}
+func init() {
 	GBaseClient = &BaseRpc{
-		timeout:    time.Duration(timeout * int(time.Millisecond)),
-		retryTimes: uint32(retry),
+		timeout:    time.Duration(DEFAULT_RPC_TIMEOUT_MS * int(time.Millisecond)),
+		retryTimes: uint32(DEFAULT_RPC_RETRY_TIMES),
 		lock:       sync.RWMutex{},
-		conns:      make(map[string]*grpc.ClientConn),
+		connPools:  make(map[string]pool.Pool),
 	}
 }
 
 func (cli *BaseRpc) getOrCreateConn(addr string, ctx context.Context) (*grpc.ClientConn, error) {
-	// cli.lock.RLock()
-	// conn, ok := cli.conns[addr]
-	// cli.lock.RUnlock()
-	// if ok {
-	// 	return conn, nil
-	// }
-
-	// cli.lock.Lock()
-	// defer cli.lock.Unlock()
-	// conn, ok = cli.conns[addr]
-	// if ok {
-	// 	return conn, nil
-	// }
-
-	ctx, cancel := context.WithTimeout(context.Background(), cli.timeout)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-	if err != nil {
-		return nil, err
+	cli.lock.RLock()
+	cpool, ok := cli.connPools[addr]
+	cli.lock.RUnlock()
+	if ok {
+		conn, err := cpool.Get()
+		if err != nil {
+			return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
+		}
+		return conn.Value(), nil
 	}
-	// cli.conns[addr] = conn
-	return conn, nil
+
+	cli.lock.Lock()
+	defer cli.lock.Unlock()
+	cpool, ok = cli.connPools[addr]
+	if ok {
+		conn, err := cpool.Get()
+		if err != nil {
+			return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
+		}
+		return conn.Value(), nil
+	}
+
+	p, err := pool.New(addr, pool.DefaultOptions)
+	if err != nil {
+		return nil, fmt.Errorf("new conn pool failed, addr: %s, err: %v", addr, err)
+	}
+
+	cli.connPools[addr] = p
+	conn, err := p.Get()
+	if err != nil {
+		return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
+	}
+	return conn.Value(), nil
 }
 
 func (cli *BaseRpc) SendRpc(ctx *RpcContext, rpcFunc Rpc) *RpcResult {

@@ -1,17 +1,13 @@
 package core
 
 import (
-	"github.com/opencurve/curve-manager/internal/metrics"
-	"github.com/opencurve/curve-manager/internal/rpc/baserpc"
+	metrics "github.com/opencurve/curve-manager/internal/metrics/core"
 	"github.com/opencurve/curve-manager/internal/rpc/curvebs/mds"
 	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
 )
 
 func initClients(cfg *pigeon.Configure) error {
-	// init base rpc client
-	baserpc.Init(cfg)
-
 	// init mds rpc client
 	err := mds.Init(cfg)
 	if err != nil {

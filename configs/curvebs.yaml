@@ -9,7 +9,6 @@ servers:
     listen: 127.0.0.1:12000
     config:
       mds.address: 127.0.0.1:6666,127.0.0.2:6666,127.0.0.3:6666
+      mds.dummy.address: 127.0.0.1:6667,127.0.0.2:6667,127.0.0.3:6667
       monitor.prometheus.addr: 127.0.0.1:9090
-      rpc.timeout.ms: 500
-      rpc.retry.times: 3
       db.sqlite.filepath: db/curvebs.db
