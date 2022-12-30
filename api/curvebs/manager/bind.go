@@ -40,7 +40,10 @@ type GetEtcdStatusRequest struct {
 type GetMdsStatusRequest struct {
 }
 
-type ListPhysicalPoolRequest struct {
+type GetSnapShotCloneServerStatusRequest struct {
+}
+
+type ListLogicalPoolRequest struct {
 }
 
 var requests = []Request{
@@ -58,8 +61,14 @@ var requests = []Request{
 	},
 	{
 		"GET",
-		"topo.list.physical.pool",
-		ListPhysicalPoolRequest{},
-		ListPhysicalPool,
+		"status.snapshotcloneserver",
+		GetSnapShotCloneServerStatusRequest{},
+		GetSnapShotCloneServerStatus,
+	},
+	{
+		"GET",
+		"topo.list.pool",
+		ListLogicalPoolRequest{},
+		ListLogicalPool,
 	},
 }

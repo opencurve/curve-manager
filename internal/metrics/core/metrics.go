@@ -14,17 +14,19 @@ import (
 )
 
 const (
-	CURVEBS_MONITOR_ADDRESS   = "monitor.prometheus.addr"
-	CURVEBS_ETCD_ADDRESS      = "etcd.address"
-	CURVEBS_MDS_DUMMY_ADDRESS = "mds.dummy.address"
-	CURVEBS_ADDRESS_DELIMITER = ","
+	CURVEBS_MONITOR_ADDRESS              = "monitor.prometheus.address"
+	CURVEBS_ETCD_ADDRESS                 = "etcd.address"
+	CURVEBS_MDS_DUMMY_ADDRESS            = "mds.dummy.address"
+	CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS = "snapshot.clone.dummy.address"
+	CURVEBS_ADDRESS_DELIMITER            = ","
 )
 
 type metricClient struct {
-	client       *resty.Client
-	PromeAddr    string
-	EtcdAddr     []string
-	MdsDummyAddr []string
+	client                       *resty.Client
+	PromeAddr                    string
+	EtcdAddr                     []string
+	MdsDummyAddr                 []string
+	SnapShotCloneServerDummyAddr []string
 }
 
 var (
@@ -54,23 +56,29 @@ func Init(cfg *pigeon.Configure) error {
 	}
 
 	GMetricClient.client = resty.NewWithClient(httpClient)
-	paddr := cfg.GetConfig().GetString(CURVEBS_MONITOR_ADDRESS)
-	if len(paddr) == 0 {
+	addr := cfg.GetConfig().GetString(CURVEBS_MONITOR_ADDRESS)
+	if len(addr) == 0 {
 		return fmt.Errorf("no cluster monitor address found")
 	}
-	GMetricClient.PromeAddr = paddr
+	GMetricClient.PromeAddr = addr
 
-	daddr := cfg.GetConfig().GetString(CURVEBS_MDS_DUMMY_ADDRESS)
-	if len(daddr) == 0 {
-		return fmt.Errorf("no cluster mds dummy address found")
-	}
-	GMetricClient.MdsDummyAddr = strings.Split(daddr, CURVEBS_ADDRESS_DELIMITER)
-
-	eaddr := cfg.GetConfig().GetString(CURVEBS_ETCD_ADDRESS)
-	if len(eaddr) == 0 {
+	addr = cfg.GetConfig().GetString(CURVEBS_ETCD_ADDRESS)
+	if len(addr) == 0 {
 		return fmt.Errorf("no cluster etcd address found")
 	}
-	GMetricClient.EtcdAddr = strings.Split(eaddr, CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.EtcdAddr = strings.Split(addr, CURVEBS_ADDRESS_DELIMITER)
+
+	addr = cfg.GetConfig().GetString(CURVEBS_MDS_DUMMY_ADDRESS)
+	if len(addr) == 0 {
+		return fmt.Errorf("no cluster mds dummy address found")
+	}
+	GMetricClient.MdsDummyAddr = strings.Split(addr, CURVEBS_ADDRESS_DELIMITER)
+
+	addr = cfg.GetConfig().GetString(CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS)
+	if len(addr) != 0 {
+		GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(addr, CURVEBS_ADDRESS_DELIMITER)
+	}
+
 	return nil
 }
 

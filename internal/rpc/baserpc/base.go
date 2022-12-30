@@ -10,6 +10,7 @@ import (
 	"github.com/shimingyah/pool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -26,6 +27,12 @@ type BaseRpc struct {
 	retryTimes uint32
 	lock       sync.RWMutex
 	connPools  map[string]pool.Pool
+}
+
+type RpcResult struct {
+	Key    interface{}
+	Err    error
+	Result interface{}
 }
 
 type RpcContext struct {
@@ -45,12 +52,6 @@ type Rpc interface {
 	Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error)
 }
 
-type RpcResult struct {
-	Addr   string
-	Err    error
-	Result interface{}
-}
-
 func init() {
 	GBaseClient = &BaseRpc{
 		timeout:    time.Duration(DEFAULT_RPC_TIMEOUT_MS * int(time.Millisecond)),
@@ -61,46 +62,53 @@ func init() {
 }
 
 func (cli *BaseRpc) getOrCreateConn(addr string, ctx context.Context) (*grpc.ClientConn, error) {
-	cli.lock.RLock()
-	cpool, ok := cli.connPools[addr]
-	cli.lock.RUnlock()
-	if ok {
-		conn, err := cpool.Get()
-		if err != nil {
-			return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
-		}
-		return conn.Value(), nil
-	}
+	// cli.lock.RLock()
+	// cpool, ok := cli.connPools[addr]
+	// cli.lock.RUnlock()
+	// if ok {
+	// 	conn, err := cpool.Get()
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
+	// 	}
+	// 	return conn.Value(), nil
+	// }
 
-	cli.lock.Lock()
-	defer cli.lock.Unlock()
-	cpool, ok = cli.connPools[addr]
-	if ok {
-		conn, err := cpool.Get()
-		if err != nil {
-			return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
-		}
-		return conn.Value(), nil
-	}
+	// cli.lock.Lock()
+	// defer cli.lock.Unlock()
+	// cpool, ok = cli.connPools[addr]
+	// if ok {
+	// 	conn, err := cpool.Get()
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
+	// 	}
+	// 	return conn.Value(), nil
+	// }
 
-	p, err := pool.New(addr, pool.DefaultOptions)
+	// p, err := pool.New(addr, pool.DefaultOptions)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("new conn pool failed, addr: %s, err: %v", addr, err)
+	// }
+
+	// cli.connPools[addr] = p
+	// conn, err := p.Get()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
+	// }
+	// return conn.Value(), nil
+	ctx, cancel := context.WithTimeout(context.Background(), cli.timeout)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
-		return nil, fmt.Errorf("new conn pool failed, addr: %s, err: %v", addr, err)
+		return nil, err
 	}
-
-	cli.connPools[addr] = p
-	conn, err := p.Get()
-	if err != nil {
-		return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
-	}
-	return conn.Value(), nil
+	return conn, nil
 }
 
 func (cli *BaseRpc) SendRpc(ctx *RpcContext, rpcFunc Rpc) *RpcResult {
 	size := len(ctx.addrs)
 	if size == 0 {
 		return &RpcResult{
-			Addr:   "",
+			Key:    "",
 			Err:    fmt.Errorf("empty addr"),
 			Result: nil,
 		}
@@ -113,7 +121,7 @@ func (cli *BaseRpc) SendRpc(ctx *RpcContext, rpcFunc Rpc) *RpcResult {
 			conn, err := cli.getOrCreateConn(address, ctx)
 			if err != nil {
 				results <- RpcResult{
-					Addr:   address,
+					Key:    address,
 					Err:    err,
 					Result: nil,
 				}
@@ -122,7 +130,7 @@ func (cli *BaseRpc) SendRpc(ctx *RpcContext, rpcFunc Rpc) *RpcResult {
 				res, err := rpcFunc.Stub_Func(ctx, grpc_retry.WithMax(uint(cli.retryTimes)),
 					grpc_retry.WithCodes(codes.Unknown, codes.Unavailable, codes.DeadlineExceeded))
 				results <- RpcResult{
-					Addr:   address,
+					Key:    address,
 					Err:    err,
 					Result: res,
 				}
@@ -136,13 +144,13 @@ func (cli *BaseRpc) SendRpc(ctx *RpcContext, rpcFunc Rpc) *RpcResult {
 			return &res
 		}
 		count = count + 1
-		rpcErr = fmt.Sprintf("%s;%s:%s", rpcErr, res.Addr, res.Err.Error())
+		rpcErr = fmt.Sprintf("%s;%s:%s", rpcErr, res.Key, res.Err.Error())
 		if count >= size {
 			break
 		}
 	}
 	return &RpcResult{
-		Addr:   "",
+		Key:    "",
 		Err:    fmt.Errorf(rpcErr),
 		Result: nil,
 	}

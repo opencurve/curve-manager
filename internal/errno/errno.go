@@ -33,7 +33,9 @@ var (
 	// 503
 	CREATE_USER_FAILED = Errno{503001, "create user failed"}
 
-	GET_ETCD_STATUS_FAILED = Errno{503101, "get etcd status failed"}
+	GET_ETCD_STATUS_FAILED           = Errno{503101, "get etcd status failed"}
+	GET_MDS_STATUS_FAILED            = Errno{503102, "get mds status failed"}
+	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503103, "get snapshotcloneserver status failed"}
 
-	LIST_PHYSICAL_POOL_FAILED = Errno{503201, "list physical pool failed"}
+	LIST_POOL_FAILED = Errno{503201, "list pool failed"}
 )

@@ -6,10 +6,17 @@ import (
 	"github.com/opencurve/curve-manager/internal/metrics/core"
 )
 
-func GetMdsStatus() (*[]MdsStatus, error) {
+const (
+	MDS_STATUS           = "mds_status"
+	MDS_LEADER           = "leader"
+	MDS_FOLLOWER         = "follower"
+	MDS_CONF_LISTEN_ADDR = "mds_config_mds_listen_addr"
+)
+
+func GetMdsStatus() (*[]MdsStatus, string) {
 	size := len(core.GMetricClient.MdsDummyAddr)
 	results := make(chan metricResult, size)
-	names := fmt.Sprintf("%s,%s",CURVEBS_VERSION, MDS_STATUS)
+	names := fmt.Sprintf("%s,%s,%s", CURVEBS_VERSION, MDS_STATUS, MDS_CONF_LISTEN_ADDR)
 	getBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
 
 	count := 0
@@ -17,23 +24,26 @@ func GetMdsStatus() (*[]MdsStatus, error) {
 	var ret []MdsStatus
 	for res := range results {
 		if res.err == nil {
+			addr := ""
 			v, e := parseBvarMetric(res.result.(string))
 			if e != nil {
-				errors = fmt.Sprintf("%s; %s:%s", errors, res.addr, e.Error())
+				errors = fmt.Sprintf("%s; %s:%s", errors, res.key, e.Error())
+			} else {
+				addr = getBvarConfMetricValue((*v)[MDS_CONF_LISTEN_ADDR])
 			}
 			ret = append(ret, MdsStatus{
-				Address: res.addr,
+				Address: addr,
 				Version: (*v)[CURVEBS_VERSION],
-				Online: true,
-				Leader: (*v)[MDS_STATUS] == MDS_LEADER,
+				Online:  true,
+				Leader:  (*v)[MDS_STATUS] == MDS_LEADER,
 			})
 		} else {
-			errors = fmt.Sprintf("%s; %s:%s", errors, res.addr, res.err.Error())
+			errors = fmt.Sprintf("%s; %s:%s", errors, res.key, res.err.Error())
 			ret = append(ret, MdsStatus{
-				Address: res.addr,
+				Address: res.key.(string),
 				Version: "",
-				Leader: false,
-				Online: false,
+				Leader:  false,
+				Online:  false,
 			})
 		}
 		count = count + 1
@@ -41,5 +51,5 @@ func GetMdsStatus() (*[]MdsStatus, error) {
 			break
 		}
 	}
-	return &ret, fmt.Errorf(errors)
+	return &ret, errors
 }
