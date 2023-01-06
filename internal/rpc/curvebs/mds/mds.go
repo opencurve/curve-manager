@@ -1,18 +1,16 @@
 package mds
 
 import (
-	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	"github.com/opencurve/curve-manager/internal/proto/topology"
 	"github.com/opencurve/curve-manager/internal/proto/topology/statuscode"
 	"github.com/opencurve/curve-manager/internal/rpc/baserpc"
 	comm "github.com/opencurve/curve-manager/internal/rpc/curvebs/common"
 	"github.com/opencurve/pigeon"
-	"google.golang.org/grpc"
 )
 
 var (
@@ -35,8 +33,24 @@ const (
 	ALLOW_STATUS = "ALLOW"
 	DENY_STATUS  = "DENY"
 
+	// chunkserver status
+	READWRITE_STATUS = "READWRITE"
+	PENDDING_STATUS  = "PENDDING"
+	RETIRED_STATUS   = "RETIRED"
+
+	// chunkserver disk status
+	DISKNORMAL_STATUS = "DISKNORMAL"
+	DISKERROR_STATUS  = "DISKERROR"
+
+	// chunkserver online status
+	ONLINE_STATUS   = "ONLINE"
+	OFFLINE_STATUS  = "OFFLINE"
+	UNSTABLE_STATUS = "UNSTABLE"
+
 	LIST_PHYSICAL_POOL_NAME = "ListPhysicalPool"
 	LIST_LOGICAL_POOL_NAME  = "ListLogicalPool"
+	LIST_POOL_ZONE_NAME     = "ListPoolZone"
+	LIST_ZONE_SERVER_NAME   = "ListZoneServer"
 	LIST_CHUNKSERVER_NAME   = "ListChunkServer"
 )
 
@@ -56,25 +70,11 @@ func Init(cfg *pigeon.Configure) error {
 }
 
 // list physical pool
-type ListPhysicalPoolRpc struct {
-	ctx            *baserpc.RpcContext
-	Request        *topology.ListPhysicalPoolRequest
-	topologyClient topology.TopologyServiceClient
-}
-
-func (lpRpc *ListPhysicalPoolRpc) NewRpcClient(cc grpc.ClientConnInterface) {
-	lpRpc.topologyClient = topology.NewTopologyServiceClient(cc)
-}
-
-func (lpRpc *ListPhysicalPoolRpc) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
-	return lpRpc.topologyClient.ListPhysicalPool(ctx, lpRpc.Request, opt...)
-}
-
-func (cli *mdsClient) listPhysicalPool() (interface{}, error) {
-	listPoolRpc := &ListPhysicalPoolRpc{}
-	listPoolRpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_PHYSICAL_POOL_NAME)
-	listPoolRpc.Request = &topology.ListPhysicalPoolRequest{}
-	ret := baserpc.GBaseClient.SendRpc(listPoolRpc.ctx, listPoolRpc)
+func (cli *mdsClient) ListPhysicalPool() (interface{}, error) {
+	Rpc := &ListPhysicalPoolRpc{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_PHYSICAL_POOL_NAME)
+	Rpc.Request = &topology.ListPhysicalPoolRequest{}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
@@ -97,20 +97,6 @@ func (cli *mdsClient) listPhysicalPool() (interface{}, error) {
 }
 
 // list logical pool
-type ListLogicalPoolRpc struct {
-	ctx            *baserpc.RpcContext
-	Request        *topology.ListLogicalPoolRequest
-	topologyClient topology.TopologyServiceClient
-}
-
-func (lpRpc *ListLogicalPoolRpc) NewRpcClient(cc grpc.ClientConnInterface) {
-	lpRpc.topologyClient = topology.NewTopologyServiceClient(cc)
-}
-
-func (lpRpc *ListLogicalPoolRpc) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
-	return lpRpc.topologyClient.ListLogicalPool(ctx, lpRpc.Request, opt...)
-}
-
 func getLogicalPoolType(t topology.LogicalPoolType) string {
 	switch t {
 	case topology.LogicalPoolType_PAGEFILE:
@@ -137,7 +123,7 @@ func getLogicalPoolAllocateStatus(s topology.AllocateStatus) string {
 
 func (cli *mdsClient) ListLogicalPool() (interface{}, error) {
 	// list physical pool and get pool id
-	physicalPools, err := cli.listPhysicalPool()
+	physicalPools, err := cli.ListPhysicalPool()
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +131,12 @@ func (cli *mdsClient) ListLogicalPool() (interface{}, error) {
 	results := make(chan baserpc.RpcResult, size)
 	for _, pool := range physicalPools.([]comm.PhysicalPool) {
 		go func(id uint32) {
-			listPoolRpc := &ListLogicalPoolRpc{}
-			listPoolRpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_LOGICAL_POOL_NAME)
-			listPoolRpc.Request = &topology.ListLogicalPoolRequest{
+			Rpc := &ListLogicalPoolRpc{}
+			Rpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_LOGICAL_POOL_NAME)
+			Rpc.Request = &topology.ListLogicalPoolRequest{
 				PhysicalPoolID: &id,
 			}
-			ret := baserpc.GBaseClient.SendRpc(listPoolRpc.ctx, listPoolRpc)
+			ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
 			if ret.Err != nil {
 				results <- baserpc.RpcResult{
 					Key:    id,
@@ -169,27 +155,15 @@ func (cli *mdsClient) ListLogicalPool() (interface{}, error) {
 				} else {
 					var pools []comm.LogicalPool
 					for _, pool := range response.GetLogicalPoolInfos() {
-						// get space
-						space, err := bsmetric.GetPoolSpace(pool.GetLogicalPoolName())
-						if err != nil {
-							results <- baserpc.RpcResult{
-								Key: id,
-								Err: fmt.Errorf("get space failed, poolName: %s, err: %v", pool.GetLogicalPoolName(), err),
-								Result: nil,
-							}
-						} else {
-							info := comm.LogicalPool{}
-							info.Id = pool.GetLogicalPoolID()
-							info.Name = pool.GetLogicalPoolName()
-							info.PhysicalPoolId = pool.GetPhysicalPoolID()
-							info.Type = getLogicalPoolType(pool.GetType())
-							info.CreateTime = time.Unix(int64(pool.GetCreateTime()), 0).UTC().String()
-							info.AllocateStatus = getLogicalPoolAllocateStatus(pool.GetAllocateStatus())
-							info.ScanEnable = pool.GetScanEnable()
-							info.TotalSpace = space.Total
-							info.UsedSpace = space.Used
-							pools = append(pools, info)
-						}
+						info := comm.LogicalPool{}
+						info.Id = pool.GetLogicalPoolID()
+						info.Name = pool.GetLogicalPoolName()
+						info.PhysicalPoolId = pool.GetPhysicalPoolID()
+						info.Type = getLogicalPoolType(pool.GetType())
+						info.CreateTime = time.Unix(int64(pool.GetCreateTime()), 0).UTC().String()
+						info.AllocateStatus = getLogicalPoolAllocateStatus(pool.GetAllocateStatus())
+						info.ScanEnable = pool.GetScanEnable()
+						pools = append(pools, info)
 					}
 					results <- baserpc.RpcResult{
 						Key:    id,
@@ -216,25 +190,144 @@ func (cli *mdsClient) ListLogicalPool() (interface{}, error) {
 	return pools, nil
 }
 
-// list chunkserver
-type ListChunkServerRpc struct {
-	ctx            *baserpc.RpcContext
-	Request        *topology.ListChunkServerRequest
-	topologyClient topology.TopologyServiceClient
+// list zones of physical pool
+func (cli *mdsClient) ListPoolZone(poolId uint32) (interface{}, error) {
+	Rpc := &ListPoolZonesRpc{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_POOL_ZONE_NAME)
+	Rpc.Request = &topology.ListPoolZoneRequest{
+		PhysicalPoolID: &poolId,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return nil, ret.Err
+	}
+
+	response := ret.Result.(*topology.ListPoolZoneResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+
+	var infos []comm.Zone
+	for _, zone := range response.GetZones() {
+		info := comm.Zone{}
+		info.Id = zone.GetZoneID()
+		info.Name = zone.GetZoneName()
+		info.PhysicalPoolId = zone.GetPhysicalPoolID()
+		info.PhysicalPoolName = zone.GetPhysicalPoolName()
+		info.Desc = zone.GetDesc()
+		infos = append(infos, info)
+	}
+	return infos, nil
 }
 
-func (lpRpc *ListChunkServerRpc) NewRpcClient(cc grpc.ClientConnInterface) {
-	lpRpc.topologyClient = topology.NewTopologyServiceClient(cc)
+// list servers of zone
+func (cli *mdsClient) ListZoneServer(zoneId uint32) (interface{}, error) {
+	Rpc := &ListZoneServer{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_ZONE_SERVER_NAME)
+	Rpc.Request = &topology.ListZoneServerRequest{
+		ZoneID: &zoneId,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return nil, ret.Err
+	}
+
+	response := ret.Result.(*topology.ListZoneServerResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+
+	var infos []comm.Server
+	for _, server := range response.GetServerInfo() {
+		info := comm.Server{}
+		info.Id = server.GetServerID()
+		info.HostName = server.GetHostName()
+		info.InternalIp = server.GetInternalIp()
+		info.InternalPort = server.GetInternalPort()
+		info.ExternalIp = server.GetExternalIp()
+		info.ExternalPort = server.GetExternalPort()
+		info.ZoneId = server.GetZoneID()
+		info.ZoneName = server.GetZoneName()
+		info.PhysicalPoolId = server.GetPhysicalPoolID()
+		info.PhysicalPoolName = server.GetPhysicalPoolName()
+		info.Desc = server.GetDesc()
+		infos = append(infos, info)
+	}
+	return infos, nil
 }
 
-func (lpRpc *ListChunkServerRpc) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
-	return lpRpc.topologyClient.ListChunkServer(ctx, lpRpc.Request, opt...)
+// list chunkservers of server
+func getChunkServerStatus(s topology.ChunkServerStatus) string {
+	switch s {
+	case topology.ChunkServerStatus_READWRITE:
+		return READWRITE_STATUS
+	case topology.ChunkServerStatus_PENDDING:
+		return PENDDING_STATUS
+	case topology.ChunkServerStatus_RETIRED:
+		return READWRITE_STATUS
+	default:
+		return INVALID
+	}
 }
 
-func (cli *mdsClient) ListChunkServer() (interface{}, error) {
-	listChunkServerRpc := &ListChunkServerRpc{}
-	listChunkServerRpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_CHUNKSERVER_NAME)
-	listChunkServerRpc.Request = &topology.ListChunkServerRequest{}
+func getDiskStatus(s topology.DiskState) string {
+	switch s {
+	case topology.DiskState_DISKNORMAL:
+		return DISKNORMAL_STATUS
+	case topology.DiskState_DISKERROR:
+		return DISKERROR_STATUS
+	default:
+		return INVALID
+	}
+}
 
-	return nil, nil
+func getOnlineStatus(s topology.OnlineState) string {
+	switch s {
+	case topology.OnlineState_ONLINE:
+		return ONLINE_STATUS
+	case topology.OnlineState_OFFLINE:
+		return OFFLINE_STATUS
+	case topology.OnlineState_UNSTABLE:
+		return UNSTABLE_STATUS
+	default:
+		return INVALID
+	}
+}
+
+func (cli *mdsClient) ListChunkServer(serverId uint32) (interface{}, error) {
+	Rpc := &ListChunkServer{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, LIST_CHUNKSERVER_NAME)
+	Rpc.Request = &topology.ListChunkServerRequest{
+		ServerID: &serverId,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return nil, ret.Err
+	}
+
+	response := ret.Result.(*topology.ListChunkServerResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+
+	var infos []comm.ChunkServer
+	for _, cs := range response.GetChunkServerInfos() {
+		info := comm.ChunkServer{}
+		info.Id = cs.GetChunkServerID()
+		info.DiskType = cs.GetDiskType()
+		info.HostIp = cs.GetHostIp()
+		info.Port = cs.GetPort()
+		info.Status = getChunkServerStatus(cs.GetStatus())
+		info.DiskStatus = getDiskStatus(cs.GetDiskStatus())
+		info.OnlineStatus = getOnlineStatus(cs.GetOnlineState())
+		info.MountPoint = cs.GetMountPoint()
+		info.DiskCapacity = strconv.FormatUint(cs.GetDiskCapacity(), 10)
+		info.DiskUsed = strconv.FormatUint(cs.GetDiskUsed(), 10)
+		info.ExternalIp = cs.GetExternalIp()
+		infos = append(infos, info)
+	}
+	return infos, nil
 }

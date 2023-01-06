@@ -34,17 +34,17 @@ func init() {
 	}
 }
 
-type GetEtcdStatusRequest struct {
-}
+type GetEtcdStatusRequest struct{}
 
-type GetMdsStatusRequest struct {
-}
+type GetMdsStatusRequest struct{}
 
-type GetSnapShotCloneServerStatusRequest struct {
-}
+type GetSnapShotCloneServerStatusRequest struct{}
 
-type ListLogicalPoolRequest struct {
-}
+type ListTopologyRequest struct{}
+
+type ListLogicalPoolRequest struct{}
+
+type GetChunkServerStatusRequest struct{}
 
 var requests = []Request{
 	{
@@ -64,6 +64,18 @@ var requests = []Request{
 		"status.snapshotcloneserver",
 		GetSnapShotCloneServerStatusRequest{},
 		GetSnapShotCloneServerStatus,
+	},
+	{
+		"GET",
+		"status.chunkserver",
+		GetChunkServerStatusRequest{},
+		GetChunkServerStatus,
+	},
+	{
+		"GET",
+		"topo.list",
+		ListTopologyRequest{},
+		ListTopology,
 	},
 	{
 		"GET",

@@ -34,17 +34,70 @@ func init() {
 	}
 }
 
+type LoginRequest struct {
+	UserName string `json:"userName" binding:"required"`
+	PassWord string `json:"passWord" binding:"required"`
+}
+
 type CreateUserRequest struct {
 	UserName   string `json:"userName" binding:"required"`
 	PassWord   string `json:"passWord" binding:"required"`
+	Email      string `json:"email" binding:"required"`
+	Permission int    `json:"permission" default:"1"`
+}
+
+type DeleteUserRequest struct {
+	UserName string `json:"userName" binding:"required"`
+}
+
+type ChangePassWordRequest struct {
+	UserName string `json:"userName" binding:"required"`
+	PassWord string `json:"passWord" binding:"required"`
+}
+
+type UpdateUserInfoRequest struct {
+	UserName   string `json:"userName" binding:"required"`
+	Email      string `json:"email" binding:"required"`
 	Permission int    `json:"permission" binding:"required"`
 }
+
+type ListUserRequest struct{}
 
 var requests = []Request{
 	{
 		"POST",
-		"user.add",
+		"user.login",
+		LoginRequest{},
+		Login,
+	},
+	{
+		"POST",
+		"user.create",
 		CreateUserRequest{},
 		CreateUser,
+	},
+	{
+		"POST",
+		"user.delete",
+		DeleteUserRequest{},
+		DeleteUser,
+	},
+	{
+		"POST",
+		"user.update.password",
+		ChangePassWordRequest{},
+		ChangePassWord,
+	},
+	{
+		"POST",
+		"user.update.info",
+		UpdateUserInfoRequest{},
+		UpdateUserInfo,
+	},
+	{
+		"GET",
+		"user.list",
+		ListUserRequest{},
+		ListUser,
 	},
 }

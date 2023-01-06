@@ -31,11 +31,18 @@ var (
 	UNSUPPORT_HTTP_METHOD = Errno{405001, "unsupport http method"}
 
 	// 503
-	CREATE_USER_FAILED = Errno{503001, "create user failed"}
+	USER_LOGIN_FAILED       = Errno{503001, "user login failed"}
+	CREATE_USER_FAILED      = Errno{503002, "create user failed"}
+	DELETE_USER_FAILED      = Errno{503003, "delete user failed"}
+	CHANGE_PASSWORD_FAILED  = Errno{503004, "change user password failed"}
+	UPDATE_USER_INFO_FAILED = Errno{503005, "update user info failed"}
+	LIST_USER_FAILED        = Errno{503006, "list user failed"}
 
 	GET_ETCD_STATUS_FAILED           = Errno{503101, "get etcd status failed"}
 	GET_MDS_STATUS_FAILED            = Errno{503102, "get mds status failed"}
 	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503103, "get snapshotcloneserver status failed"}
+	GET_CHUNKSERVER_STATUS_FAILED    = Errno{503104, "get chunkserver status failed"}
 
-	LIST_POOL_FAILED = Errno{503201, "list pool failed"}
+	LIST_TOPO_FAILED = Errno{503201, "list topo failed"}
+	LIST_POOL_FAILED = Errno{503202, "list pool failed"}
 )

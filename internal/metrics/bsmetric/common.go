@@ -64,6 +64,17 @@ type SnapShotCloneServerStatus struct {
 	Online  bool   `json:"online"`
 }
 
+type VersionNum struct {
+	Version string `json:"version"`
+	Number  int    `json:"number"`
+}
+
+type ChunkServerStatus struct {
+	TotalNum  int          `json:"totalNum"`
+	OnlineNum int          `json:"onlineNum"`
+	Versions  []VersionNum `json:"versions"`
+}
+
 type metricResult struct {
 	key    interface{}
 	result interface{}
@@ -121,6 +132,6 @@ func formatToMetricName(name string) string {
 			pos = index
 		}
 	}
-	target = append(target, strings.ToLower(name[pos:len(name)]))
+	target = append(target, strings.ToLower(name[pos:]))
 	return strings.Join(target, "_")
 }
