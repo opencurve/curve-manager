@@ -1,4 +1,4 @@
-package common
+package curvebs
 
 type PhysicalPool struct {
 	Id   uint32 `json:"id" binding:"required"`
@@ -50,4 +50,32 @@ type ChunkServer struct {
 	DiskCapacity string `json:"diskCapacity" binding:"required"`
 	DiskUsed     string `json:"diskUsed" binding:"required"`
 	ExternalIp   string `json:"externalIp"`
+}
+
+type ThrottleParams struct {
+	Type        string `json:"type"`
+	Limit       uint64 `json:"limit"`
+	Burst       uint64 `json:"burst"`
+	BurstLength uint64 `json:"burstLength"`
+}
+
+type FileInfo struct {
+	Id                   uint64           `json:"id"`
+	FileName             string           `json:"fileName"`
+	ParentId             uint64           `json:"parentId"`
+	FileType             string           `json:"fileType"`
+	Owner                string           `json:"owner"`
+	ChunkSize            uint32           `json:"chunkSize"`
+	SegmentSize          uint32           `json:"segmentSize"`
+	Length               uint64           `json:"length"`
+	Ctime                string           `json:"ctime"`
+	SeqNum               uint64           `json:"seqNum"`
+	FileStatus           string           `json:"fileStatus"`
+	OriginalFullPathName string           `json:"originalFullPathName"`
+	CloneSource          string           `json:"cloneSource"`
+	CloneLength          uint64           `json:"cloneLength"`
+	StripeUnit           uint64           `json:"stripeUnit"`
+	StripeCount          uint64           `json:"stripeCount"`
+	ThrottleParams       []ThrottleParams `json:"throttleParams"`
+	Epoch                uint64           `json:"epoch"`
 }

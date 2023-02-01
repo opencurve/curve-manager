@@ -2,14 +2,14 @@ package core
 
 import (
 	metrics "github.com/opencurve/curve-manager/internal/metrics/core"
-	"github.com/opencurve/curve-manager/internal/rpc/curvebs/mds"
+	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
 )
 
 func initClients(cfg *pigeon.Configure) error {
 	// init mds rpc client
-	err := mds.Init(cfg)
+	err := bsrpc.Init(cfg)
 	if err != nil {
 		return err
 	}

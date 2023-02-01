@@ -46,6 +46,19 @@ type ListLogicalPoolRequest struct{}
 
 type GetChunkServerStatusRequest struct{}
 
+type GetClusterStatusRequest struct{}
+
+type GetClusterSpaceRequest struct{}
+
+type GetClusterPerformanceRequest struct{}
+
+type ListVolumeRequest struct {
+	Size    uint32 `json:"size" binding:"required"`
+	Page    uint32 `json:"page" binding:"required"`
+	Path    string `json:"path" default:"/"`
+	SortKey string `json:"sortKey" default:"id"`
+}
+
 var requests = []Request{
 	{
 		"GET",
@@ -73,14 +86,38 @@ var requests = []Request{
 	},
 	{
 		"GET",
+		"status.cluster",
+		GetClusterStatusRequest{},
+		GetClusterStatus,
+	},
+	{
+		"GET",
+		"space.cluster",
+		GetClusterSpaceRequest{},
+		GetClusterSpace,
+	},
+	{
+		"GET",
+		"performance.cluster",
+		GetClusterPerformanceRequest{},
+		GetClusterPerformance,
+	},
+	{
+		"GET",
 		"topo.list",
 		ListTopologyRequest{},
 		ListTopology,
 	},
 	{
 		"GET",
-		"topo.list.pool",
+		"topo.pool.list",
 		ListLogicalPoolRequest{},
 		ListLogicalPool,
+	},
+	{
+		"POST",
+		"volume.list",
+		ListVolumeRequest{},
+		ListVolume,
 	},
 }

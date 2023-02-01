@@ -3,6 +3,7 @@ package bsmetric
 import (
 	"fmt"
 
+	comm "github.com/opencurve/curve-manager/internal/metrics/common"
 	"github.com/opencurve/curve-manager/internal/metrics/core"
 )
 
@@ -12,43 +13,45 @@ const (
 	SNAPSHOT_CLONE_LEADER           = "active"
 )
 
-func GetSnapShotCloneServerStatus() (*[]SnapShotCloneServerStatus, string) {
+type ServiceStatus comm.ServiceStatus
+
+func GetSnapShotCloneServerStatus() ([]ServiceStatus, string) {
 	size := len(core.GMetricClient.SnapShotCloneServerDummyAddr)
-	results := make(chan metricResult, size)
-	names := fmt.Sprintf("%s,%s,%s", CURVEBS_VERSION, SNAPSHOT_CLONE_STATUS, SNAPSHOT_CLONE_CONF_LISTEN_ADDR)
-	getBvarMetric(core.GMetricClient.SnapShotCloneServerDummyAddr, names, &results)
+	results := make(chan comm.MetricResult, size)
+	names := fmt.Sprintf("%s,%s,%s", comm.CURVEBS_VERSION, SNAPSHOT_CLONE_STATUS, SNAPSHOT_CLONE_CONF_LISTEN_ADDR)
+	comm.GetBvarMetric(core.GMetricClient.SnapShotCloneServerDummyAddr, names, &results)
 
 	count := 0
 	var errors string
-	var ret []SnapShotCloneServerStatus
+	var ret []ServiceStatus
 	for res := range results {
-		if res.err == nil {
+		if res.Err == nil {
 			addr := ""
-			v, e := parseBvarMetric(res.result.(string))
+			v, e := comm.ParseBvarMetric(res.Result.(string))
 			if e != nil {
-				errors = fmt.Sprintf("%s; %s:%s", errors, res.key, e.Error())
+				errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, e.Error())
 			} else {
-				addr = getBvarConfMetricValue((*v)[SNAPSHOT_CLONE_CONF_LISTEN_ADDR])
+				addr = comm.GetBvarConfMetricValue((*v)[SNAPSHOT_CLONE_CONF_LISTEN_ADDR])
 			}
-			ret = append(ret, SnapShotCloneServerStatus{
+			ret = append(ret, ServiceStatus{
 				Address: addr,
-				Version: (*v)[CURVEBS_VERSION],
+				Version: (*v)[comm.CURVEBS_VERSION],
 				Online:  true,
 				Leader:  (*v)[SNAPSHOT_CLONE_STATUS] == SNAPSHOT_CLONE_LEADER,
 			})
 		} else {
-			errors = fmt.Sprintf("%s; %s:%s", errors, res.key, res.err.Error())
-			ret = append(ret, SnapShotCloneServerStatus{
-				Address: res.key.(string),
+			errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, res.Err.Error())
+			ret = append(ret, ServiceStatus{
+				Address: res.Key.(string),
 				Version: "",
 				Leader:  false,
 				Online:  false,
 			})
 		}
-		count = count + 1
+		count += 1
 		if count >= size {
 			break
 		}
 	}
-	return &ret, errors
+	return ret, errors
 }

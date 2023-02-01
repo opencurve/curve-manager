@@ -8,6 +8,28 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+func GetClusterSpace(r *pigeon.Request, ctx *Context) bool {
+	space, err := agent.GetClusterSpace()
+	if err != nil {
+		r.Logger().Error("GetClusterSpace failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return core.Exit(r, errno.GET_CLUSTER_SPACE_FAILED)
+	}
+	return core.ExitSuccessWithData(r, space)
+}
+
+func GetClusterPerformance(r *pigeon.Request, ctx *Context) bool {
+	performance, err := agent.GetClusterPerformance()
+	if err != nil {
+		r.Logger().Error("GetClusterPerformance failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return core.Exit(r, errno.GET_CLUSTER_PERFORMANCE_FAILED)
+	}
+	return core.ExitSuccessWithData(r, performance)
+}
+
 func ListTopology(r *pigeon.Request, ctx *Context) bool {
 	topo, err := agent.ListTopology()
 	if err != nil {

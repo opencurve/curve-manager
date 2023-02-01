@@ -7,6 +7,7 @@ import (
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/shimingyah/pool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -22,17 +23,13 @@ const (
 	DEFAULT_RPC_RETRY_TIMES = 3
 )
 
+type RpcResult common.QueryResult
+
 type BaseRpc struct {
 	timeout    time.Duration
 	retryTimes uint32
 	lock       sync.RWMutex
 	connPools  map[string]pool.Pool
-}
-
-type RpcResult struct {
-	Key    interface{}
-	Err    error
-	Result interface{}
 }
 
 type RpcContext struct {
@@ -143,7 +140,7 @@ func (cli *BaseRpc) SendRpc(ctx *RpcContext, rpcFunc Rpc) *RpcResult {
 		if res.Err == nil {
 			return &res
 		}
-		count = count + 1
+		count += 1
 		rpcErr = fmt.Sprintf("%s;%s:%s", rpcErr, res.Key, res.Err.Error())
 		if count >= size {
 			break

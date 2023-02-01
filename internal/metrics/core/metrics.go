@@ -82,7 +82,7 @@ func Init(cfg *pigeon.Configure) error {
 	return nil
 }
 
-func (cli *metricClient) GetMetricFromBvar(host, path string) (interface{}, error) {
+func (cli *metricClient) GetMetricFromService(host, path string) (interface{}, error) {
 	url := (&url.URL{
 		Scheme: "http",
 		Host:   host,

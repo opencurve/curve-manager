@@ -10,7 +10,7 @@ import (
 
 func GetEtcdStatus(r *pigeon.Request, ctx *Context) bool {
 	status, err := agent.GetEtcdStatus()
-	if err != nil {
+	if err != "" {
 		r.Logger().Error("GetEtcdStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
@@ -43,11 +43,22 @@ func GetSnapShotCloneServerStatus(r *pigeon.Request, ctx *Context) bool {
 
 func GetChunkServerStatus(r *pigeon.Request, ctx *Context) bool {
 	status, err := agent.GetChunkServerStatus()
-	if err != "" {
+	if err != nil {
 		r.Logger().Error("GetChunkServerStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return core.Exit(r, errno.GET_CHUNKSERVER_STATUS_FAILED)
+	}
+	return core.ExitSuccessWithData(r, status)
+}
+
+func GetClusterStatus(r *pigeon.Request, ctx *Context) bool {
+	status, err := agent.GetClusterStatus()
+	if err != nil {
+		r.Logger().Error("GetClusterStatus failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return core.Exit(r, errno.GET_CLUSTER_STATUS_FAILED)
 	}
 	return core.ExitSuccessWithData(r, status)
 }

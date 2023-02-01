@@ -3,53 +3,91 @@ package bsmetric
 import (
 	"fmt"
 
+	comm "github.com/opencurve/curve-manager/internal/metrics/common"
 	"github.com/opencurve/curve-manager/internal/metrics/core"
 )
 
 const (
-	MDS_STATUS           = "mds_status"
-	MDS_LEADER           = "leader"
-	MDS_FOLLOWER         = "follower"
-	MDS_CONF_LISTEN_ADDR = "mds_config_mds_listen_addr"
+	MDS_STATUS             = "mds_status"
+	MDS_LEADER             = "leader"
+	MDS_FOLLOWER           = "follower"
+	MDS_CONF_LISTEN_ADDR   = "mds_config_mds_listen_addr"
+	MDS_CONF_AUTH_USERNAME = "mds_config_mds_auth_root_user_name"
+	MDS_CONF_AUTH_PASSWORD = "mds_config_mds_auth_root_password"
 )
 
-func GetMdsStatus() (*[]MdsStatus, string) {
+type AuthInfo struct {
+	UserName string
+	PassWord string
+}
+
+func GetMdsStatus() ([]ServiceStatus, string) {
 	size := len(core.GMetricClient.MdsDummyAddr)
-	results := make(chan metricResult, size)
-	names := fmt.Sprintf("%s,%s,%s", CURVEBS_VERSION, MDS_STATUS, MDS_CONF_LISTEN_ADDR)
-	getBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
+	results := make(chan comm.MetricResult, size)
+	names := fmt.Sprintf("%s,%s,%s", comm.CURVEBS_VERSION, MDS_STATUS, MDS_CONF_LISTEN_ADDR)
+	comm.GetBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
 
 	count := 0
 	var errors string
-	var ret []MdsStatus
+	var ret []ServiceStatus
 	for res := range results {
-		if res.err == nil {
+		if res.Err == nil {
 			addr := ""
-			v, e := parseBvarMetric(res.result.(string))
+			v, e := comm.ParseBvarMetric(res.Result.(string))
 			if e != nil {
-				errors = fmt.Sprintf("%s; %s:%s", errors, res.key, e.Error())
+				errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, e.Error())
 			} else {
-				addr = getBvarConfMetricValue((*v)[MDS_CONF_LISTEN_ADDR])
+				addr = comm.GetBvarConfMetricValue((*v)[MDS_CONF_LISTEN_ADDR])
 			}
-			ret = append(ret, MdsStatus{
+			ret = append(ret, ServiceStatus{
 				Address: addr,
-				Version: (*v)[CURVEBS_VERSION],
+				Version: (*v)[comm.CURVEBS_VERSION],
 				Online:  true,
 				Leader:  (*v)[MDS_STATUS] == MDS_LEADER,
 			})
 		} else {
-			errors = fmt.Sprintf("%s; %s:%s", errors, res.key, res.err.Error())
-			ret = append(ret, MdsStatus{
-				Address: res.key.(string),
+			errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, res.Err.Error())
+			ret = append(ret, ServiceStatus{
+				Address: res.Key.(string),
 				Version: "",
 				Leader:  false,
 				Online:  false,
 			})
 		}
-		count = count + 1
+		count += 1
 		if count >= size {
 			break
 		}
 	}
-	return &ret, errors
+	return ret, errors
+}
+
+func GetAuthInfoOfRoot() (*AuthInfo, string) {
+	size := len(core.GMetricClient.MdsDummyAddr)
+	results := make(chan comm.MetricResult, size)
+	names := fmt.Sprintf("%s,%s", MDS_CONF_AUTH_USERNAME, MDS_CONF_AUTH_PASSWORD)
+	comm.GetBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
+
+	count := 0
+	var errors string
+	var result AuthInfo
+	for res := range results {
+		if res.Err == nil {
+			v, e := comm.ParseBvarMetric(res.Result.(string))
+			if e != nil {
+				errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, e.Error())
+			} else {
+				result.UserName = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_USERNAME])
+				result.PassWord = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_PASSWORD])
+				return &result, ""
+			}
+		} else {
+			errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, res.Err.Error())
+		}
+		count += 1
+		if count >= size {
+			break
+		}
+	}
+	return nil, errors
 }
