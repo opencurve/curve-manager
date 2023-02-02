@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/opencurve/curve-manager/internal/common"
 	comm "github.com/opencurve/curve-manager/internal/metrics/common"
 	"github.com/opencurve/curve-manager/internal/metrics/core"
 )
@@ -106,7 +107,7 @@ func GetPoolSpace(name string) (*Space, error) {
 				if ok != nil {
 					return nil, ok
 				}
-				space.Total = total / comm.GB
+				space.Total = total / common.GB
 				break
 			}
 		} else {
@@ -115,7 +116,7 @@ func GetPoolSpace(name string) (*Space, error) {
 				if ok != nil {
 					return nil, ok
 				}
-				space.Used = used / comm.GB
+				space.Used = used / common.GB
 				break
 			}
 		}

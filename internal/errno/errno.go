@@ -49,4 +49,5 @@ var (
 	LIST_TOPO_FAILED               = Errno{503203, "list topo failed"}
 	LIST_POOL_FAILED               = Errno{503204, "list pool failed"}
 	LIST_VOLUME_FAILED             = Errno{503205, "list volume failed"}
+	LIST_SNAPSHOT_FAILED           = Errno{503205, "list snapshot failed"}
 )

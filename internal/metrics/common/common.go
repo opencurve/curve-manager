@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	GB = 1024 * 1024 * 1024
-
 	INSTANT_METRIC_PATH     = "/api/v1/query"
 	VECTOR_METRIC_QUERY_KEY = "query"
 

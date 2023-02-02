@@ -14,6 +14,7 @@ servers:
       etcd.address: 127.0.0.1:2379,127.0.0.2:2379,127.0.0.3:2379
       mds.address: 127.0.0.1:6666,127.0.0.2:6666,127.0.0.3:6666
       mds.dummy.address: 127.0.0.1:6667,127.0.0.2:6667,127.0.0.3:6667
-      snapshot.clone.dummy.address: 127.0.0.1:8081,127.0.0.2:8081,127.0.0.3:8081
+      snapshot.clone.dummy.address: 127.0.0.1:8100,127.0.0.2:8101,127.0.0.3:8102
+      snapshot.clone.proxy.address: 127.0.0.1:8000,127.0.0.2:8001,127.0.0.3:8002
       monitor.prometheus.address: 127.0.0.1:9090
       db.sqlite.filepath: /db/curvebs.db

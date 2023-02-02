@@ -59,6 +59,15 @@ type ListVolumeRequest struct {
 	SortKey string `json:"sortKey" default:"id"`
 }
 
+type ListSnapshotRequest struct {
+	Size     uint32 `json:"size" binding:"required"`
+	Page     uint32 `json:"page" binding:"required"`
+	UUID     string `json:"uuid"`
+	User     string `json:"user"`
+	FileName string `json:"fileName"`
+	Status   string `json:"status"`
+}
+
 var requests = []Request{
 	{
 		"GET",
@@ -119,5 +128,11 @@ var requests = []Request{
 		"volume.list",
 		ListVolumeRequest{},
 		ListVolume,
+	},
+	{
+		"POST",
+		"snapshot.list",
+		ListSnapshotRequest{},
+		ListSnapshot,
 	},
 }

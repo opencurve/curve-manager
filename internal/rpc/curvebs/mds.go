@@ -21,8 +21,7 @@ var (
 type RpcResult common.QueryResult
 
 const (
-	CURVEBS_MDS_ADDRESS           = "mds.address"
-	CURVEBS_MDS_ADDRESS_DELIMITER = ","
+	CURVEBS_MDS_ADDRESS = "mds.address"
 
 	// invalid type
 	INVALID = "INVALID"
@@ -93,7 +92,7 @@ func Init(cfg *pigeon.Configure) error {
 		return fmt.Errorf("no cluster mds address found")
 	}
 	GMdsClient = &mdsClient{
-		addrs: strings.Split(addrs, CURVEBS_MDS_ADDRESS_DELIMITER),
+		addrs: strings.Split(addrs, common.CURVEBS_ADDRESS_DELIMITER),
 	}
 	return nil
 }
@@ -501,7 +500,7 @@ func (cli *mdsClient) ListDir(filename, owner, sig string, date uint64) ([]FileI
 		info.Owner = v.GetOwner()
 		info.ChunkSize = v.GetChunkSize()
 		info.SegmentSize = v.GetSegmentSize()
-		info.Length = v.GetLength()
+		info.Length = v.GetLength() / common.GB
 		info.Ctime = time.Unix(int64(v.GetCtime()/1000000), 0).Format(common.TIME_FORMAT)
 		info.SeqNum = v.GetSeqNum()
 		info.FileStatus = getFileStatus(v.GetFileStatus())

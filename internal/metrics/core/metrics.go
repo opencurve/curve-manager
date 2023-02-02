@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/pigeon"
 )
 
@@ -18,7 +19,6 @@ const (
 	CURVEBS_ETCD_ADDRESS                 = "etcd.address"
 	CURVEBS_MDS_DUMMY_ADDRESS            = "mds.dummy.address"
 	CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS = "snapshot.clone.dummy.address"
-	CURVEBS_ADDRESS_DELIMITER            = ","
 )
 
 type metricClient struct {
@@ -66,17 +66,17 @@ func Init(cfg *pigeon.Configure) error {
 	if len(addr) == 0 {
 		return fmt.Errorf("no cluster etcd address found")
 	}
-	GMetricClient.EtcdAddr = strings.Split(addr, CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.EtcdAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
 
 	addr = cfg.GetConfig().GetString(CURVEBS_MDS_DUMMY_ADDRESS)
 	if len(addr) == 0 {
 		return fmt.Errorf("no cluster mds dummy address found")
 	}
-	GMetricClient.MdsDummyAddr = strings.Split(addr, CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.MdsDummyAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
 
 	addr = cfg.GetConfig().GetString(CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS)
 	if len(addr) != 0 {
-		GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(addr, CURVEBS_ADDRESS_DELIMITER)
+		GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
 	}
 
 	return nil

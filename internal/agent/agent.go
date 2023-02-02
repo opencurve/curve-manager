@@ -8,6 +8,7 @@ import (
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
+	"github.com/opencurve/curve-manager/internal/snapshotclone"
 )
 
 const (
@@ -233,4 +234,8 @@ func ListVolume(size, page uint32, path, key string) (interface{}, error) {
 		end = page * size
 	}
 	return fileInfos[start:end], nil
+}
+
+func GetSnapshot(size, page uint32, uuid, user, fileName, status string) (interface{}, error) {
+	return snapshotclone.GetSnapshot(size, page, uuid, user, fileName, status)
 }
