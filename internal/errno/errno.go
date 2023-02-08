@@ -35,14 +35,14 @@ var (
 	CREATE_USER_FAILED      = Errno{503002, "create user failed"}
 	DELETE_USER_FAILED      = Errno{503003, "delete user failed"}
 	CHANGE_PASSWORD_FAILED  = Errno{503004, "change user password failed"}
-	UPDATE_USER_INFO_FAILED = Errno{503005, "update user info failed"}
-	LIST_USER_FAILED        = Errno{503006, "list user failed"}
+	RESET_PASSWORD_FAILED   = Errno{503005, "change user password failed"}
+	UPDATE_USER_INFO_FAILED = Errno{503006, "update user info failed"}
+	LIST_USER_FAILED        = Errno{503007, "list user failed"}
 
-	GET_CLUSTER_STATUS_FAILED        = Errno{503101, "get cluster status failed"}
-	GET_ETCD_STATUS_FAILED           = Errno{503102, "get etcd status failed"}
-	GET_MDS_STATUS_FAILED            = Errno{503103, "get mds status failed"}
-	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503104, "get snapshotcloneserver status failed"}
-	GET_CHUNKSERVER_STATUS_FAILED    = Errno{503105, "get chunkserver status failed"}
+	GET_ETCD_STATUS_FAILED           = Errno{503101, "get etcd status failed"}
+	GET_MDS_STATUS_FAILED            = Errno{503102, "get mds status failed"}
+	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503103, "get snapshotcloneserver status failed"}
+	GET_CHUNKSERVER_STATUS_FAILED    = Errno{503104, "get chunkserver status failed"}
 
 	GET_CLUSTER_SPACE_FAILED       = Errno{503201, "get cluster space failed"}
 	GET_CLUSTER_PERFORMANCE_FAILED = Errno{503202, "get cluster performance failed"}

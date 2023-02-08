@@ -16,14 +16,17 @@ const (
 type ServiceStatus comm.ServiceStatus
 
 func GetSnapShotCloneServerStatus() ([]ServiceStatus, string) {
+	ret := []ServiceStatus{}
 	size := len(core.GMetricClient.SnapShotCloneServerDummyAddr)
+	if size == 0 {
+		return ret, "no snapshotclone service address found"
+	}
 	results := make(chan comm.MetricResult, size)
 	names := fmt.Sprintf("%s,%s,%s", comm.CURVEBS_VERSION, SNAPSHOT_CLONE_STATUS, SNAPSHOT_CLONE_CONF_LISTEN_ADDR)
 	comm.GetBvarMetric(core.GMetricClient.SnapShotCloneServerDummyAddr, names, &results)
 
 	count := 0
 	var errors string
-	var ret []ServiceStatus
 	for res := range results {
 		if res.Err == nil {
 			addr := ""

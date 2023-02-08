@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/opencurve/curve-manager/internal/email"
 	metrics "github.com/opencurve/curve-manager/internal/metrics/core"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/curve-manager/internal/snapshotclone"
@@ -22,8 +23,11 @@ func initClients(cfg *pigeon.Configure) error {
 	}
 
 	// init snapshot clone client
-	err = snapshotclone.Init(cfg)
-	return err
+	snapshotclone.Init(cfg)
+
+	// init email client which used to reset password and some system notifications
+	email.Init(cfg)
+	return nil
 }
 
 func Init(cfg *pigeon.Configure) error {

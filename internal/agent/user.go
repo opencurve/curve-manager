@@ -1,6 +1,10 @@
 package agent
 
-import "github.com/opencurve/curve-manager/internal/storage"
+import (
+	"github.com/opencurve/curve-manager/internal/common"
+	"github.com/opencurve/curve-manager/internal/storage"
+	"github.com/opencurve/curve-manager/internal/email"
+)
 
 func Login(name, passwd string) (interface{}, error) {
 	return storage.Login(name, passwd)
@@ -16,6 +20,21 @@ func DeleteUser(name string) error {
 
 func ChangePassWord(name, passwd string) error {
 	return storage.ChangePassWord(name, passwd)
+}
+
+func ResetPassWord(name string) error {
+	emailAddr, err := storage.GetUserEmail(name)
+	if err != nil {
+		return err
+	}
+	passwd := storage.GetNewPassWord()
+	err = ChangePassWord(name, common.GetMd5Sum32Little(passwd))
+	if err != nil {
+		return err
+	}
+
+	err = email.SendNewPassWord(name, emailAddr, passwd)
+	return err
 }
 
 func UpdateUserInfo(name, email string, permission int) error {

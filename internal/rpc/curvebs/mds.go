@@ -72,14 +72,17 @@ const (
 	BPS_READ   = "BPS_READ"
 	BPS_WRITE  = "BPS_WRITE"
 
-	LIST_PHYSICAL_POOL_FUNC         = "ListPhysicalPool"
-	LIST_LOGICAL_POOL_FUNC          = "ListLogicalPool"
-	LIST_POOL_ZONE_FUNC             = "ListPoolZone"
-	LIST_ZONE_SERVER_FUNC           = "ListZoneServer"
-	LIST_CHUNKSERVER_FUNC           = "ListChunkServer"
-	GET_CHUNKSERVER_IN_CLUSTER_FUNC = "GetChunkServerInCluster"
-	GET_FILE_ALLOC_SIZE_FUNC        = "GetAllocatedSize"
-	LIST_DIR_FUNC                   = "ListDir"
+	LIST_PHYSICAL_POOL_FUNC          = "ListPhysicalPool"
+	LIST_LOGICAL_POOL_FUNC           = "ListLogicalPool"
+	LIST_POOL_ZONE_FUNC              = "ListPoolZone"
+	LIST_ZONE_SERVER_FUNC            = "ListZoneServer"
+	LIST_CHUNKSERVER_FUNC            = "ListChunkServer"
+	GET_CHUNKSERVER_IN_CLUSTER_FUNC  = "GetChunkServerInCluster"
+	GET_COPYSET_IN_CHUNKSERVER_FUNC  = "GetCopySetsInChunkServer"
+	GET_CHUNKSERVER_LIST_IN_COPYSETS = "GetChunkServerListInCopySets"
+	GET_COPYSETS_IN_CLUSTER          = "GetCopySetsInCluster"
+	GET_FILE_ALLOC_SIZE_FUNC         = "GetAllocatedSize"
+	LIST_DIR_FUNC                    = "ListDir"
 )
 
 type mdsClient struct {
@@ -203,7 +206,7 @@ func (cli *mdsClient) ListLogicalPool() ([]LogicalPool, error) {
 		}(pool.Id)
 	}
 
-	var pools []LogicalPool
+	pools := []LogicalPool{}
 	count := 0
 	for res := range results {
 		if res.Err != nil {
@@ -236,7 +239,7 @@ func (cli *mdsClient) ListPoolZone(poolId uint32) ([]Zone, error) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
 	}
 
-	var infos []Zone
+	infos := []Zone{}
 	for _, zone := range response.GetZones() {
 		info := Zone{}
 		info.Id = zone.GetZoneID()
@@ -267,7 +270,7 @@ func (cli *mdsClient) ListZoneServer(zoneId uint32) ([]Server, error) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
 	}
 
-	var infos []Server
+	infos := []Server{}
 	for _, server := range response.GetServerInfo() {
 		info := Server{}
 		info.Id = server.GetServerID()
@@ -341,7 +344,7 @@ func (cli *mdsClient) ListChunkServer(serverId uint32) ([]ChunkServer, error) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
 	}
 
-	var infos []ChunkServer
+	infos := []ChunkServer{}
 	for _, cs := range response.GetChunkServerInfos() {
 		info := ChunkServer{}
 		info.Id = cs.GetChunkServerID()
@@ -374,7 +377,7 @@ func (cli *mdsClient) GetChunkServerInCluster() ([]ChunkServer, error) {
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
 	}
-	var infos []ChunkServer
+	infos := []ChunkServer{}
 	for _, cs := range response.GetChunkServerInfos() {
 		info := ChunkServer{}
 		info.Id = cs.GetChunkServerID()
@@ -388,6 +391,95 @@ func (cli *mdsClient) GetChunkServerInCluster() ([]ChunkServer, error) {
 		info.DiskCapacity = strconv.FormatUint(cs.GetDiskCapacity(), 10)
 		info.DiskUsed = strconv.FormatUint(cs.GetDiskUsed(), 10)
 		info.ExternalIp = cs.GetExternalIp()
+		infos = append(infos, info)
+	}
+	return infos, nil
+}
+
+func (cli *mdsClient) GetCopySetsInChunkServer(ip string, port uint32) ([]CopySetInfo, error) {
+	Rpc := &GetCopySetsInChunkServer{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_COPYSET_IN_CHUNKSERVER_FUNC)
+	Rpc.Request = &topology.GetCopySetsInChunkServerRequest{
+		HostIp: &ip,
+		Port:   &port,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return nil, ret.Err
+	}
+	response := ret.Result.(*topology.GetCopySetsInChunkServerResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+	infos := []CopySetInfo{}
+	for _, cs := range response.GetCopysetInfos() {
+		info := CopySetInfo{}
+		info.LogicalPoolId = cs.GetLogicalPoolId()
+		info.CopysetId = cs.GetCopysetId()
+		info.Scanning = cs.GetScaning()
+		info.LastScanSec = cs.GetLastScanSec()
+		info.LastScanConsistent = cs.GetLastScanConsistent()
+		infos = append(infos, info)
+	}
+	return infos, nil
+}
+
+func (cli *mdsClient) GetChunkServerListInCopySets(logicalPoolId uint32, copysetIds []uint32) ([]CopySetServerInfo, error) {
+	Rpc := &GetChunkServerListInCopySets{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_CHUNKSERVER_LIST_IN_COPYSETS)
+	Rpc.Request = &topology.GetChunkServerListInCopySetsRequest{}
+	Rpc.Request.LogicalPoolId = &logicalPoolId
+	Rpc.Request.CopysetId = append(Rpc.Request.CopysetId, copysetIds...)
+
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return nil, ret.Err
+	}
+	response := ret.Result.(*topology.GetChunkServerListInCopySetsResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+	infos := []CopySetServerInfo{}
+	for _, csInfo := range response.GetCsInfo() {
+		info := CopySetServerInfo{}
+		info.CopysetId = csInfo.GetCopysetId()
+		for _, locs := range csInfo.GetCsLocs() {
+			var l ChunkServerLocation
+			l.ChunkServerId = locs.GetChunkServerID()
+			l.HostIp = locs.GetHostIp()
+			l.Port = locs.GetPort()
+			l.ExternalIp = locs.GetExternalIp()
+			info.CsLocs = append(info.CsLocs, l)
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
+}
+
+func (cli *mdsClient) GetCopySetsInCluster() ([]CopySetInfo, error) {
+	Rpc := &GetCopySetsInCluster{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_COPYSETS_IN_CLUSTER)
+	Rpc.Request = &topology.GetCopySetsInClusterRequest{}
+
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return nil, ret.Err
+	}
+	response := ret.Result.(*topology.GetCopySetsInClusterResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+	infos := []CopySetInfo{}
+	for _, csInfo := range response.GetCopysetInfos() {
+		info := CopySetInfo{}
+		info.CopysetId = csInfo.GetCopysetId()
+		info.LastScanConsistent = csInfo.GetLastScanConsistent()
+		info.LastScanSec = csInfo.GetLastScanSec()
+		info.LogicalPoolId = csInfo.GetLogicalPoolId()
+		info.Scanning = csInfo.GetScaning()
 		infos = append(infos, info)
 	}
 	return infos, nil
@@ -490,7 +582,7 @@ func (cli *mdsClient) ListDir(filename, owner, sig string, date uint64) ([]FileI
 	if statusCode != nameserver2.StatusCode_kOK {
 		return nil, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
 	}
-	var infos []FileInfo
+	infos := []FileInfo{}
 	for _, v := range response.GetFileInfo() {
 		var info FileInfo
 		info.Id = v.GetId()

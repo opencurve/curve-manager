@@ -62,6 +62,19 @@ func ChangePassWord(r *pigeon.Request, ctx *Context) bool {
 	return core.Exit(r, errno.OK)
 }
 
+func ResetPassWord(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*ResetPassWordRequest)
+	err := agent.ResetPassWord(data.UserName)
+	if err != nil {
+		r.Logger().Error("reset password failed",
+			pigeon.Field("userName", data.UserName),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return core.Exit(r, errno.RESET_PASSWORD_FAILED)
+	}
+	return core.Exit(r, errno.OK)
+}
+
 func UpdateUserInfo(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*UpdateUserInfoRequest)
 	err := agent.UpdateUserInfo(data.UserName, data.Email, data.Permission)

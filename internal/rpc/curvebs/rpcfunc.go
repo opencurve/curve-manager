@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// topology
 // list physical pool
 type ListPhysicalPoolRpc struct {
 	ctx     *baserpc.RpcContext
@@ -97,6 +98,52 @@ func (rpc *GetChunkServerInCluster) NewRpcClient(cc grpc.ClientConnInterface) {
 
 func (rpc *GetChunkServerInCluster) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
 	return rpc.client.GetChunkServerInCluster(ctx, rpc.Request, opt...)
+}
+
+// get copysets on chunkserver
+type GetCopySetsInChunkServer struct {
+	ctx     *baserpc.RpcContext
+	client  topology.TopologyServiceClient
+	Request *topology.GetCopySetsInChunkServerRequest
+}
+
+func (rpc *GetCopySetsInChunkServer) NewRpcClient(cc grpc.ClientConnInterface) {
+	rpc.client = topology.NewTopologyServiceClient(cc)
+}
+
+func (rpc *GetCopySetsInChunkServer) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
+	return rpc.client.GetCopySetsInChunkServer(ctx, rpc.Request, opt...)
+}
+
+// get chunkserver list in copysets
+type GetChunkServerListInCopySets struct {
+	ctx     *baserpc.RpcContext
+	client  topology.TopologyServiceClient
+	Request *topology.GetChunkServerListInCopySetsRequest
+}
+
+func (rpc *GetChunkServerListInCopySets) NewRpcClient(cc grpc.ClientConnInterface) {
+	rpc.client = topology.NewTopologyServiceClient(cc)
+}
+
+func (rpc *GetChunkServerListInCopySets) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
+	return rpc.client.GetChunkServerListInCopySets(ctx, rpc.Request, opt...)
+}
+
+
+// get copysets in cluster
+type GetCopySetsInCluster struct {
+	ctx     *baserpc.RpcContext
+	client  topology.TopologyServiceClient
+	Request *topology.GetCopySetsInClusterRequest
+}
+
+func (rpc *GetCopySetsInCluster) NewRpcClient(cc grpc.ClientConnInterface) {
+	rpc.client = topology.NewTopologyServiceClient(cc)
+}
+
+func (rpc *GetCopySetsInCluster) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
+	return rpc.client.GetCopySetsInCluster(ctx, rpc.Request, opt...)
 }
 
 // nameserver2

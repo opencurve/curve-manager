@@ -79,3 +79,22 @@ type FileInfo struct {
 	ThrottleParams       []ThrottleParams `json:"throttleParams"`
 	Epoch                uint64           `json:"epoch"`
 }
+
+type CopySetInfo struct {
+	LogicalPoolId      uint32 `json:"logicalPoolId" binding:"required"`
+	CopysetId          uint32 `json:"copysetId" binding:"required"`
+	Scanning           bool   `json:"scanning"`
+	LastScanSec        uint64 `json:"lastScanSec"`
+	LastScanConsistent bool   `json:"lastScanConsistent"`
+}
+
+type ChunkServerLocation struct {
+	ChunkServerId uint32 `json:"chunkServerId" binding:"required"`
+	HostIp        string `json:"hostIp" binding:"required"`
+	Port          uint32 `josn:"port" binding:"required"`
+	ExternalIp    string `json:"externalIp"`
+}
+type CopySetServerInfo struct {
+	CopysetId uint32                `json:"copysetId" binding:"required"`
+	CsLocs    []ChunkServerLocation `json:"csLocs" binding:"required"`
+}

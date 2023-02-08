@@ -58,7 +58,6 @@ func GetClusterStatus(r *pigeon.Request, ctx *Context) bool {
 		r.Logger().Error("GetClusterStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return core.Exit(r, errno.GET_CLUSTER_STATUS_FAILED)
 	}
 	return core.ExitSuccessWithData(r, status)
 }

@@ -137,18 +137,109 @@ func GetBvarMetric(addrs []string, name string, results *chan MetricResult) {
 	}
 }
 
-// func ParseRaftStatusMetric(value string) ([]map[string]string, error) {
-// 	var ret []map[string]string
-// 	items := strings.Split(value, "\n\n")
-// 	for _, item := range items {
-// 		v := make(map[string]string)
-// 		lines := strings.Split(item, "\n")
-// 		for _, line := range lines {
-
-// 		}
-// 	}
-
-// }
+/*
+[8589934645]
+peer_id: 10.166.24.22:8200:0\r\n
+state: LEADER\r\n
+readonly: 0\r\n
+term: 19\r\n
+conf_index: 11244429\r\n
+peers: 10.166.24.22:8200:0 10.166.24.27:8218:0 10.166.24.29:8206:0\r\n
+changing_conf: NO    stage: STAGE_NONE\r\n
+election_timer: timeout(1000ms) STOPPED\r\n
+vote_timer: timeout(1000ms) STOPPED\r\n
+stepdown_timer: timeout(1000ms) SCHEDULING(in 577ms)\r\n
+snapshot_timer: timeout(1800000ms) SCHEDULING(in 277280ms)\r\n
+storage: [11243647, 11245778]\n
+disk_index: 11245778\n
+known_applied_index: 11245778\n
+last_log_id: (index=11245778,term=19)\n
+state_machine: Idle\n
+last_committed_index: 11245778r\n
+last_snapshot_index: 11244429
+last_snapshot_term: 19
+snapshot_status: IDLE
+replicator_82304458296217@10.166.24.27:8218:0: next_index=11245779  flying_append_entries_size=0 idle hc=17738777 ac=206514 ic=0
+replicator_80702435493905@10.166.24.29:8206:0: next_index=11245779  flying_append_entries_size=0 idle hc=17738818 ac=206282 ic=0
+\r\n\r\n
+[8589934712]
+peer_id: 10.166.24.22:8200:0
+state: FOLLOWER
+readonly: 0
+term: 16
+conf_index: 15368827
+peers: 10.166.24.22:8200:0 10.166.24.29:8212:0 10.166.24.30:8219:0
+leader: 10.166.24.29:8212:0
+last_msg_to_now: 48
+election_timer: timeout(1000ms) SCHEDULING(in 719ms)
+vote_timer: timeout(1000ms) STOPPED
+stepdown_timer: timeout(1000ms) STOPPED
+snapshot_timer: timeout(1800000ms) SCHEDULING(in 422640ms)
+storage: [15367732, 15370070]
+disk_index: 15370070
+known_applied_index: 15370070
+last_log_id: (index=15370070,term=16)
+state_machine: Idle
+last_committed_index: 15370070
+last_snapshot_index: 15368827
+last_snapshot_term: 16
+snapshot_status: IDLE
+*/
+func ParseRaftStatusMetric(value string) ([]map[string]string, error) {
+	var ret []map[string]string
+	items := strings.Split(value, "\r\n\r\n")
+	for _, item := range items {
+		tmap := make(map[string]string)
+		lines := strings.Split(item, "\r\n")
+		raplicatorIndex := 0
+		for index, line := range lines {
+			if index == 0 {
+				start := strings.Index(line, "[") + 1
+				end := strings.Index(line, "]")
+				tmap[common.RAFT_STATUS_KEY_GROUPID] = line[start:end]
+				continue
+			}
+			hit := strings.Count(line, ": ")
+			if hit == 1 {
+				c := strings.Split(line, ": ")
+				if len(c) != 2 {
+					return nil, fmt.Errorf(fmt.Sprintf("format error: %s", line))
+				}
+				if strings.Contains(c[0], common.RAFT_STATUS_KEY_REPLICATOR) {
+					c[0] = fmt.Sprintf("%s%d", common.RAFT_STATUS_KEY_REPLICATOR, raplicatorIndex)
+					raplicatorIndex += 1
+				}
+				tmap[c[0]] = c[1]
+			} else if hit == 2 {
+				// line: [changing_conf: NO    stage: STAGE_NONE]
+				v := strings.Split(line, "    ")
+				if len(v) != 2 {
+					return nil, fmt.Errorf(fmt.Sprintf("format error: %s", line))
+				}
+				for _, i := range v {
+					j := strings.Split(i, ": ")
+					if len(j) != 2 {
+						return nil, fmt.Errorf(fmt.Sprintf("format error: %s", i))
+					}
+					tmap[j[0]] = j[1]
+				}
+			} else if strings.Contains(line, common.RAFT_STATUS_KEY_STORAGE) {
+				storageItems := strings.Split(line, "\n")
+				for _, sitem := range storageItems {
+					sitemArr := strings.Split(sitem, ": ")
+					if len(sitemArr) != 2 {
+						return nil, fmt.Errorf(fmt.Sprintf("format error: %s", sitem))
+					}
+					tmap[sitemArr[0]] = sitemArr[1]
+				} 
+			} else {
+				return nil, fmt.Errorf(fmt.Sprintf("format error: %s", line))
+			}
+		}
+		ret = append(ret, tmap)
+	}
+	return ret, nil
+}
 
 func GetRaftStatusMetric(addrs []string, results *chan MetricResult) {
 	for _, host := range addrs {
@@ -231,7 +322,7 @@ func QueryRangeMetric(name string, results *chan MetricResult) {
 }
 
 func GetPerformance(name string) ([]Performance, error) {
-	var performance []Performance
+	performance := []Performance{}
 	retMap := make(map[float64]*Performance)
 
 	// writeIOPS, writeBPS, readIOPS, readBPS

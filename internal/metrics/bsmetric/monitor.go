@@ -33,7 +33,7 @@ type PoolItemNum struct {
 
 func GetEtcdStatus() ([]ServiceStatus, string) {
 	// init value
-	var ret []ServiceStatus
+	ret := []ServiceStatus{}
 	retMap := make(map[string]*ServiceStatus)
 	for _, addr := range core.GMetricClient.EtcdAddr {
 		retMap[addr] = &ServiceStatus{

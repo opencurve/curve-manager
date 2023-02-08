@@ -55,6 +55,10 @@ type ChangePassWordRequest struct {
 	PassWord string `json:"passWord" binding:"required"`
 }
 
+type ResetPassWordRequest struct {
+	UserName string `json:"userName" binding:"required"`
+}
+
 type UpdateUserInfoRequest struct {
 	UserName   string `json:"userName" binding:"required"`
 	Email      string `json:"email" binding:"required"`
@@ -87,6 +91,12 @@ var requests = []Request{
 		"user.update.password",
 		ChangePassWordRequest{},
 		ChangePassWord,
+	},
+	{
+		"POST",
+		"user.reset.password",
+		ResetPassWordRequest{},
+		ResetPassWord,
 	},
 	{
 		"POST",

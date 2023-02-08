@@ -12,7 +12,7 @@ import (
 func ListVolume(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*ListVolumeRequest)
 	defaults.SetDefaults(data)
-	volumes, err := agent.ListVolume(data.Size, data.Page, data.Path, data.SortKey)
+	volumes, err := agent.ListVolume(data.Size, data.Page, data.Path, data.SortKey, data.SortDirection)
 	if err != nil {
 		r.Logger().Error("list volume failed",
 			pigeon.Field("path", data.Path),

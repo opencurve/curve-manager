@@ -18,3 +18,5 @@ servers:
       snapshot.clone.proxy.address: 127.0.0.1:8000,127.0.0.2:8001,127.0.0.3:8002
       monitor.prometheus.address: 127.0.0.1:9090
       db.sqlite.filepath: /db/curvebs.db
+      email.addr: example@163.com
+      email.auth: password or authCode

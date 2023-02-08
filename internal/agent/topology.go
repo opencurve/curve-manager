@@ -1,14 +1,12 @@
 package agent
 
 import (
+	"fmt"
+
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	bsmetricomm "github.com/opencurve/curve-manager/internal/metrics/common"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
-)
-
-const (
-	RECYCLEBIN_DIR = "/RecycleBin"
 )
 
 // get chunkservers of server concurrently
@@ -211,34 +209,61 @@ func getPoolPerformance(pools *[]PoolInfo) error {
 	return nil
 }
 
-func checkServiceHealthy(name string) bool {
-	var status []bsmetric.ServiceStatus
-	var err string
-	switch name {
-	case ETCD_SERVICE:
-		status, err = bsmetric.GetEtcdStatus()
-	case MDS_SERVICE:
-		status, err = bsmetric.GetMdsStatus()
-	case SNAPSHOT_CLONE_SERVER_SERVICE:
-		status, err = bsmetric.GetSnapShotCloneServerStatus()
-	default:
-		return false
+func ListLogicalPool() (interface{}, error) {
+	result := []PoolInfo{}
+	// get info from mds
+	pools, err := bsrpc.GMdsClient.ListLogicalPool()
+	if err != nil {
+		return nil, fmt.Errorf("ListLogicalPool failed, %s", err)
 	}
 
-	if err != "" {
-		return false
+	for _, pool := range pools {
+		var info PoolInfo
+		info.Id = pool.Id
+		info.Name = pool.Name
+		info.PhysicalPoolId = pool.PhysicalPoolId
+		info.Type = pool.Type
+		info.CreateTime = pool.CreateTime
+		info.AllocateStatus = pool.AllocateStatus
+		info.ScanEnable = pool.ScanEnable
+		result = append(result, info)
 	}
 
-	hasLeader := false
-	hasOffline := false
-	for _, s := range status {
-		if s.Leader {
-			hasLeader = true
-		}
-		if !s.Online {
-			hasOffline = true
-		}
+	// get info from monitor
+	err = getPoolItemNum(&result)
+	if err != nil {
+		return nil, err
 	}
 
-	return hasLeader && !hasOffline
+	err = getPoolSpace(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = getPoolPerformance(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func ListTopology() (interface{}, error) {
+	result := []Pool{}
+	logicalPools, err := bsrpc.GMdsClient.ListLogicalPool()
+	if err != nil {
+		return nil, fmt.Errorf("ListLogicalPool failed, %s", err)
+	}
+	for _, lp := range logicalPools {
+		var pool Pool
+		pool.Id = lp.Id
+		pool.physicalPoolId = lp.PhysicalPoolId
+		pool.Name = lp.Name
+		pool.Type = lp.Type
+		result = append(result, pool)
+	}
+	err = listPoolZone(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }

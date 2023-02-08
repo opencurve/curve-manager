@@ -29,7 +29,7 @@ func GetMdsStatus() ([]ServiceStatus, string) {
 
 	count := 0
 	var errors string
-	var ret []ServiceStatus
+	ret := []ServiceStatus{}
 	for res := range results {
 		if res.Err == nil {
 			addr := ""

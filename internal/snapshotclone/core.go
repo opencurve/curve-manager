@@ -27,7 +27,7 @@ const (
 	CURVEBS_SNAPSHOT_CLONE_PROXY_ADDRESS = "snapshot.clone.proxy.address"
 )
 
-func Init(cfg *pigeon.Configure) error {
+func Init(cfg *pigeon.Configure) {
 	GSnapshotCloneClient = &snapshotCloneClient{}
 	// init http client
 	dialer := &net.Dialer{
@@ -54,14 +54,12 @@ func Init(cfg *pigeon.Configure) error {
 	if len(addr) != 0 {
 		GSnapshotCloneClient.SnapShotCloneProxyAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
 	}
-	if len(GSnapshotCloneClient.SnapShotCloneProxyAddr) == 0 {
-		return fmt.Errorf("have no valide snapshotclone proxy addr")
-	}
-
-	return nil
 }
 
 func (cli *snapshotCloneClient) sendHttp2SnapshotClone(queryParam string) (string, error) {
+	if cli.SnapShotCloneProxyAddr == nil {
+		return "", fmt.Errorf("no snapshot proxy address found")
+	}
 	url := (&url.URL{
 		Scheme:   "http",
 		Host:     cli.SnapShotCloneProxyAddr[0],

@@ -1,12 +1,12 @@
 package storage
 
 import (
-	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/pigeon"
 )
 
@@ -15,7 +15,8 @@ var (
 )
 
 const (
-	SQLITE_DB_FILE = "db.sqlite.filepath"
+	SQLITE_DB_FILE      = "db.sqlite.filepath"
+	NEW_PASSWORD_LENGTH = 8
 )
 
 type UserInfo struct {
@@ -72,7 +73,7 @@ func (s *Storage) execSQL(query string, args ...interface{}) error {
 }
 
 func createAdminUser() error {
-	passwd := fmt.Sprintf("%x", md5.Sum([]byte(USER_ADMIN_PASSWORD)))
+	passwd := common.GetMd5Sum32Little(USER_ADMIN_PASSWORD)
 	return gStorage.execSQL(CREATE_ADMIN, USER_ADMIN_NAME, passwd, "", ADMIN_PERM)
 }
 
@@ -131,4 +132,26 @@ func ListUser() (interface{}, error) {
 		users = append(users, user)
 	}
 	return &users, nil
+}
+
+func GetUserEmail(name string) (string, error) {
+	rows, err := gStorage.db.Query(GET_USER_EMAIL, name)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var email string
+	if rows.Next() {
+		err = rows.Scan(&email)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		return "", fmt.Errorf("user not exist")
+	}
+	return email, nil
+}
+
+func GetNewPassWord() string {
+	return common.GetRandString(NEW_PASSWORD_LENGTH)
 }

@@ -27,3 +27,30 @@ func GetChunkServerVersion(endpoints *[]string) (*map[string]int, error) {
 	}
 	return &ret, nil
 }
+
+func GetCopysetRaftStatus(endpoints *[]string) (map[string][]map[string]string, error) {
+	size := len(*endpoints)
+	results := make(chan comm.MetricResult, size)
+	comm.GetRaftStatusMetric(*endpoints, &results)
+
+	count := 0
+	// key: chunkserver's addr, value: copysets' raft status
+	ret := map[string][]map[string]string{}
+	for res := range results {
+		if res.Err == nil {
+			v, e := comm.ParseRaftStatusMetric(res.Result.(string))
+			if e != nil {
+				return nil, e
+			} else {
+				ret[res.Key.(string)] = v
+			}
+		} else {
+			ret[res.Key.(string)] = nil
+		}
+		count += 1
+		if count >= size {
+			break
+		}
+	}
+	return ret, nil
+}

@@ -110,7 +110,7 @@ func GetSnapshot(size, page uint32, uuid, user, fileName, status string) ([]Snap
 		return nil, fmt.Errorf(snapshotInfo.Message)
 	}
 
-	var snapshots []Snapshot
+	snapshots := []Snapshot{}
 	transferSnapshotInfo(&snapshotInfo.Snapshots, &snapshots)
 	return snapshots, nil
 }

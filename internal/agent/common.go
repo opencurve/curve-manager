@@ -9,6 +9,8 @@ const (
 	ETCD_SERVICE                  = "etcd"
 	MDS_SERVICE                   = "mds"
 	SNAPSHOT_CLONE_SERVER_SERVICE = "snapshotcloneserver"
+
+	RECYCLEBIN_DIR = "/RecycleBin"
 )
 
 type Server struct {
@@ -42,17 +44,17 @@ type Space struct {
 }
 
 type PoolInfo struct {
-	Id             uint32               `json:"id" binding:"required"`
-	Name           string               `json:"name" binding:"required"`
-	PhysicalPoolId uint32               `json:"physicalPoolId" binding:"required"`
-	Type           string               `json:"type" binding:"required"`
-	CreateTime     string               `json:"createTime" binding:"required"`
-	AllocateStatus string               `json:"allocateStatus" binding:"required"`
-	ScanEnable     bool                 `json:"scanEnable"`
-	ServerNum      uint32               `json:"serverNum" binding:"required"`
-	ChunkServerNum uint32               `json:"chunkServerNum" binding:"required"`
-	CopysetNum     uint32               `json:"copysetNum" binding:"required"`
-	Space          Space                `json:"space" binding:"required"`
+	Id             uint32                    `json:"id" binding:"required"`
+	Name           string                    `json:"name" binding:"required"`
+	PhysicalPoolId uint32                    `json:"physicalPoolId" binding:"required"`
+	Type           string                    `json:"type" binding:"required"`
+	CreateTime     string                    `json:"createTime" binding:"required"`
+	AllocateStatus string                    `json:"allocateStatus" binding:"required"`
+	ScanEnable     bool                      `json:"scanEnable"`
+	ServerNum      uint32                    `json:"serverNum" binding:"required"`
+	ChunkServerNum uint32                    `json:"chunkServerNum" binding:"required"`
+	CopysetNum     uint32                    `json:"copysetNum" binding:"required"`
+	Space          Space                     `json:"space" binding:"required"`
 	Performance    []bsmetricomm.Performance `json:"performance" binding:"required"`
 }
 
@@ -65,4 +67,17 @@ type ChunkServerStatus struct {
 	TotalNum  int          `json:"totalNum"`
 	OnlineNum int          `json:"onlineNum"`
 	Versions  []VersionNum `json:"versions"`
+}
+
+
+
+type CopysetNum struct {
+	Total     uint32 `json:"total" binding:"required"`
+	Unhealthy uint32 `json:"unhealthy" binding:"required"`
+}
+
+type ClusterStatus struct {
+	Healthy    bool       `json:"healthy" binding:"required"`
+	PoolNum    uint32     `json:"poolNum" binding:"required"`
+	CopysetNum CopysetNum `json:"copysetNum" binding:"required"`
 }

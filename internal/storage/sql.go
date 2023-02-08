@@ -42,6 +42,8 @@ var (
 
 	GET_USER = `SELECT * FROM user WHERE username = ?`
 
+	GET_USER_EMAIL = `SELECT email FROM user WHERE username = ?`
+
 	LIST_USER = `SELECT username, email, permission FROM user WHERE username != ?`
 
 	UPDATE_PASSWORD = `UPDATE user SET password = ? WHERE username = ?`
