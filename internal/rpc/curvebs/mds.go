@@ -1,3 +1,25 @@
+/*
+*  Copyright (c) 2023 NetEase Inc.
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+ */
+
+/*
+* Project: Curve-Manager
+* Created Date: 2023-02-11
+* Author: wanghai (SeanHai)
+ */
+
 package curvebs
 
 import (
@@ -485,7 +507,7 @@ func (cli *mdsClient) GetCopySetsInCluster() ([]CopySetInfo, error) {
 	return infos, nil
 }
 
-func (cli *mdsClient) GetFileAllocatedSize(filename string) (uint64, *map[uint32]uint64, error) {
+func (cli *mdsClient) GetFileAllocatedSize(filename string) (uint64, map[uint32]uint64, error) {
 	Rpc := &GetFileAllocatedSize{}
 	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_FILE_ALLOC_SIZE_FUNC)
 	Rpc.Request = &nameserver2.GetAllocatedSizeRequest{
@@ -503,9 +525,9 @@ func (cli *mdsClient) GetFileAllocatedSize(filename string) (uint64, *map[uint32
 	}
 	infos := make(map[uint32]uint64)
 	for k, v := range response.GetAllocSizeMap() {
-		infos[k] = v
+		infos[k] = v / common.GiB
 	}
-	return response.GetAllocatedSize(), &infos, nil
+	return response.GetAllocatedSize() / common.GiB, infos, nil
 }
 
 func getFileType(t nameserver2.FileType) string {
@@ -592,7 +614,7 @@ func (cli *mdsClient) ListDir(filename, owner, sig string, date uint64) ([]FileI
 		info.Owner = v.GetOwner()
 		info.ChunkSize = v.GetChunkSize()
 		info.SegmentSize = v.GetSegmentSize()
-		info.Length = v.GetLength() / common.GB
+		info.Length = v.GetLength() / common.GiB
 		info.Ctime = time.Unix(int64(v.GetCtime()/1000000), 0).Format(common.TIME_FORMAT)
 		info.SeqNum = v.GetSeqNum()
 		info.FileStatus = getFileStatus(v.GetFileStatus())
@@ -601,6 +623,7 @@ func (cli *mdsClient) ListDir(filename, owner, sig string, date uint64) ([]FileI
 		info.CloneLength = v.GetCloneLength()
 		info.StripeUnit = v.GetStripeUnit()
 		info.StripeCount = v.GetStripeCount()
+		info.ThrottleParams = []ThrottleParams{}
 		for _, p := range v.GetThrottleParams().GetThrottleParams() {
 			var param ThrottleParams
 			param.Type = getThrottleType(p.GetType())

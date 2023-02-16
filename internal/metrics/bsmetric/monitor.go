@@ -1,3 +1,25 @@
+/*
+*  Copyright (c) 2023 NetEase Inc.
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+ */
+
+/*
+* Project: Curve-Manager
+* Created Date: 2023-02-11
+* Author: wanghai (SeanHai)
+ */
+
 package bsmetric
 
 import (
@@ -18,12 +40,9 @@ const (
 	LOGICAL_POOL_SERVER_NUM       = "_server_num"
 	LOGICAL_POOL_CHUNKSERVER_NUM  = "_chunkserver_num"
 	LOGICAL_POOL_COPYSET_NUM      = "_copyset_num"
-)
 
-type Space struct {
-	Total uint64
-	Used  uint64
-}
+	FILE_PREFIX = "curve_client_"
+)
 
 type PoolItemNum struct {
 	ServerNum      uint32
@@ -45,8 +64,8 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 	}
 
 	// version, leader
-	rquestSize := 2
-	results := make(chan comm.MetricResult, rquestSize)
+	requestSize := 2
+	results := make(chan comm.MetricResult, requestSize)
 	go comm.QueryInstantMetric(comm.ETCD_CLUSTER_VERSION_NAME, &results)
 	go comm.QueryInstantMetric(comm.ETCD_SERVER_IS_LEADER_NAME, &results)
 
@@ -56,14 +75,14 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 			return ret, res.Err.Error()
 		}
 		if res.Key.(string) == comm.ETCD_CLUSTER_VERSION_NAME {
-			versions := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), comm.ETCD_CLUSTER_VERSION, false)
-			for k, v := range *versions {
-				(*retMap[k]).Version = v
+			versions := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), false)
+			for k, v := range versions {
+				(*retMap[k]).Version = v[comm.ETCD_CLUSTER_VERSION]
 			}
 		} else {
-			leaders := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), "", true)
-			for k, v := range *leaders {
-				if v == "1" {
+			leaders := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), true)
+			for k, v := range leaders {
+				if v["value"] == "1" {
 					(*retMap[k]).Leader = true
 				} else {
 					(*retMap[k]).Leader = false
@@ -72,7 +91,7 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 			}
 		}
 		count += 1
-		if count >= rquestSize {
+		if count >= requestSize {
 			break
 		}
 	}
@@ -82,13 +101,13 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 	return ret, ""
 }
 
-func GetPoolSpace(name string) (*Space, error) {
-	var space Space
+func GetPoolSpace(name string) (*comm.Space, error) {
+	space := comm.Space{}
 	poolName := comm.FormatToMetricName(name)
 
 	// total, alloc
-	rquestSize := 2
-	results := make(chan comm.MetricResult, rquestSize)
+	requestSize := 2
+	results := make(chan comm.MetricResult, requestSize)
 	totalName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_LOGICAL_CAPACITY)
 	usedName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_LOGICAL_ALLOC)
 
@@ -100,28 +119,28 @@ func GetPoolSpace(name string) (*Space, error) {
 		if res.Err != nil {
 			return &space, res.Err
 		}
-		ret := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), "", true)
+		ret := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), true)
 		if res.Key.(string) == totalName {
-			for _, v := range *ret {
-				total, ok := strconv.ParseUint(v, 10, 64)
+			for _, v := range ret {
+				total, ok := strconv.ParseUint(v["value"], 10, 64)
 				if ok != nil {
 					return nil, ok
 				}
-				space.Total = total / common.GB
+				space.Total = total / common.GiB
 				break
 			}
 		} else {
-			for _, v := range *ret {
-				used, ok := strconv.ParseUint(v, 10, 64)
+			for _, v := range ret {
+				used, ok := strconv.ParseUint(v["value"], 10, 64)
 				if ok != nil {
 					return nil, ok
 				}
-				space.Used = used / common.GB
+				space.Used = used / common.GiB
 				break
 			}
 		}
 		count += 1
-		if count >= rquestSize {
+		if count >= requestSize {
 			break
 		}
 	}
@@ -129,12 +148,12 @@ func GetPoolSpace(name string) (*Space, error) {
 }
 
 func GetPoolItemNum(name string) (*PoolItemNum, error) {
-	var poolItemNum PoolItemNum
+	poolItemNum := PoolItemNum{}
 	poolName := comm.FormatToMetricName(name)
 
 	// serverNUm, chunkserverNum, copysetNum
-	rquestSize := 3
-	results := make(chan comm.MetricResult, rquestSize)
+	requestSize := 3
+	results := make(chan comm.MetricResult, requestSize)
 	serverName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_SERVER_NUM)
 	chunkserverName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_CHUNKSERVER_NUM)
 	copysetName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_COPYSET_NUM)
@@ -148,9 +167,9 @@ func GetPoolItemNum(name string) (*PoolItemNum, error) {
 		if res.Err != nil {
 			return &poolItemNum, res.Err
 		}
-		ret := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), "", true)
-		for _, v := range *ret {
-			iv, ok := strconv.ParseUint(v, 10, 32)
+		ret := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), true)
+		for _, v := range ret {
+			iv, ok := strconv.ParseUint(v["value"], 10, 32)
 			if ok != nil {
 				return &poolItemNum, ok
 			}
@@ -164,7 +183,7 @@ func GetPoolItemNum(name string) (*PoolItemNum, error) {
 			break
 		}
 		count += 1
-		if count >= rquestSize {
+		if count >= requestSize {
 			break
 		}
 	}
@@ -179,4 +198,10 @@ func GetPoolPerformance(name string) ([]comm.Performance, error) {
 
 func GetClusterPerformance() ([]comm.Performance, error) {
 	return comm.GetPerformance(CLUSTER_METRIC_PREFIX)
+}
+
+func GetVolumePerformance(volumeName string) ([]comm.UserPerformance, error) {
+	name := comm.FormatToMetricName(volumeName)
+	prefix := fmt.Sprintf("%s%s_", FILE_PREFIX, name)
+	return comm.GetUserPerformance(prefix)
 }

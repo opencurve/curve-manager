@@ -1,3 +1,25 @@
+/*
+*  Copyright (c) 2023 NetEase Inc.
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+ */
+
+/*
+* Project: Curve-Manager
+* Created Date: 2023-02-11
+* Author: wanghai (SeanHai)
+ */
+
 package snapshotclone
 
 import (
@@ -68,7 +90,7 @@ func transferSnapshotInfo(in *[]snapshot, out *[]Snapshot) {
 		item.File = info.File
 		item.SeqNum = info.SeqNum
 		item.Ctime = time.Unix(int64(info.Ctime/1000000), 0).Format(common.TIME_FORMAT)
-		item.FileLength = info.FileLength / common.GB
+		item.FileLength = info.FileLength / common.GiB
 		item.Status = getStrStatus(info.Status)
 		item.Progress = fmt.Sprintf("%d%%", info.Progress)
 		*out = append(*out, item)
@@ -78,7 +100,7 @@ func transferSnapshotInfo(in *[]snapshot, out *[]Snapshot) {
 func GetSnapshot(size, page uint32, uuid, user, fileName, status string) ([]Snapshot, error) {
 	var snapshotInfo SnapShotInfo
 	params := fmt.Sprintf("Action=%s&Version=%s&Limit=%d&Offset=%d",
-	ACTION_GET_SNAPSHOT_LIST, SNAPSHOT_CLONE_VERSION, size, (page-1)*size)
+		ACTION_GET_SNAPSHOT_LIST, SNAPSHOT_CLONE_VERSION, size, (page-1)*size)
 	if uuid != "" {
 		params = fmt.Sprintf("%s&UUID=%s", params, uuid)
 	}

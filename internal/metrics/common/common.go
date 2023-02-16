@@ -1,3 +1,25 @@
+/*
+*  Copyright (c) 2023 NetEase Inc.
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+ */
+
+/*
+* Project: Curve-Manager
+* Created Date: 2023-02-11
+* Author: wanghai (SeanHai)
+ */
+
 package common
 
 import (
@@ -11,6 +33,11 @@ import (
 )
 
 const (
+	INSTANCE   = "instance"
+	DEVICE     = "device"
+	FSTYPE     = "fstype"
+	MOUNTPOINT = "mountpoint"
+
 	INSTANT_METRIC_PATH     = "/api/v1/query"
 	VECTOR_METRIC_QUERY_KEY = "query"
 
@@ -30,15 +57,33 @@ const (
 	ETCD_SERVER_IS_LEADER_NAME = "etcd_server_is_leader"
 	ETCD_CLUSTER_VERSION       = "cluster_version"
 
-	DEFAULT_RANGE = 180
+	DEFAULT_RANGE = 600
 	DEFAULT_STEP  = 15
 	WRITE_IOPS    = "write_iops"
 	WRITE_RATE    = "write_rate"
 	READ_IOPS     = "read_iops"
 	READ_REAT     = "read_rate"
+
+	WRITE_QPS = "write_qps"
+	WRITE_BPS = "write_bps"
+	READ_QPS  = "read_qps"
+	READ_BPS  = "read_bps"
 )
 
 type MetricResult common.QueryResult
+
+type Space struct {
+	Total uint64
+	Used  uint64
+}
+
+type FileSystemInfo struct {
+	Device     string
+	FsType     string
+	MountPoint string
+	SpaceTotal uint64
+	SpaceAvail uint64
+}
 
 /*
 prometheus http api resonse data struct
@@ -89,8 +134,8 @@ type bvarConfMetric struct {
 }
 
 type RangeMetricItem struct {
-	Timestamp float64
-	value     string
+	Timestamp float64 `json:"timestamp"`
+	Value     string  `json:"value"`
 }
 
 type Performance struct {
@@ -99,6 +144,35 @@ type Performance struct {
 	WriteBPS  string  `json:"writeBPS" binding:"required"`
 	ReadIOPS  string  `json:"readIOPS" binding:"required"`
 	ReadBPS   string  `json:"readBPS" binding:"required"`
+}
+
+type UserPerformance struct {
+	Timestamp float64 `json:"timestamp" binding:"required"`
+	WriteQPS  string  `json:"writeQPS" binding:"required"`
+	WriteBPS  string  `json:"writeBPS" binding:"required"`
+	ReadQPS   string  `json:"readQPS" binding:"required"`
+	ReadBPS   string  `json:"readBPS" binding:"required"`
+}
+
+func GetNodeCPUUtilizationName(instance string) string {
+	return fmt.Sprintf("(sum+by(instance)+(irate(node_cpu_seconds_total{instance=%q,mode!=%q}[%ds]))",
+		instance, NODE_CPU_IDLE, DEFAULT_STEP) +
+		fmt.Sprintf("/on(instance)+group_left+sum+by+(instance)((irate(node_cpu_seconds_total[%ds]))))*100",
+			DEFAULT_STEP)
+}
+
+func GetNodeMemUtilizationName(instance string) string {
+	return fmt.Sprintf("100-((node_memory_MemAvailable_bytes{instance=%q}*100)/node_memory_MemTotal_bytes)",
+		instance)
+}
+
+func GetNodeDiskPerformanceName(typeName, instance string) string {
+	return fmt.Sprintf("irate(%s{instance=%q}[%ds])", typeName, instance, DEFAULT_STEP)
+}
+
+func GetNodeNetWorkReveiveName(typeName, instance string) string {
+	return fmt.Sprintf("irate(%s{instance=%q,device!~%q}[%ds])/128",
+		typeName, instance, NODE_NETWORK_DEVICE_FILTER, DEFAULT_STEP)
 }
 
 func ParseBvarMetric(value string) (*map[string]string, error) {
@@ -231,7 +305,7 @@ func ParseRaftStatusMetric(value string) ([]map[string]string, error) {
 						return nil, fmt.Errorf(fmt.Sprintf("format error: %s", sitem))
 					}
 					tmap[sitemArr[0]] = sitemArr[1]
-				} 
+				}
 			} else {
 				return nil, fmt.Errorf(fmt.Sprintf("format error: %s", line))
 			}
@@ -254,49 +328,61 @@ func GetRaftStatusMetric(addrs []string, results *chan MetricResult) {
 	}
 }
 
-// eg: LogicalPool1 -> logical_pool1
+// bvar related: https://github.com/apache/brpc/blob/84ac073a6c2c6b15d6d754686255c26acc917bfd/src/bvar/variable.cpp#L946
 func FormatToMetricName(name string) string {
 	var target []string
 	pos := 0
 	for index, ch := range name {
-		if ch >= 65 && ch <= 90 && index != 0 {
-			target = append(target, strings.ToLower(name[pos:index]))
+		if ch >= 'A' && ch <= 'Z' {
+			if name[pos:index] != "" {
+				target = append(target, strings.ToLower(name[pos:index]))
+			}
 			pos = index
+		} else if !(ch >= '0' && ch <= '9') && !(ch >= 'a' && ch <= 'z') {
+			if name[pos:index] != "" {
+				target = append(target, strings.ToLower(name[pos:index]))
+			}
+			pos = index + 1
 		}
 	}
-	target = append(target, strings.ToLower(name[pos:]))
+	if name[pos:] != "" {
+		target = append(target, strings.ToLower(name[pos:]))
+	}
 	return strings.Join(target, "_")
 }
 
-func ParseVectorMetric(info *QueryResponseOfVector, key string, isValue bool) *map[string]string {
-	ret := make(map[string]string)
+// @return map[string]map[string]string, key: instance, value.key: meticKey or "value"
+func ParseVectorMetric(info *QueryResponseOfVector, isValue bool) map[string]map[string]string {
+	ret := make(map[string]map[string]string)
 	if info == nil {
-		return &ret
+		return ret
 	}
 	for _, item := range info.Data.Result {
 		if !isValue {
-			ret[item.Metric["instance"]] = item.Metric[key]
+			ret[item.Metric[INSTANCE]] = item.Metric
 		} else {
-			ret[item.Metric["instance"]] = item.Value[1].(string)
+			tmap := make(map[string]string)
+			tmap["value"] = item.Value[1].(string)
+			ret[item.Metric[INSTANCE]] = tmap
 		}
 	}
-	return &ret
+	return ret
 }
 
-func ParseMatrixMetric(info *QueryResponseOfMatrix) *map[string][]RangeMetricItem {
+func ParseMatrixMetric(info *QueryResponseOfMatrix, key string) map[string][]RangeMetricItem {
 	ret := make(map[string][]RangeMetricItem)
 	if info == nil {
-		return &ret
+		return ret
 	}
 	for _, item := range info.Data.Result {
 		for _, slice := range item.Values {
 			var rangeItem RangeMetricItem
 			rangeItem.Timestamp = slice[0].(float64)
-			rangeItem.value = slice[1].(string)
-			ret[item.Metric["instance"]] = append(ret[item.Metric["instance"]], rangeItem)
+			rangeItem.Value = slice[1].(string)
+			ret[item.Metric[key]] = append(ret[item.Metric[key]], rangeItem)
 		}
 	}
-	return &ret
+	return ret
 }
 
 func QueryInstantMetric(name string, results *chan MetricResult) {
@@ -321,13 +407,35 @@ func QueryRangeMetric(name string, results *chan MetricResult) {
 	}
 }
 
+func GetUtilization(name string) (map[string][]RangeMetricItem, error) {
+	end := time.Now().Unix()
+	start := end - DEFAULT_RANGE
+	metricName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds", name, start, end, DEFAULT_STEP)
+	utilization := make(map[string][]RangeMetricItem)
+	requestSize := 1
+	results := make(chan MetricResult, requestSize)
+	QueryRangeMetric(metricName, &results)
+	count := 0
+	for res := range results {
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		utilization = ParseMatrixMetric(res.Result.(*QueryResponseOfMatrix), INSTANCE)
+		count += 1
+		if count >= requestSize {
+			break
+		}
+	}
+	return utilization, nil
+}
+
 func GetPerformance(name string) ([]Performance, error) {
 	performance := []Performance{}
 	retMap := make(map[float64]*Performance)
 
 	// writeIOPS, writeBPS, readIOPS, readBPS
-	rquestSize := 4
-	results := make(chan MetricResult, rquestSize)
+	requestSize := 4
+	results := make(chan MetricResult, requestSize)
 	end := time.Now().Unix()
 	start := end - DEFAULT_RANGE
 	writeIOPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_IOPS, start, end, DEFAULT_STEP)
@@ -345,41 +453,41 @@ func GetPerformance(name string) ([]Performance, error) {
 		if res.Err != nil {
 			return nil, res.Err
 		}
-		ret := ParseMatrixMetric(res.Result.(*QueryResponseOfMatrix))
-		for _, v := range *ret {
+		ret := ParseMatrixMetric(res.Result.(*QueryResponseOfMatrix), INSTANCE)
+		for _, v := range ret {
 			for _, data := range v {
 				if p, ok := retMap[data.Timestamp]; ok {
 					switch res.Key.(string) {
 					case writeIOPSName:
-						p.WriteIOPS = data.value
+						p.WriteIOPS = data.Value
 					case writeBPSName:
-						p.WriteBPS = data.value
+						p.WriteBPS = data.Value
 					case readIOPSName:
-						p.ReadIOPS = data.value
+						p.ReadIOPS = data.Value
 					case readBPSName:
-						p.ReadBPS = data.value
+						p.ReadBPS = data.Value
 					}
 				} else {
 					switch res.Key.(string) {
 					case writeIOPSName:
 						retMap[data.Timestamp] = &Performance{
 							Timestamp: data.Timestamp,
-							WriteIOPS: data.value,
+							WriteIOPS: data.Value,
 						}
 					case writeBPSName:
 						retMap[data.Timestamp] = &Performance{
 							Timestamp: data.Timestamp,
-							WriteBPS:  data.value,
+							WriteBPS:  data.Value,
 						}
 					case readIOPSName:
 						retMap[data.Timestamp] = &Performance{
 							Timestamp: data.Timestamp,
-							ReadIOPS:  data.value,
+							ReadIOPS:  data.Value,
 						}
 					case readBPSName:
 						retMap[data.Timestamp] = &Performance{
 							Timestamp: data.Timestamp,
-							ReadBPS:   data.value,
+							ReadBPS:   data.Value,
 						}
 					}
 				}
@@ -387,7 +495,84 @@ func GetPerformance(name string) ([]Performance, error) {
 			break
 		}
 		count += 1
-		if count >= rquestSize {
+		if count >= requestSize {
+			break
+		}
+	}
+
+	for _, v := range retMap {
+		performance = append(performance, *v)
+	}
+	return performance, nil
+}
+
+func GetUserPerformance(name string) ([]UserPerformance, error) {
+	performance := []UserPerformance{}
+	retMap := make(map[float64]*UserPerformance)
+
+	// writeQPS, writeBPS, readQPS, readBPS
+	requestSize := 4
+	results := make(chan MetricResult, requestSize)
+	end := time.Now().Unix()
+	start := end - DEFAULT_RANGE
+	writeQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_QPS, start, end, DEFAULT_STEP)
+	writeBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_BPS, start, end, DEFAULT_STEP)
+	readQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_QPS, start, end, DEFAULT_STEP)
+	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_BPS, start, end, DEFAULT_STEP)
+
+	go QueryRangeMetric(writeQPSName, &results)
+	go QueryRangeMetric(writeBPSName, &results)
+	go QueryRangeMetric(readQPSName, &results)
+	go QueryRangeMetric(readBPSName, &results)
+
+	count := 0
+	for res := range results {
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		ret := ParseMatrixMetric(res.Result.(*QueryResponseOfMatrix), INSTANCE)
+		for _, v := range ret {
+			for _, data := range v {
+				if p, ok := retMap[data.Timestamp]; ok {
+					switch res.Key.(string) {
+					case writeQPSName:
+						p.WriteQPS = data.Value
+					case writeBPSName:
+						p.WriteBPS = data.Value
+					case readQPSName:
+						p.ReadQPS = data.Value
+					case readBPSName:
+						p.ReadBPS = data.Value
+					}
+				} else {
+					switch res.Key.(string) {
+					case writeQPSName:
+						retMap[data.Timestamp] = &UserPerformance{
+							Timestamp: data.Timestamp,
+							WriteQPS:  data.Value,
+						}
+					case writeBPSName:
+						retMap[data.Timestamp] = &UserPerformance{
+							Timestamp: data.Timestamp,
+							WriteBPS:  data.Value,
+						}
+					case readQPSName:
+						retMap[data.Timestamp] = &UserPerformance{
+							Timestamp: data.Timestamp,
+							ReadQPS:   data.Value,
+						}
+					case readBPSName:
+						retMap[data.Timestamp] = &UserPerformance{
+							Timestamp: data.Timestamp,
+							ReadBPS:   data.Value,
+						}
+					}
+				}
+			}
+			break
+		}
+		count += 1
+		if count >= requestSize {
 			break
 		}
 	}

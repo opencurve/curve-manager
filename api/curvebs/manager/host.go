@@ -16,14 +16,13 @@
 
 /*
 * Project: Curve-Manager
-* Created Date: 2023-02-11
+* Created Date: 2023-02-15
 * Author: wanghai (SeanHai)
  */
 
 package manager
 
 import (
-	"github.com/mcuadros/go-defaults"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/agent"
@@ -31,19 +30,26 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
-func ListVolume(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*ListVolumeRequest)
-	defaults.SetDefaults(data)
-	volumes, err := agent.ListVolume(data.Size, data.Page, data.Path, data.SortKey, data.SortDirection)
+func ListHost(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*ListHostRequest)
+	hosts, err := agent.ListHost(data.Size, data.Page)
 	if err != nil {
-		r.Logger().Error("list volume failed",
-			pigeon.Field("path", data.Path),
-			pigeon.Field("size", data.Size),
-			pigeon.Field("page", data.Page),
-			pigeon.Field("sortkey", data.SortKey),
+		r.Logger().Error("ListHost failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return core.Exit(r, errno.LIST_VOLUME_FAILED)
+		return core.Exit(r, errno.LIST_HOST_FAILED)
 	}
-	return core.ExitSuccessWithData(r, volumes)
+	return core.ExitSuccessWithData(r, hosts)
+}
+
+func GetHostPerformance(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetHostPerformanceRequest)
+	performance, err := agent.GetHostPerformance(data.HostName)
+	if err != nil {
+		r.Logger().Error("GetHostPerformance failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return core.Exit(r, errno.GET_HOST_PERFORMANCE)
+	}
+	return core.ExitSuccessWithData(r, performance)
 }

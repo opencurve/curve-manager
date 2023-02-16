@@ -1,3 +1,25 @@
+/*
+*  Copyright (c) 2023 NetEase Inc.
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+ */
+
+/*
+* Project: Curve-Manager
+* Created Date: 2023-02-11
+* Author: wanghai (SeanHai)
+ */
+
 package agent
 
 import (
@@ -20,6 +42,7 @@ func GetClusterSpace() (interface{}, error) {
 	for _, pool := range pools {
 		var info PoolInfo
 		info.Name = pool.Name
+		info.Id = pool.Id
 		poolInfos = append(poolInfos, info)
 	}
 
@@ -45,7 +68,7 @@ func GetClusterStatus() (interface{}, error) {
 	// 1. get pool numbers in cluster
 	pools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
-		clusterStatus.Healthy =  false
+		clusterStatus.Healthy = false
 		clusterStatus.PoolNum = 0
 		retErr = fmt.Errorf("ListLogicalPool failed: %s  |  ", err)
 	}
