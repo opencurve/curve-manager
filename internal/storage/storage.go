@@ -43,6 +43,7 @@ const (
 
 type UserInfo struct {
 	UserName   string `json:"userName" binding:"required"`
+	PassWord   string `json:"-"`
 	Email      string `json:"email"`
 	Permission int    `json:"permission" binding:"required"`
 }
@@ -99,30 +100,25 @@ func createAdminUser() error {
 	return gStorage.execSQL(CREATE_ADMIN, USER_ADMIN_NAME, passwd, "", ADMIN_PERM)
 }
 
-func Login(name, passwd string) (interface{}, error) {
+func GetUser(name string) (UserInfo, error) {
+	var user UserInfo
 	rows, err := gStorage.db.Query(GET_USER, name)
 	if err != nil {
-		return nil, err
+		return user, err
 	}
 	defer rows.Close()
-	var user UserInfo
-	var passWord string
 	if rows.Next() {
-		err = rows.Scan(&user.UserName, &passWord, &user.Email, &user.Permission)
+		err = rows.Scan(&user.UserName, &user.PassWord, &user.Email, &user.Permission)
 		if err != nil {
-			return nil, err
+			return user, err
 		}
 	} else {
-		return nil, fmt.Errorf("user not exist")
+		return user, fmt.Errorf("user not exist")
 	}
-
-	if passWord == passwd {
-		return &user, nil
-	}
-	return nil, fmt.Errorf(fmt.Sprintf("passwd mismatch, storedPasswd=%s, inPasswd=%s", passWord, passwd))
+	return user, nil
 }
 
-func CreateUser(name, passwd, email string, permission int) error {
+func SetUser(name, passwd, email string, permission int) error {
 	return gStorage.execSQL(CREATE_USER, name, passwd, email, permission)
 }
 
@@ -130,7 +126,7 @@ func DeleteUser(name string) error {
 	return gStorage.execSQL(DELETE_USER, name)
 }
 
-func ChangePassWord(name, passwd string) error {
+func UpdateUserPassWord(name, passwd string) error {
 	return gStorage.execSQL(UPDATE_PASSWORD, passwd, name)
 }
 

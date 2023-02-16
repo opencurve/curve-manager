@@ -24,7 +24,8 @@ package bsmetric
 
 import comm "github.com/opencurve/curve-manager/internal/metrics/common"
 
-func GetChunkServerVersion(endpoints *[]string) (*map[string]int, error) {
+// @return map[version]number
+func GetChunkServerVersion(endpoints *[]string) (map[string]int, error) {
 	size := len(*endpoints)
 	results := make(chan comm.MetricResult, size)
 	comm.GetBvarMetric(*endpoints, comm.CURVEBS_VERSION, &results)
@@ -47,16 +48,16 @@ func GetChunkServerVersion(endpoints *[]string) (*map[string]int, error) {
 			break
 		}
 	}
-	return &ret, nil
+	return ret, nil
 }
 
+// @return key: chunkserver's addr, value: copysets' raft status
 func GetCopysetRaftStatus(endpoints *[]string) (map[string][]map[string]string, error) {
 	size := len(*endpoints)
 	results := make(chan comm.MetricResult, size)
 	comm.GetRaftStatusMetric(*endpoints, &results)
 
 	count := 0
-	// key: chunkserver's addr, value: copysets' raft status
 	ret := map[string][]map[string]string{}
 	for res := range results {
 		if res.Err == nil {

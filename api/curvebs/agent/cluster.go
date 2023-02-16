@@ -23,19 +23,21 @@
 package agent
 
 import (
-	"fmt"
-
 	"github.com/opencurve/curve-manager/internal/common"
+	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
+	"github.com/opencurve/pigeon"
 )
 
-func GetClusterSpace() (interface{}, error) {
+func GetClusterSpace(r *pigeon.Request) (interface{}, errno.Errno) {
 	var result Space
 	// get logical pools form mds
 	pools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
-		return nil, fmt.Errorf("ListLogicalPool failed, %s", err)
+		r.Logger().Error("GetClusterSpace bsrpc.ListLogicalPool failed",
+			pigeon.Field("error", err))
+		return nil, errno.LIST_POOL_FAILED
 	}
 
 	var poolInfos []PoolInfo
@@ -48,29 +50,37 @@ func GetClusterSpace() (interface{}, error) {
 
 	err = getPoolSpace(&poolInfos)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("GetClusterSpace getPoolSpace failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_SPACE_FAILED
 	}
 	for _, info := range poolInfos {
 		result.Total += info.Space.Total
 		result.Alloc += info.Space.Alloc
 		result.CanRecycled += info.Space.CanRecycled
 	}
-	return &result, nil
+	return &result, errno.OK
 }
 
-func GetClusterPerformance() (interface{}, error) {
-	return bsmetric.GetClusterPerformance()
+func GetClusterPerformance(r *pigeon.Request) (interface{}, errno.Errno) {
+	performance, err := bsmetric.GetClusterPerformance()
+	if err != nil {
+		r.Logger().Error("GetClusterPerformance failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_CLUSTER_PERFORMANCE_FAILED
+	}
+	return performance, errno.OK
 }
 
-func GetClusterStatus() (interface{}, error) {
-	retErr := fmt.Errorf("")
+func GetClusterStatus(r *pigeon.Request) interface{} {
 	clusterStatus := ClusterStatus{}
 	// 1. get pool numbers in cluster
 	pools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
 		clusterStatus.Healthy = false
 		clusterStatus.PoolNum = 0
-		retErr = fmt.Errorf("ListLogicalPool failed: %s  |  ", err)
+		r.Logger().Error("GetClusterStatus bsrpc.ListLogicalPool failed",
+			pigeon.Field("error", err))
 	}
 	clusterStatus.PoolNum = uint32(len(pools))
 
@@ -94,7 +104,9 @@ func GetClusterStatus() (interface{}, error) {
 	count := 0
 	for res := range ret {
 		if res.Err != nil {
-			retErr = fmt.Errorf("%sCheck %s service healthy failed: %s  |  ", retErr, res.Key.(string), res.Err)
+			r.Logger().Error("GetClusterStatus check service status failed",
+				pigeon.Field("service", res.Key.(string)),
+				pigeon.Field("error", res.Err))
 		}
 		healthy = healthy && res.Result.(bool)
 		count += 1
@@ -107,11 +119,12 @@ func GetClusterStatus() (interface{}, error) {
 	cs := NewCopyset()
 	health, err := cs.checkCopysetsInCluster()
 	if err != nil {
-		retErr = fmt.Errorf("%sCheck copysets in cluster failed: %s  |  ", retErr, err)
+		r.Logger().Error("GetClusterStatus checkCopysetsInCluster failed",
+			pigeon.Field("error", err))
 	}
 	healthy = health && healthy
 	clusterStatus.Healthy = healthy
 	clusterStatus.CopysetNum.Total = cs.getCopysetTotalNum()
 	clusterStatus.CopysetNum.Unhealthy = cs.getCopysetUnhealthyNum()
-	return clusterStatus, retErr
+	return clusterStatus
 }

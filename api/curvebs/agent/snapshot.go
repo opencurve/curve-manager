@@ -16,33 +16,30 @@
 
 /*
 * Project: Curve-Manager
-* Created Date: 2023-02-15
+* Created Date: 2023-02-11
 * Author: wanghai (SeanHai)
  */
 
-package manager
+package agent
 
 import (
-	"github.com/opencurve/curve-manager/api/curvebs/agent"
-	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
+	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/pigeon"
 )
 
-func ListHost(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*ListHostRequest)
-	hosts, err := agent.ListHost(r, data.Size, data.Page)
-	if err != errno.OK {
-		return core.Exit(r, err)
+func GetSnapshot(r *pigeon.Request, size, page uint32, uuid, user, fileName, status string) (interface{}, errno.Errno) {
+	snapshots, err := snapshotclone.GetSnapshot(size, page, uuid, user, fileName, status)
+	if err != nil {
+		r.Logger().Error("GetSnapshot failed",
+			pigeon.Field("size", size),
+			pigeon.Field("page", page),
+			pigeon.Field("uuid", uuid),
+			pigeon.Field("user", user),
+			pigeon.Field("fileName", fileName),
+			pigeon.Field("status", status),
+			pigeon.Field("error", err))
+		return nil, errno.LIST_SNAPSHOT_FAILED
 	}
-	return core.ExitSuccessWithData(r, hosts)
-}
-
-func GetHostPerformance(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*GetHostPerformanceRequest)
-	performance, err := agent.GetHostPerformance(r, data.HostName)
-	if err != errno.OK {
-		return core.Exit(r, err)
-	}
-	return core.ExitSuccessWithData(r, performance)
+	return snapshots, errno.OK
 }

@@ -25,7 +25,9 @@ package agent
 import (
 	"sort"
 
+	"github.com/opencurve/curve-manager/internal/errno"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
+	"github.com/opencurve/pigeon"
 )
 
 func sortDisk(disks []DiskInfo) {
@@ -39,17 +41,24 @@ func sortDisk(disks []DiskInfo) {
 	})
 }
 
-func ListDisk(size, page uint32, hostname string) (interface{}, error) {
+func ListDisk(r *pigeon.Request, size, page uint32, hostname string) (interface{}, errno.Errno) {
 	disksInfo := []DiskInfo{}
+	// map[instance]map[device]*DiskInfo
 	retMap := make(map[string]map[string]*DiskInfo)
 	instance, err := getInstanceByHostName(hostname)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListDisk getInstanceByHostName failed",
+			pigeon.Field("hostname", hostname),
+			pigeon.Field("error", err))
+		return nil, errno.GET_INSTANCE_BY_HOSTNAME_FAILED
 	}
 	// 1. get disk device list
 	disks, err := metricomm.ListDisk(instance)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListDisk metricomm.ListDisk failed",
+			pigeon.Field("instance", instance),
+			pigeon.Field("error", err))
+		return nil, errno.LIST_DISK_FAILED
 	}
 	// nstance -> hostname
 	insts := make([]string, len(disks))
@@ -58,7 +67,9 @@ func ListDisk(size, page uint32, hostname string) (interface{}, error) {
 	}
 	inst2host, err := getHostNameByInstance(insts)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListDisk getHostNameByInstance failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_HOSTNAME_BY_INSTANCE_FAILED
 	}
 	for inst, devs := range disks {
 		retMap[inst] = make(map[string]*DiskInfo)
@@ -73,7 +84,10 @@ func ListDisk(size, page uint32, hostname string) (interface{}, error) {
 	// 2. get filesystem info
 	fileSystemInfos, err := metricomm.GetFileSystemInfo(instance)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListDisk metricomm.GetFileSystemInfo failed",
+			pigeon.Field("instance", instance),
+			pigeon.Field("error", err))
+		return nil, errno.GET_FILESYSTEM_INFO_FAILED
 	}
 	for inst, infos := range fileSystemInfos {
 		for dev, info := range infos {
@@ -91,7 +105,6 @@ func ListDisk(size, page uint32, hostname string) (interface{}, error) {
 			disksInfo = append(disksInfo, *v)
 		}
 	}
-
 	sortDisk(disksInfo)
 	length := uint32(len(disksInfo))
 	start := (page - 1) * size
@@ -101,5 +114,5 @@ func ListDisk(size, page uint32, hostname string) (interface{}, error) {
 	} else {
 		end = page * size
 	}
-	return disksInfo[start:end], nil
+	return disksInfo[start:end], errno.OK
 }

@@ -23,12 +23,12 @@
 package agent
 
 import (
-	"fmt"
-
 	"github.com/opencurve/curve-manager/internal/common"
+	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
+	"github.com/opencurve/pigeon"
 )
 
 // get chunkservers of server concurrently
@@ -231,12 +231,14 @@ func getPoolPerformance(pools *[]PoolInfo) error {
 	return nil
 }
 
-func ListLogicalPool() (interface{}, error) {
+func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	result := []PoolInfo{}
 	// get info from mds
 	pools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
-		return nil, fmt.Errorf("ListLogicalPool failed, %s", err)
+		r.Logger().Error("ListLogicalPool bsrpc.ListLogicalPool failed",
+			pigeon.Field("error", err))
+		return nil, errno.LIST_POOL_FAILED
 	}
 
 	for _, pool := range pools {
@@ -254,26 +256,34 @@ func ListLogicalPool() (interface{}, error) {
 	// get info from monitor
 	err = getPoolItemNum(&result)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListLogicalPool getPoolItemNum failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_ITEM_NUMBER_FAILED
 	}
 
 	err = getPoolSpace(&result)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListLogicalPool getPoolSpace failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_SPACE_FAILED
 	}
 
 	err = getPoolPerformance(&result)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListLogicalPool getPoolPerformance failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_PERFORMANCE_FAILED
 	}
-	return &result, nil
+	return &result, errno.OK
 }
 
-func ListTopology() (interface{}, error) {
+func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {
 	result := []Pool{}
 	logicalPools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
-		return nil, fmt.Errorf("ListLogicalPool failed, %s", err)
+		r.Logger().Error("ListTopology bsrpc.ListLogicalPool failed",
+			pigeon.Field("error", err))
+		return nil, errno.LIST_POOL_FAILED
 	}
 	for _, lp := range logicalPools {
 		var pool Pool
@@ -285,7 +295,9 @@ func ListTopology() (interface{}, error) {
 	}
 	err = listPoolZone(&result)
 	if err != nil {
-		return nil, err
+		r.Logger().Error("ListTopology listPoolZone failed",
+			pigeon.Field("error", err))
+		return nil, errno.LIST_POOL_ZONE_FAILED
 	}
-	return &result, nil
+	return &result, errno.OK
 }

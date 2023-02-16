@@ -53,26 +53,50 @@ var (
 	UNSUPPORT_HTTP_METHOD = Errno{405001, "unsupport http method"}
 
 	// 503
-	USER_LOGIN_FAILED       = Errno{503001, "user login failed"}
-	CREATE_USER_FAILED      = Errno{503002, "create user failed"}
-	DELETE_USER_FAILED      = Errno{503003, "delete user failed"}
-	CHANGE_PASSWORD_FAILED  = Errno{503004, "change user password failed"}
-	RESET_PASSWORD_FAILED   = Errno{503005, "change user password failed"}
-	UPDATE_USER_INFO_FAILED = Errno{503006, "update user info failed"}
-	LIST_USER_FAILED        = Errno{503007, "list user failed"}
+	// user/storage
+	GET_USER_FAILED             = Errno{503001, "get user failed"}
+	USER_PASSWORD_NOT_MATCH     = Errno{503002, "user password not match"}
+	CREATE_USER_FAILED          = Errno{503003, "create user failed"}
+	DELETE_USER_FAILED          = Errno{503004, "delete user failed"}
+	GET_USER_PASSWORD_FAILED    = Errno{503005, "get user password failed"}
+	UPDATE_USER_PASSWORD_FAILED = Errno{503006, "update user password failed"}
+	GET_USER_EMAIL_FAILED       = Errno{503007, "get user email failed"}
+	USER_EMAIL_EMPTY            = Errno{503008, "user email is empty"}
+	SEND_USER_PASSWORD_FAILED   = Errno{503009, "send user email failed"}
+	UPDATE_USER_INFO_FAILED     = Errno{503010, "update user info failed"}
+	LIST_USER_FAILED            = Errno{503011, "list user failed"}
 
-	GET_ETCD_STATUS_FAILED           = Errno{503101, "get etcd status failed"}
-	GET_MDS_STATUS_FAILED            = Errno{503102, "get mds status failed"}
-	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503103, "get snapshotcloneserver status failed"}
-	GET_CHUNKSERVER_STATUS_FAILED    = Errno{503104, "get chunkserver status failed"}
+	// hadware/metric
+	GET_INSTANCE_BY_HOSTNAME_FAILED  = Errno{503101, "get instance by hostname failed"}
+	GET_HOSTNAME_BY_INSTANCE_FAILED  = Errno{503102, "get hostname by instance failed"}
+	LIST_DISK_FAILED                 = Errno{503103, "list disk failed"}
+	GET_FILESYSTEM_INFO_FAILED       = Errno{503104, "get filesystem info failed"}
+	GET_HOST_INFO_FAILED             = Errno{503105, "get host info failed"}
+	GET_HOST_CPU_INFO_FAILED         = Errno{503106, "get host cpu info failed"}
+	GET_HOST_MEM_INFO_FAILED         = Errno{503107, "get host memory info failed"}
+	GET_HOST_DISK_NUM_FAILED         = Errno{503108, "get host disk number failed"}
+	GET_HOST_CPU_UTILIZATION_FAILED  = Errno{503109, "get host cpu utilization failed"}
+	GET_HOST_MEM_UTILIZATION_FAILED  = Errno{503110, "get host momery utilization failed"}
+	GET_HOST_DISK_PERFORMANCE_FAILED = Errno{503111, "get host disk performance failed"}
+	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503112, "get host network traffic failed"}
 
-	GET_CLUSTER_SPACE_FAILED       = Errno{503201, "get cluster space failed"}
-	GET_CLUSTER_PERFORMANCE_FAILED = Errno{503202, "get cluster performance failed"}
-	LIST_TOPO_FAILED               = Errno{503203, "list topo failed"}
-	LIST_POOL_FAILED               = Errno{503204, "list pool failed"}
-	LIST_VOLUME_FAILED             = Errno{503205, "list volume failed"}
-	LIST_SNAPSHOT_FAILED           = Errno{503206, "list snapshot failed"}
-	LIST_HOST_FAILED               = Errno{503207, "list host failed"}
-	GET_HOST_PERFORMANCE           = Errno{503208, "get host performance failed"}
-	LIST_DISK_FAILED               = Errno{503209, "list disk failed"}
+	// curve/metric
+	GET_ETCD_STATUS_FAILED           = Errno{503201, "get etcd status failed"}
+	GET_MDS_STATUS_FAILED            = Errno{503202, "get mds status failed"}
+	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503203, "get snapshotcloneserver status failed"}
+	GET_CHUNKSERVER_VERSION_FAILED   = Errno{503204, "get host network traffic failed"}
+	GET_POOL_ITEM_NUMBER_FAILED      = Errno{503205, "get pool item number failed"}
+	GET_POOL_PERFORMANCE_FAILED      = Errno{503206, "get pool performance failed"}
+	GET_ROOT_AUTH_FAILED             = Errno{503207, "get root auth failed"}
+	GET_VOLUME_PERFORMANCE_FAILED    = Errno{503208, "get volume performance failed"}
+
+	// rpc
+	LIST_SNAPSHOT_FAILED              = Errno{503301, "list snapshot failed"}
+	GET_CHUNKSERVER_IN_CLUSTER_FAILED = Errno{503302, "get chunkserver in cluster failed"}
+	LIST_POOL_FAILED                  = Errno{503303, "list pool failed"}
+	GET_POOL_SPACE_FAILED             = Errno{503304, "get pool space failed"}
+	GET_CLUSTER_PERFORMANCE_FAILED    = Errno{503305, "get cluster performance failed"}
+	LIST_POOL_ZONE_FAILED             = Errno{503306, "list pool zone failed"}
+	LIST_VOLUME_FAILED                = Errno{503307, "list volume failed"}
+	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{503308, "get volume alloc size failed"}
 )

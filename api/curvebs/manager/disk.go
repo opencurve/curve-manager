@@ -23,21 +23,17 @@
 package manager
 
 import (
-	comm "github.com/opencurve/curve-manager/api/common"
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
-	"github.com/opencurve/curve-manager/internal/agent"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/pigeon"
 )
 
 func ListDisk(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*ListDiskRequest)
-	disks, err := agent.ListDisk(data.Size, data.Page, data.HostName)
-	if err != nil {
-		r.Logger().Error("ListDisk failed",
-			pigeon.Field("error", err),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return core.Exit(r, errno.LIST_DISK_FAILED)
+	disks, err := agent.ListDisk(r, data.Size, data.Page, data.HostName)
+	if err != errno.OK {
+		return core.Exit(r, err)
 	}
 	return core.ExitSuccessWithData(r, disks)
 }

@@ -12,13 +12,13 @@
 *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
-*/
+ */
 
 /*
 * Project: Curve-Manager
 * Created Date: 2023-02-11
 * Author: wanghai (SeanHai)
-*/
+ */
 
 package agent
 
@@ -28,9 +28,11 @@ import (
 	"time"
 
 	"github.com/opencurve/curve-manager/internal/common"
+	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	comm "github.com/opencurve/curve-manager/internal/metrics/common"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
+	"github.com/opencurve/pigeon"
 )
 
 const (
@@ -147,11 +149,17 @@ func getVolumePerformance(path string, volumes *[]VolumeInfo) error {
 	return nil
 }
 
-func ListVolume(size, page uint32, path, key string, direction int) (interface{}, error) {
+func ListVolume(r *pigeon.Request, size, page uint32, path, key string, direction int) (interface{}, errno.Errno) {
 	// get root auth info
 	authInfo, err := bsmetric.GetAuthInfoOfRoot()
 	if err != "" {
-		return nil, fmt.Errorf(err)
+		r.Logger().Error("ListVolume bsmetric.GetAuthInfoOfRoot failed",
+			pigeon.Field("path", path),
+			pigeon.Field("size", size),
+			pigeon.Field("page", page),
+			pigeon.Field("sortkey", key),
+			pigeon.Field("error", err))
+		return nil, errno.GET_ROOT_AUTH_FAILED
 	}
 
 	// create signature
@@ -161,11 +169,17 @@ func ListVolume(size, page uint32, path, key string, direction int) (interface{}
 
 	fileInfos, e := bsrpc.GMdsClient.ListDir(path, authInfo.UserName, sig, uint64(date))
 	if e != nil {
-		return nil, fmt.Errorf("ListDir failed, %s", e)
+		r.Logger().Error("ListVolume bsrpc.ListDir failed",
+			pigeon.Field("path", path),
+			pigeon.Field("size", size),
+			pigeon.Field("page", page),
+			pigeon.Field("sortkey", key),
+			pigeon.Field("error", err))
+		return nil, errno.LIST_VOLUME_FAILED
 	}
 
 	if len(fileInfos) == 0 {
-		return nil, nil
+		return []VolumeInfo{}, errno.OK
 	}
 
 	sortFile(fileInfos, key, direction)
@@ -188,13 +202,17 @@ func ListVolume(size, page uint32, path, key string, direction int) (interface{}
 	}
 	e = getVolumeAllocSize(path, &volumes)
 	if e != nil {
-		return nil, e
+		r.Logger().Error("ListVolume getVolumeAllocSize failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_VOLUME_ALLOC_SIZE_FAILED
 	}
 
 	// get performance of the volume
 	e = getVolumePerformance(path, &volumes)
 	if e != nil {
-		return nil, e
+		r.Logger().Error("ListVolume getVolumePerformance failed",
+			pigeon.Field("error", err))
+		return nil, errno.GET_VOLUME_PERFORMANCE_FAILED
 	}
-	return volumes, nil
+	return volumes, errno.OK
 }
