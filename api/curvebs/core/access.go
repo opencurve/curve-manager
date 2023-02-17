@@ -23,9 +23,110 @@
 package core
 
 import (
+	"fmt"
+	"reflect"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	apicomm "github.com/opencurve/curve-manager/api/common"
+	"github.com/opencurve/curve-manager/internal/common"
+	"github.com/opencurve/curve-manager/internal/errno"
+	"github.com/opencurve/curve-manager/internal/storage"
+
 	"github.com/opencurve/pigeon"
 )
 
-func AccessAllowed(r *pigeon.Request, data interface{}) bool {
+const (
+	ACCESS_API_ENABLE_CHECK     = "access.api.enable_check"
+	ACCESS_API_EXPIRE_SECONDS   = "access.api.expire_seconds"
+	ACCESS_LOGIN_EXPIRE_SECONDS = "access.login.expire_seconds"
+)
+
+var (
+	// a switch whether to enable interface verification, default false
+	enableCheck bool
+	// api expire time, default 60s
+	apiExpireSeconds int
+	// login expire time, default 600s
+	loginExpireSeconds int
+)
+
+func InitAccess(cfg *pigeon.Configure) {
+	enableCheck = cfg.GetConfig().GetBool(ACCESS_API_ENABLE_CHECK)
+	apiExpireSeconds = cfg.GetConfig().GetInt(ACCESS_API_EXPIRE_SECONDS)
+	if apiExpireSeconds <= 0 {
+		apiExpireSeconds = 60
+	}
+	loginExpireSeconds = cfg.GetConfig().GetInt(ACCESS_LOGIN_EXPIRE_SECONDS)
+	if loginExpireSeconds <= 0 {
+		loginExpireSeconds = 600
+	}
+}
+
+func isLoginRequest(r *pigeon.Request) bool {
+	return r.Args["method"] == "user.login"
+}
+
+func checkTimeOut(r *pigeon.Request) bool {
+	argTime := r.HeadersIn[apicomm.HEADER_AUTH_TIMESTAMP]
+	inTime, err := strconv.ParseInt(argTime, 10, 64)
+	if err != nil {
+		r.Logger().Error("checkTimeOut failed, invalid time argument",
+			pigeon.Field("time", argTime))
+		return false
+	}
+	nowSec := time.Now().Unix()
+	if inTime+int64(apiExpireSeconds) < nowSec {
+		r.Logger().Error("checkTimeOut failed, time expired",
+			pigeon.Field("inTime", inTime),
+			pigeon.Field("ttl", apiExpireSeconds),
+			pigeon.Field("now", nowSec))
+		return false
+	}
 	return true
+}
+
+/*
+* algorithm：
+* 1. String-Items: HTTP-Method; URI; Args; QueryValue1; QueryValue2; ... QueryValuen; Timestamp; Token
+* 2. Sorted-Items: sort String-Items based alphabetically
+* 3. Sign-String: join Sorted-Items with ":"
+* 4. Sign: MD532Little(Sign-String)
+ */
+func checkSignature(r *pigeon.Request, data interface{}) bool {
+	token := r.HeadersIn[apicomm.HEADER_AUTH_TOKEN]
+	inSign := r.HeadersIn[apicomm.HEADER_AUTH_SIGN]
+	timeStamp := r.HeadersIn[apicomm.HEADER_AUTH_TIMESTAMP]
+	stringItems := []string{r.Method, r.Uri, timeStamp, token}
+	for _, v := range r.Args {
+		stringItems = append(stringItems, v)
+	}
+	v := reflect.ValueOf(data)
+	for i := 0; i < v.Elem().NumField(); i++ {
+		stringItems = append(stringItems, fmt.Sprintf("%+v", v.Elem().Field(i)))
+	}
+	sort.Strings(stringItems)
+	signStr := strings.Join(stringItems, ":")
+	r.Logger().Error("checkSignature",
+		pigeon.Field("sign", signStr))
+	sign := common.GetMd5Sum32Little(signStr)
+	return inSign == sign
+}
+
+func checkToken(r *pigeon.Request) bool {
+	return storage.CheckSession(r.HeadersIn[apicomm.HEADER_AUTH_TOKEN], apiExpireSeconds)
+}
+
+func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {
+	if !isLoginRequest(r) {
+		if !checkToken(r) {
+			return errno.USER_IS_UNAUTHORIZED
+		}
+		if !checkTimeOut(r) || !checkSignature(r, data) {
+			return errno.REQUEST_IS_DENIED_FOR_SIGNATURE
+		}
+	}
+	return errno.OK
 }

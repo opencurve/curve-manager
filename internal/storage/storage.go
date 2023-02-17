@@ -26,6 +26,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/opencurve/curve-manager/internal/common"
@@ -46,11 +47,14 @@ type UserInfo struct {
 	PassWord   string `json:"-"`
 	Email      string `json:"email"`
 	Permission int    `json:"permission" binding:"required"`
+	Token      string `json:"token" binding:"required"`
 }
 
 type Storage struct {
-	db    *sql.DB
-	mutex *sync.Mutex
+	db           *sql.DB
+	mutex        *sync.Mutex
+	session      map[string]int64
+	sessionMutex *sync.Mutex
 }
 
 func Init(cfg *pigeon.Configure) error {
@@ -64,7 +68,7 @@ func Init(cfg *pigeon.Configure) error {
 	if err != nil {
 		return err
 	}
-	gStorage = &Storage{db: db, mutex: &sync.Mutex{}}
+	gStorage = &Storage{db: db, mutex: &sync.Mutex{}, session: make(map[string]int64), sessionMutex: &sync.Mutex{}}
 
 	// init user table
 	if err = gStorage.execSQL(CREATE_USER_TABLE); err != nil {
@@ -98,6 +102,31 @@ func (s *Storage) execSQL(query string, args ...interface{}) error {
 func createAdminUser() error {
 	passwd := common.GetMd5Sum32Little(USER_ADMIN_PASSWORD)
 	return gStorage.execSQL(CREATE_ADMIN, USER_ADMIN_NAME, passwd, "", ADMIN_PERM)
+}
+
+func AddSession(userInfo *UserInfo) {
+	now := time.Now().Unix()
+	sigStr := fmt.Sprintf("username=%s&password=%s&timestamp=%d", userInfo.UserName, userInfo.PassWord, now)
+	sig := common.GetMd5Sum32Little(sigStr)
+	gStorage.sessionMutex.Lock()
+	defer gStorage.sessionMutex.Unlock()
+	gStorage.session[sig] = now
+	userInfo.Token = sig
+}
+
+func CheckSession(s string, expireSec int) bool {
+	now := time.Now().Unix()
+	gStorage.sessionMutex.Lock()
+	defer gStorage.sessionMutex.Unlock()
+	if time, ok := gStorage.session[s]; ok {
+		if time+int64(expireSec) < now {
+			delete(gStorage.session, s)
+			return false
+		}
+		gStorage.session[s] = now
+		return true
+	}
+	return false
 }
 
 func GetUser(name string) (UserInfo, error) {

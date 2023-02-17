@@ -47,6 +47,7 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 			pigeon.Field("error", err))
 		return nil, errno.USER_PASSWORD_NOT_MATCH
 	}
+	storage.AddSession(&userInfo)
 	return userInfo, errno.OK
 }
 

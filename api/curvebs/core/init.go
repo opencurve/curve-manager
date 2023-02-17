@@ -53,6 +53,8 @@ func initClients(cfg *pigeon.Configure) error {
 }
 
 func Init(cfg *pigeon.Configure) error {
+	// init access
+	InitAccess(cfg)
 	// init storage
 	err := storage.Init(cfg)
 	if err != nil {

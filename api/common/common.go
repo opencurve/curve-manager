@@ -25,5 +25,8 @@ package common
 const (
 	HEADER_REQUEST_ID            = "X-Pigeon-Request-Id"
 	HEADER_ERROR_CODE            = "X-Pigeon-Error-Code"
+	HEADER_AUTH_SIGN             = "X-Pigeon-Auth-Sign"
+	HEADER_AUTH_TOKEN            = "X-Pigeon-Auth-Token"
+	HEADER_AUTH_TIMESTAMP        = "X-Pigeon-Auth-Timestamp"
 	HEADER_CURVE_CONSOLE_VERSION = "X-Pigeon-Curve-Manager-Version"
 )

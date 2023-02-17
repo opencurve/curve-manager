@@ -46,6 +46,9 @@ var (
 	HTTP_METHOD_MISMATCHED    = Errno{400003, "http method mismatch"}
 	BAD_REQUEST_FORM_PARAM    = Errno{400004, "bad request form param"}
 
+	// 401
+	USER_IS_UNAUTHORIZED = Errno{401001, "user is unauthorized"}
+
 	// 403
 	REQUEST_IS_DENIED_FOR_SIGNATURE = Errno{403000, "request is denied for signature"}
 

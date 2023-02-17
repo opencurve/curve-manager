@@ -57,8 +57,8 @@ func Entrypoint(r *pigeon.Request) bool {
 		return core.Exit(r, errno.BAD_REQUEST_FORM_PARAM)
 	}
 
-	if !core.AccessAllowed(r, data) {
-		return core.Exit(r, errno.REQUEST_IS_DENIED_FOR_SIGNATURE)
+	if e := core.AccessAllowed(r, data); e != errno.OK {
+		return core.Exit(r, e)
 	}
 	return request.handler(r, &Context{data})
 }
