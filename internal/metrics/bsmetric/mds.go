@@ -38,11 +38,6 @@ const (
 	MDS_CONF_AUTH_PASSWORD = "mds_config_mds_auth_root_password"
 )
 
-type AuthInfo struct {
-	UserName string
-	PassWord string
-}
-
 func GetMdsStatus() ([]ServiceStatus, string) {
 	size := len(core.GMetricClient.MdsDummyAddr)
 	results := make(chan comm.MetricResult, size)
@@ -84,7 +79,7 @@ func GetMdsStatus() ([]ServiceStatus, string) {
 	return ret, errors
 }
 
-func GetAuthInfoOfRoot() (*AuthInfo, string) {
+func GetAuthInfoOfRoot() (string, string, string) {
 	size := len(core.GMetricClient.MdsDummyAddr)
 	results := make(chan comm.MetricResult, size)
 	names := fmt.Sprintf("%s,%s", MDS_CONF_AUTH_USERNAME, MDS_CONF_AUTH_PASSWORD)
@@ -92,16 +87,16 @@ func GetAuthInfoOfRoot() (*AuthInfo, string) {
 
 	count := 0
 	var errors string
-	var result AuthInfo
+	var userName, passWord string
 	for res := range results {
 		if res.Err == nil {
 			v, e := comm.ParseBvarMetric(res.Result.(string))
 			if e != nil {
 				errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, e.Error())
 			} else {
-				result.UserName = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_USERNAME])
-				result.PassWord = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_PASSWORD])
-				return &result, ""
+				userName = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_USERNAME])
+				passWord = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_PASSWORD])
+				return userName, passWord, ""
 			}
 		} else {
 			errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, res.Err.Error())
@@ -111,5 +106,5 @@ func GetAuthInfoOfRoot() (*AuthInfo, string) {
 			break
 		}
 	}
-	return nil, errors
+	return "", "", errors
 }

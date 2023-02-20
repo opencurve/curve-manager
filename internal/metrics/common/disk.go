@@ -46,7 +46,7 @@ const (
 )
 
 // @return map[string][]Performance, key: device, value: performance at different timestamp
-func GetDiskPerformance(instance string) (map[string][]Performance, error) {
+func GetDiskPerformance(instance string) (interface{}, error) {
 	performance := make(map[string][]Performance)
 	retMap := make(map[string]map[float64]*Performance)
 

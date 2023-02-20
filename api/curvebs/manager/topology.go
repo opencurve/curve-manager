@@ -60,3 +60,12 @@ func ListLogicalPool(r *pigeon.Request, ctx *Context) bool {
 	}
 	return core.ExitSuccessWithData(r, pools)
 }
+
+func GetLogicalPool(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetLogicalPoolRequest)
+	pools, err := agent.GetLogicalPool(r, data.Id)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, pools)
+}

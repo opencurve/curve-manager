@@ -37,15 +37,6 @@
 
 package storage
 
-const (
-	USER_ADMIN_NAME     = "admin"
-	USER_ADMIN_PASSWORD = "curve"
-
-	ADMIN_PERM      = 0
-	READ_PERM       = 1
-	READ_WRITE_PERM = 2
-)
-
 var (
 	// table user
 	CREATE_USER_TABLE = `

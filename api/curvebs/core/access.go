@@ -42,6 +42,13 @@ const (
 	ACCESS_API_ENABLE_CHECK     = "access.api.enable_check"
 	ACCESS_API_EXPIRE_SECONDS   = "access.api.expire_seconds"
 	ACCESS_LOGIN_EXPIRE_SECONDS = "access.login.expire_seconds"
+
+	// method
+	METHOD             = "method"
+	METHOD_USER_LOGIN  = "user.login"
+	METHOD_USER_CREATE = "user.create"
+	METHOD_USER_DELETE = "user.delete"
+	METHOD_USER_LIST   = "user.list"
 )
 
 var (
@@ -66,7 +73,12 @@ func InitAccess(cfg *pigeon.Configure) {
 }
 
 func isLoginRequest(r *pigeon.Request) bool {
-	return r.Args["method"] == "user.login"
+	return r.Args[METHOD] == METHOD_USER_LOGIN
+}
+
+func isAdminRequest(r *pigeon.Request) bool {
+	method := r.Args[METHOD]
+	return method == METHOD_USER_CREATE || method == METHOD_USER_DELETE || method == METHOD_USER_LIST
 }
 
 func checkTimeOut(r *pigeon.Request) bool {
@@ -116,7 +128,14 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 }
 
 func checkToken(r *pigeon.Request) bool {
-	return storage.CheckSession(r.HeadersIn[apicomm.HEADER_AUTH_TOKEN], apiExpireSeconds)
+	token := r.HeadersIn[apicomm.HEADER_AUTH_TOKEN]
+	if !storage.CheckSession(token, apiExpireSeconds) {
+		return false
+	}
+	if isAdminRequest(r) {
+		return storage.IsAdmin(token)
+	}
+	return true
 }
 
 func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {

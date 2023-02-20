@@ -30,6 +30,23 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+const (
+	ETCD_SERVICE                  = "etcd"
+	MDS_SERVICE                   = "mds"
+	SNAPSHOT_CLONE_SERVER_SERVICE = "snapshotcloneserver"
+)
+
+type CopysetNum struct {
+	Total     uint32 `json:"total" binding:"required"`
+	Unhealthy uint32 `json:"unhealthy" binding:"required"`
+}
+
+type ClusterStatus struct {
+	Healthy    bool       `json:"healthy" binding:"required"`
+	PoolNum    uint32     `json:"poolNum" binding:"required"`
+	CopysetNum CopysetNum `json:"copysetNum" binding:"required"`
+}
+
 func GetClusterSpace(r *pigeon.Request) (interface{}, errno.Errno) {
 	var result Space
 	// get logical pools form mds

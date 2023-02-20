@@ -23,14 +23,20 @@
 package agent
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"path"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
-	comm "github.com/opencurve/curve-manager/internal/metrics/common"
+	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
+	"github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/pigeon"
 )
@@ -42,6 +48,58 @@ const (
 	ORDER_DIRECTION_INCREASE = 1
 	ORDER_DIRECTION_DECREASE = -1
 )
+
+type AuthInfo struct {
+	userName  string
+	passWord  string
+	signatrue string
+	date      uint64
+}
+
+type VolumePoolInfo struct {
+	Id    uint32 `json:"id" binding:"required"`
+	Name  string `json:"name" binding:"required"`
+	Type  string `json:"type" binding:"required"`
+	Alloc uint32 `json:"alloc" binding:"required"`
+}
+type VolumeInfo struct {
+	Info        curvebs.FileInfo            `json:"info" binding:"required"`
+	Pools       []VolumePoolInfo            `json:"pools"`
+	Performance []metricomm.UserPerformance `json:"performance" binding:"required"`
+}
+
+func getUpPath(dir string) string {
+	return dir[:strings.LastIndex(dir, "/")]
+}
+
+func getString2Signature(date int64, owner string) string {
+	return fmt.Sprintf("%d:%s", date, owner)
+}
+
+func calcString2Signature(in string, secretKet string) string {
+	h := hmac.New(sha256.New, []byte(secretKet))
+	h.Write([]byte(in))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+func getAuthInfoOfRoot() (*AuthInfo, string) {
+	// get root username and password
+	userName, passWord, err := bsmetric.GetAuthInfoOfRoot()
+	if err != "" {
+		return nil, err
+	}
+
+	// create signature
+	date := time.Now().UnixMicro()
+	str2sig := getString2Signature(date, userName)
+	sig := calcString2Signature(str2sig, passWord)
+	return &AuthInfo{
+		userName:  userName,
+		passWord:  passWord,
+		signatrue: sig,
+		date:      uint64(date),
+	}, ""
+}
 
 func sortFile(files []bsrpc.FileInfo, orderKey string, direction int) {
 	sort.Slice(files, func(i, j int) bool {
@@ -66,7 +124,7 @@ func sortFile(files []bsrpc.FileInfo, orderKey string, direction int) {
 	})
 }
 
-func getVolumeAllocSize(path string, volumes *[]VolumeInfo) error {
+func getVolumeAllocSize(dir string, volumes *[]VolumeInfo) error {
 	size := len(*volumes)
 	ret := make(chan common.QueryResult, size)
 	for index, volume := range *volumes {
@@ -77,7 +135,7 @@ func getVolumeAllocSize(path string, volumes *[]VolumeInfo) error {
 				Result: poolSize,
 				Err:    err,
 			}
-		}(path+volume.Info.FileName, &(*volumes)[index])
+		}(path.Join(dir, volume.Info.FileName), &(*volumes)[index])
 	}
 	count := 0
 	for res := range ret {
@@ -113,7 +171,7 @@ func getVolumePoolInfo(volumes *[]VolumeInfo) error {
 	}
 
 	for i, vInfo := range *volumes {
-		for j, _ := range vInfo.Pools {
+		for j := range vInfo.Pools {
 			id := (*volumes)[i].Pools[j].Id
 			(*volumes)[i].Pools[j].Name = *&poolMap[id].Name
 			(*volumes)[i].Pools[j].Type = *&poolMap[id].Type
@@ -122,7 +180,7 @@ func getVolumePoolInfo(volumes *[]VolumeInfo) error {
 	return nil
 }
 
-func getVolumePerformance(path string, volumes *[]VolumeInfo) error {
+func getVolumePerformance(dir string, volumes *[]VolumeInfo) error {
 	size := len(*volumes)
 	ret := make(chan common.QueryResult, size)
 	for index, volume := range *volumes {
@@ -133,14 +191,14 @@ func getVolumePerformance(path string, volumes *[]VolumeInfo) error {
 				Result: performances,
 				Err:    err,
 			}
-		}(path+volume.Info.FileName, &(*volumes)[index])
+		}(path.Join(dir, volume.Info.FileName), &(*volumes)[index])
 	}
 	count := 0
 	for res := range ret {
 		if res.Err != nil {
 			return res.Err
 		}
-		res.Key.(*VolumeInfo).Performance = res.Result.([]comm.UserPerformance)
+		res.Key.(*VolumeInfo).Performance = res.Result.([]metricomm.UserPerformance)
 		count += 1
 		if count >= size {
 			break
@@ -150,24 +208,13 @@ func getVolumePerformance(path string, volumes *[]VolumeInfo) error {
 }
 
 func ListVolume(r *pigeon.Request, size, page uint32, path, key string, direction int) (interface{}, errno.Errno) {
-	// get root auth info
-	authInfo, err := bsmetric.GetAuthInfoOfRoot()
+	authInfo, err := getAuthInfoOfRoot()
 	if err != "" {
-		r.Logger().Error("ListVolume bsmetric.GetAuthInfoOfRoot failed",
-			pigeon.Field("path", path),
-			pigeon.Field("size", size),
-			pigeon.Field("page", page),
-			pigeon.Field("sortkey", key),
+		r.Logger().Error("ListVolume getAuthInfoOfRoot failed",
 			pigeon.Field("error", err))
 		return nil, errno.GET_ROOT_AUTH_FAILED
 	}
-
-	// create signature
-	date := time.Now().UnixMicro()
-	str2sig := common.GetString2Signature(date, authInfo.UserName)
-	sig := common.CalcString2Signature(str2sig, authInfo.PassWord)
-
-	fileInfos, e := bsrpc.GMdsClient.ListDir(path, authInfo.UserName, sig, uint64(date))
+	fileInfos, e := bsrpc.GMdsClient.ListDir(path, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
 		r.Logger().Error("ListVolume bsrpc.ListDir failed",
 			pigeon.Field("path", path),
@@ -192,17 +239,34 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 		end = page * size
 	}
 
-	var volumes []VolumeInfo
-	for _, info := range fileInfos[start:end] {
-		vInfo := VolumeInfo{}
-		vInfo.Info = info
-		vInfo.Pools = []VolumePoolInfo{}
-		vInfo.Performance = []comm.UserPerformance{}
-		volumes = append(volumes, vInfo)
+	return fileInfos[start:end], errno.OK
+}
+
+func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) {
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("GetVolume getAuthInfoOfRoot failed",
+			pigeon.Field("error", err))
 	}
+	fileInfo, e := bsrpc.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
+	if e != nil {
+		r.Logger().Error("GetVolume bsrpc.GetFileInfo failed",
+			pigeon.Field("fileName", volumeName),
+			pigeon.Field("error", err))
+		return nil, errno.GET_VOLUME_INFO_FAILED
+	}
+
+	volume := VolumeInfo{}
+	volume.Info = fileInfo
+	volume.Pools = []VolumePoolInfo{}
+	volume.Performance = []metricomm.UserPerformance{}
+
+	path := getUpPath(volumeName)
+	volumes := []VolumeInfo{volume}
 	e = getVolumeAllocSize(path, &volumes)
 	if e != nil {
-		r.Logger().Error("ListVolume getVolumeAllocSize failed",
+		r.Logger().Error("GetVolume getVolumeAllocSize failed",
+			pigeon.Field("fileName", volumeName),
 			pigeon.Field("error", err))
 		return nil, errno.GET_VOLUME_ALLOC_SIZE_FAILED
 	}
@@ -210,9 +274,10 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 	// get performance of the volume
 	e = getVolumePerformance(path, &volumes)
 	if e != nil {
-		r.Logger().Error("ListVolume getVolumePerformance failed",
+		r.Logger().Error("GetVolume getVolumePerformance failed",
+			pigeon.Field("fileName", volumeName),
 			pigeon.Field("error", err))
 		return nil, errno.GET_VOLUME_PERFORMANCE_FAILED
 	}
-	return volumes, errno.OK
+	return volumes[0], errno.OK
 }

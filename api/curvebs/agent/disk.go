@@ -30,6 +30,16 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+type DiskInfo struct {
+	HostName   string `json:"hostName" binding:"required"`
+	Device     string `json:"device" binding:"required"`
+	MountPoint string `json:"mountPoint"`
+	FileSystem string `json:"fileSystem"`
+	DiskType   string `json:"diskType"`
+	SpaceTotal uint32 `json:"spaceTotal"`
+	SpaceAvail uint32 `json:"spaceAvail"`
+}
+
 func sortDisk(disks []DiskInfo) {
 	sort.Slice(disks, func(i, j int) bool {
 		if disks[i].HostName < disks[j].HostName {

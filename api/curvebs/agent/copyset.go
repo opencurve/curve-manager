@@ -208,7 +208,7 @@ func (cs *Copyset) checkCopysetsNoLeader(csAddr string, peersMap *map[string][]s
 		return true
 	}
 	groupIds := set.NewSet[string]()
-	for k, _ := range *peersMap {
+	for k := range *peersMap {
 		groupIds.Add(k)
 	}
 	result, err := cs.ifChunkServerInCopysets(csAddr, &groupIds)

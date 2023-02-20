@@ -30,6 +30,12 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+type ListUserInfo struct {
+	UserName   string `json:"userName" binding:"required"`
+	Email      string `json:"email"`
+	Permission int    `json:"permission" binding:"required"`
+}
+
 func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 	userInfo, err := storage.GetUser(name)
 	if err != nil {
@@ -154,5 +160,13 @@ func ListUser(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("error", err))
 		return nil, errno.LIST_USER_FAILED
 	}
-	return users, errno.OK
+	var infos []ListUserInfo
+	for _, user := range *users {
+		var info ListUserInfo
+		info.UserName = user.UserName
+		info.Email = user.Email
+		info.Permission = user.Permission
+		infos = append(infos, info)
+	}
+	return infos, errno.OK
 }

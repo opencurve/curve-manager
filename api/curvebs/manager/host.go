@@ -38,9 +38,9 @@ func ListHost(r *pigeon.Request, ctx *Context) bool {
 	return core.ExitSuccessWithData(r, hosts)
 }
 
-func GetHostPerformance(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*GetHostPerformanceRequest)
-	performance, err := agent.GetHostPerformance(r, data.HostName)
+func GetHost(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetHostRequest)
+	performance, err := agent.GetHost(r, data.HostName)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

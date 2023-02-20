@@ -68,11 +68,20 @@ type CPUInfo struct {
 	Models   map[string]uint32 `json:"cpuModles"`
 }
 
-func GetHostsInfo() (map[string]HostInfo, error) {
+type NetworkTraffic struct {
+	Receive  map[string][]RangeMetricItem
+	Transmit map[string][]RangeMetricItem
+}
+
+func GetHostInfo(instance string) (interface{}, error) {
 	hostsInfo := make(map[string]HostInfo)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
-	QueryInstantMetric(NODE_UNAME_INFO, &results)
+	metricName := NODE_UNAME_INFO
+	if instance != "" {
+		metricName = fmt.Sprintf("%s{instance=%q}", metricName, instance)
+	}
+	QueryInstantMetric(metricName, &results)
 	count := 0
 	for res := range results {
 		if res.Err != nil {
@@ -97,11 +106,15 @@ func GetHostsInfo() (map[string]HostInfo, error) {
 	return hostsInfo, nil
 }
 
-func GetHostCPUInfo() (map[string]CPUInfo, error) {
+func GetHostCPUInfo(instance string) (interface{}, error) {
 	cpuInfoMap := make(map[string]CPUInfo)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
-	QueryInstantMetric(NODE_CPU_INFO, &results)
+	metricName := NODE_CPU_INFO
+	if instance != "" {
+		metricName = fmt.Sprintf("%s{instance=%q}", metricName, instance)
+	}
+	QueryInstantMetric(metricName, &results)
 	count := 0
 	for res := range results {
 		if res.Err != nil {
@@ -131,11 +144,15 @@ func GetHostCPUInfo() (map[string]CPUInfo, error) {
 	return cpuInfoMap, nil
 }
 
-func GetHostMemoryInfo() (map[string]uint64, error) {
+func GetHostMemoryInfo(instance string) (interface{}, error) {
 	memoryInfo := make(map[string]uint64)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
-	QueryInstantMetric(NODE_MEMORY_TOTAL_BYTES, &results)
+	metricName := NODE_MEMORY_TOTAL_BYTES
+	if instance != "" {
+		metricName = fmt.Sprintf("%s{instance=%q}", metricName, instance)
+	}
+	QueryInstantMetric(metricName, &results)
 	count := 0
 	for res := range results {
 		if res.Err != nil {
@@ -154,7 +171,7 @@ func GetHostMemoryInfo() (map[string]uint64, error) {
 	return memoryInfo, nil
 }
 
-func GetHostDiskNum() (map[string]uint32, error) {
+func GetHostDiskNum(instance string) (interface{}, error) {
 	diskNum := make(map[string]uint32)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
@@ -185,9 +202,8 @@ func GetHostDiskNum() (map[string]uint32, error) {
 * return: reveive, transmit, error
 * map[string][]RangeMetricItem: key: network device, value: performance in different timestamp
  */
-func GetNetWorkTraffic(instance string) (map[string][]RangeMetricItem, map[string][]RangeMetricItem, error) {
-	receive := make(map[string][]RangeMetricItem)
-	transmit := make(map[string][]RangeMetricItem)
+func GetNetWorkTraffic(instance string) (interface{}, error) {
+	networkTraffic := NetworkTraffic{}
 
 	// receive, transmit
 	requestSize := 2
@@ -205,27 +221,27 @@ func GetNetWorkTraffic(instance string) (map[string][]RangeMetricItem, map[strin
 	count := 0
 	for res := range results {
 		if res.Err != nil {
-			return nil, nil, res.Err
+			return networkTraffic, res.Err
 		}
 		ret := ParseMatrixMetric(res.Result.(*QueryResponseOfMatrix), DEVICE)
 		switch res.Key.(string) {
 		case receiveName:
-			receive = ret
+			networkTraffic.Receive = ret
 		case transmitName:
-			transmit = ret
+			networkTraffic.Transmit = ret
 		}
 		count += 1
 		if count >= requestSize {
 			break
 		}
 	}
-	return receive, transmit, nil
+	return networkTraffic, nil
 }
 
-func GetHostCPUUtilization(instance string) (map[string][]RangeMetricItem, error) {
+func GetHostCPUUtilization(instance string) (interface{}, error) {
 	return GetUtilization(GetNodeCPUUtilizationName(instance))
 }
 
-func GetHostMemUtilization(instance string) (map[string][]RangeMetricItem, error) {
+func GetHostMemUtilization(instance string) (interface{}, error) {
 	return GetUtilization(GetNodeMemUtilizationName(instance))
 }

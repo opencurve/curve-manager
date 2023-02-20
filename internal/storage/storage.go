@@ -26,10 +26,8 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/pigeon"
 )
 
@@ -38,22 +36,13 @@ var (
 )
 
 const (
-	SQLITE_DB_FILE      = "db.sqlite.filepath"
-	NEW_PASSWORD_LENGTH = 8
+	SQLITE_DB_FILE = "db.sqlite.filepath"
 )
-
-type UserInfo struct {
-	UserName   string `json:"userName" binding:"required"`
-	PassWord   string `json:"-"`
-	Email      string `json:"email"`
-	Permission int    `json:"permission" binding:"required"`
-	Token      string `json:"token" binding:"required"`
-}
 
 type Storage struct {
 	db           *sql.DB
 	mutex        *sync.Mutex
-	session      map[string]int64
+	session      map[string]sessionItem
 	sessionMutex *sync.Mutex
 }
 
@@ -68,7 +57,7 @@ func Init(cfg *pigeon.Configure) error {
 	if err != nil {
 		return err
 	}
-	gStorage = &Storage{db: db, mutex: &sync.Mutex{}, session: make(map[string]int64), sessionMutex: &sync.Mutex{}}
+	gStorage = &Storage{db: db, mutex: &sync.Mutex{}, session: make(map[string]sessionItem), sessionMutex: &sync.Mutex{}}
 
 	// init user table
 	if err = gStorage.execSQL(CREATE_USER_TABLE); err != nil {
@@ -97,126 +86,4 @@ func (s *Storage) execSQL(query string, args ...interface{}) error {
 
 	_, err = stmt.Exec(args...)
 	return err
-}
-
-func createAdminUser() error {
-	passwd := common.GetMd5Sum32Little(USER_ADMIN_PASSWORD)
-	return gStorage.execSQL(CREATE_ADMIN, USER_ADMIN_NAME, passwd, "", ADMIN_PERM)
-}
-
-func AddSession(userInfo *UserInfo) {
-	now := time.Now().Unix()
-	sigStr := fmt.Sprintf("username=%s&password=%s&timestamp=%d", userInfo.UserName, userInfo.PassWord, now)
-	sig := common.GetMd5Sum32Little(sigStr)
-	gStorage.sessionMutex.Lock()
-	defer gStorage.sessionMutex.Unlock()
-	gStorage.session[sig] = now
-	userInfo.Token = sig
-}
-
-func CheckSession(s string, expireSec int) bool {
-	now := time.Now().Unix()
-	gStorage.sessionMutex.Lock()
-	defer gStorage.sessionMutex.Unlock()
-	if time, ok := gStorage.session[s]; ok {
-		if time+int64(expireSec) < now {
-			delete(gStorage.session, s)
-			return false
-		}
-		gStorage.session[s] = now
-		return true
-	}
-	return false
-}
-
-func GetUser(name string) (UserInfo, error) {
-	var user UserInfo
-	rows, err := gStorage.db.Query(GET_USER, name)
-	if err != nil {
-		return user, err
-	}
-	defer rows.Close()
-	if rows.Next() {
-		err = rows.Scan(&user.UserName, &user.PassWord, &user.Email, &user.Permission)
-		if err != nil {
-			return user, err
-		}
-	} else {
-		return user, fmt.Errorf("user not exist")
-	}
-	return user, nil
-}
-
-func SetUser(name, passwd, email string, permission int) error {
-	return gStorage.execSQL(CREATE_USER, name, passwd, email, permission)
-}
-
-func DeleteUser(name string) error {
-	return gStorage.execSQL(DELETE_USER, name)
-}
-
-func UpdateUserPassWord(name, passwd string) error {
-	return gStorage.execSQL(UPDATE_PASSWORD, passwd, name)
-}
-
-func UpdateUserInfo(name, email string, permission int) error {
-	return gStorage.execSQL(UPDATE_USER_INFO, email, permission, name)
-}
-
-func ListUser() (interface{}, error) {
-	rows, err := gStorage.db.Query(LIST_USER, USER_ADMIN_NAME)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var users []UserInfo
-	for rows.Next() {
-		var user UserInfo
-		err = rows.Scan(&user.UserName, &user.Email, &user.Permission)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, user)
-	}
-	return &users, nil
-}
-
-func GetUserEmail(name string) (string, error) {
-	rows, err := gStorage.db.Query(GET_USER_EMAIL, name)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-	var email string
-	if rows.Next() {
-		err = rows.Scan(&email)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		return "", fmt.Errorf("user not exist")
-	}
-	return email, nil
-}
-
-func GetUserPassword(name string) (string, error) {
-	rows, err := gStorage.db.Query(GET_USER_PASSWORD, name)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-	var passwd string
-	if rows.Next() {
-		err = rows.Scan(&passwd)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		return "", fmt.Errorf("user not exist")
-	}
-	return passwd, nil
-}
-
-func GetNewPassWord() string {
-	return common.GetRandString(NEW_PASSWORD_LENGTH)
 }

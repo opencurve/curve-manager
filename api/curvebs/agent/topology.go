@@ -31,6 +31,59 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+const (
+	RECYCLEBIN_DIR = "/RecycleBin"
+)
+
+type Server struct {
+	Id           uint32              `json:"id" binding:"required"`
+	Hostname     string              `json:"hostname" binding:"required"`
+	InternalIp   string              `json:"internalIp" binding:"required"`
+	InternalPort uint32              `json:"internalPort" binding:"required"`
+	ExternalIp   string              `json:"externalIp" binding:"required"`
+	ExternalPort uint32              `json:"externalPort" binding:"required"`
+	ChunkServers []bsrpc.ChunkServer `json:"chunkservers" binding:"required"`
+}
+
+type Zone struct {
+	Id      uint32   `json:"id" binding:"required"`
+	Name    string   `json:"name" binding:"required"`
+	Servers []Server `json:"servers" binding:"required"`
+}
+
+type Pool struct {
+	Id             uint32 `json:"id" binding:"required"`
+	Name           string `json:"name" binding:"required"`
+	Type           string `json:"type" binding:"required"`
+	Zones          []Zone `json:"zones" binding:"required"`
+	physicalPoolId uint32
+}
+
+type Space struct {
+	Total       uint64 `json:"total" binding:"required"`
+	Alloc       uint64 `json:"alloc" binding:"required"`
+	CanRecycled uint64 `json:"canRecycled" binding:"required"`
+}
+
+type PoolInfo struct {
+	Id             uint32 `json:"id" binding:"required"`
+	Name           string `json:"name" binding:"required"`
+	PhysicalPoolId uint32 `json:"physicalPoolId" binding:"required"`
+	Type           string `json:"type" binding:"required"`
+	CreateTime     string `json:"createTime" binding:"required"`
+	AllocateStatus string `json:"allocateStatus" binding:"required"`
+	ScanEnable     bool   `json:"scanEnable"`
+	ServerNum      uint32 `json:"serverNum" binding:"required"`
+	ChunkServerNum uint32 `json:"chunkServerNum" binding:"required"`
+	CopysetNum     uint32 `json:"copysetNum" binding:"required"`
+	Space          Space  `json:"space" binding:"required"`
+}
+
+type PoolInfoWithPerformance struct {
+	Info        PoolInfo                `json:"info" binding:"required"`
+	Performance []metricomm.Performance `json:"performance" binding:"required"`
+}
+
 // get chunkservers of server concurrently
 func listChunkServer(pools *[]Pool, size int) error {
 	ret := make(chan common.QueryResult, size)
@@ -204,7 +257,7 @@ func getPoolItemNum(pools *[]PoolInfo) error {
 	return nil
 }
 
-func getPoolPerformance(pools *[]PoolInfo) error {
+func getPoolPerformance(pools *[]PoolInfoWithPerformance) error {
 	size := len(*pools)
 	ret := make(chan common.QueryResult, size)
 	for index, pool := range *pools {
@@ -215,7 +268,7 @@ func getPoolPerformance(pools *[]PoolInfo) error {
 				Result: performance,
 				Err:    err,
 			}
-		}(pool.Name, index)
+		}(pool.Info.Name, index)
 	}
 	count := 0
 	for res := range ret {
@@ -267,14 +320,55 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("error", err))
 		return nil, errno.GET_POOL_SPACE_FAILED
 	}
+	return &result, errno.OK
+}
 
+func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno) {
+	pool, err := bsrpc.GMdsClient.GetLogicalPool(poolId)
+	if err != nil {
+		r.Logger().Error("GetLogicalPool bsrpc.GetLogicalPool failed",
+			pigeon.Field("poolId", poolId),
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_FAILED
+	}
+
+	var poolInfo PoolInfoWithPerformance
+	var info PoolInfo
+	info.Id = pool.Id
+	info.Name = pool.Name
+	info.PhysicalPoolId = pool.PhysicalPoolId
+	info.Type = pool.Type
+	info.CreateTime = pool.CreateTime
+	info.AllocateStatus = pool.AllocateStatus
+	info.ScanEnable = pool.ScanEnable
+	tmp := []PoolInfo{info}
+	// get info from monitor
+	err = getPoolItemNum(&tmp)
+	if err != nil {
+		r.Logger().Error("GetLogicalPool getPoolItemNum failed",
+			pigeon.Field("poolId", poolId),
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_ITEM_NUMBER_FAILED
+	}
+
+	err = getPoolSpace(&tmp)
+	if err != nil {
+		r.Logger().Error("GetLogicalPool getPoolSpace failed",
+			pigeon.Field("poolId", poolId),
+			pigeon.Field("error", err))
+		return nil, errno.GET_POOL_SPACE_FAILED
+	}
+
+	poolInfo.Info = tmp[0]
+	result := []PoolInfoWithPerformance{poolInfo}
 	err = getPoolPerformance(&result)
 	if err != nil {
-		r.Logger().Error("ListLogicalPool getPoolPerformance failed",
+		r.Logger().Error("GetLogicalPool getPoolPerformance failed",
+			pigeon.Field("poolId", poolId),
 			pigeon.Field("error", err))
 		return nil, errno.GET_POOL_PERFORMANCE_FAILED
 	}
-	return &result, errno.OK
+	return result[0], errno.OK
 }
 
 func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {

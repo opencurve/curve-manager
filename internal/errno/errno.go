@@ -56,18 +56,20 @@ var (
 	UNSUPPORT_HTTP_METHOD = Errno{405001, "unsupport http method"}
 
 	// 503
+	UNKNOW_ERROR = Errno{503001, "unknown error"}
+
 	// user/storage
-	GET_USER_FAILED             = Errno{503001, "get user failed"}
-	USER_PASSWORD_NOT_MATCH     = Errno{503002, "user password not match"}
-	CREATE_USER_FAILED          = Errno{503003, "create user failed"}
-	DELETE_USER_FAILED          = Errno{503004, "delete user failed"}
-	GET_USER_PASSWORD_FAILED    = Errno{503005, "get user password failed"}
-	UPDATE_USER_PASSWORD_FAILED = Errno{503006, "update user password failed"}
-	GET_USER_EMAIL_FAILED       = Errno{503007, "get user email failed"}
-	USER_EMAIL_EMPTY            = Errno{503008, "user email is empty"}
-	SEND_USER_PASSWORD_FAILED   = Errno{503009, "send user email failed"}
-	UPDATE_USER_INFO_FAILED     = Errno{503010, "update user info failed"}
-	LIST_USER_FAILED            = Errno{503011, "list user failed"}
+	GET_USER_FAILED             = Errno{503002, "get user failed"}
+	USER_PASSWORD_NOT_MATCH     = Errno{503003, "user password not match"}
+	CREATE_USER_FAILED          = Errno{503004, "create user failed"}
+	DELETE_USER_FAILED          = Errno{503005, "delete user failed"}
+	GET_USER_PASSWORD_FAILED    = Errno{503006, "get user password failed"}
+	UPDATE_USER_PASSWORD_FAILED = Errno{503007, "update user password failed"}
+	GET_USER_EMAIL_FAILED       = Errno{503008, "get user email failed"}
+	USER_EMAIL_EMPTY            = Errno{503009, "user email is empty"}
+	SEND_USER_PASSWORD_FAILED   = Errno{503010, "send user email failed"}
+	UPDATE_USER_INFO_FAILED     = Errno{503011, "update user info failed"}
+	LIST_USER_FAILED            = Errno{503012, "list user failed"}
 
 	// hadware/metric
 	GET_INSTANCE_BY_HOSTNAME_FAILED  = Errno{503101, "get instance by hostname failed"}
@@ -97,9 +99,11 @@ var (
 	LIST_SNAPSHOT_FAILED              = Errno{503301, "list snapshot failed"}
 	GET_CHUNKSERVER_IN_CLUSTER_FAILED = Errno{503302, "get chunkserver in cluster failed"}
 	LIST_POOL_FAILED                  = Errno{503303, "list pool failed"}
-	GET_POOL_SPACE_FAILED             = Errno{503304, "get pool space failed"}
-	GET_CLUSTER_PERFORMANCE_FAILED    = Errno{503305, "get cluster performance failed"}
-	LIST_POOL_ZONE_FAILED             = Errno{503306, "list pool zone failed"}
-	LIST_VOLUME_FAILED                = Errno{503307, "list volume failed"}
-	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{503308, "get volume alloc size failed"}
+	GET_POOL_FAILED                   = Errno{503304, "get pool failed"}
+	GET_POOL_SPACE_FAILED             = Errno{503305, "get pool space failed"}
+	GET_CLUSTER_PERFORMANCE_FAILED    = Errno{503306, "get cluster performance failed"}
+	LIST_POOL_ZONE_FAILED             = Errno{503307, "list pool zone failed"}
+	LIST_VOLUME_FAILED                = Errno{503308, "list volume failed"}
+	GET_VOLUME_INFO_FAILED            = Errno{503309, "get volume failed"}
+	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{5033010, "get volume alloc size failed"}
 )

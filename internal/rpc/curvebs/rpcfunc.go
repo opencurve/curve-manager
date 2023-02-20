@@ -167,6 +167,21 @@ func (rpc *GetCopySetsInCluster) Stub_Func(ctx context.Context, opt ...grpc.Call
 	return rpc.client.GetCopySetsInCluster(ctx, rpc.Request, opt...)
 }
 
+// get logical pool
+type GetLogicalPool struct {
+	ctx     *baserpc.RpcContext
+	client  topology.TopologyServiceClient
+	Request *topology.GetLogicalPoolRequest
+}
+
+func (rpc *GetLogicalPool) NewRpcClient(cc grpc.ClientConnInterface) {
+	rpc.client = topology.NewTopologyServiceClient(cc)
+}
+
+func (rpc *GetLogicalPool) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
+	return rpc.client.GetLogicalPool(ctx, rpc.Request, opt...)
+}
+
 // nameserver2
 // get file(include dir) allocated space
 type GetFileAllocatedSize struct {
@@ -196,4 +211,19 @@ func (rpc *ListDir) NewRpcClient(cc grpc.ClientConnInterface) {
 
 func (rpc *ListDir) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
 	return rpc.client.ListDir(ctx, rpc.Request, opt...)
+}
+
+// get volume
+type GetFileInfo struct {
+	ctx     *baserpc.RpcContext
+	client  nameserver2.CurveFSServiceClient
+	Request *nameserver2.GetFileInfoRequest
+}
+
+func (rpc *GetFileInfo) NewRpcClient(cc grpc.ClientConnInterface) {
+	rpc.client = nameserver2.NewCurveFSServiceClient(cc)
+}
+
+func (rpc *GetFileInfo) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
+	return rpc.client.GetFileInfo(ctx, rpc.Request, opt...)
 }

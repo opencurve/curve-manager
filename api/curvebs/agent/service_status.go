@@ -32,6 +32,17 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+type VersionNum struct {
+	Version string `json:"version"`
+	Number  int    `json:"number"`
+}
+
+type ChunkServerStatus struct {
+	TotalNum  int          `json:"totalNum"`
+	OnlineNum int          `json:"onlineNum"`
+	Versions  []VersionNum `json:"versions"`
+}
+
 func GetEtcdStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	status, err := bsmetric.GetEtcdStatus()
 	if err != "" {

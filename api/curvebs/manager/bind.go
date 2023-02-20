@@ -66,6 +66,10 @@ type ListTopologyRequest struct{}
 
 type ListLogicalPoolRequest struct{}
 
+type GetLogicalPoolRequest struct {
+	Id uint32 `json:"id" binding:"required"`
+}
+
 type GetChunkServerStatusRequest struct{}
 
 type GetClusterStatusRequest struct{}
@@ -87,6 +91,10 @@ type ListVolumeRequest struct {
 	SortDirection int    `json:"sortDirection" default:"1"`
 }
 
+type GetVolumeRequest struct {
+	VolumeName string `json:"volumeName" binding:"required"`
+}
+
 type ListSnapshotRequest struct {
 	Size     uint32 `json:"size" binding:"required"`
 	Page     uint32 `json:"page" binding:"required"`
@@ -96,7 +104,7 @@ type ListSnapshotRequest struct {
 	Status   string `json:"status"`
 }
 
-type GetHostPerformanceRequest struct {
+type GetHostRequest struct {
 	HostName string `json:"hostName" binding:"required"`
 }
 
@@ -163,9 +171,21 @@ var requests = []Request{
 	},
 	{
 		"POST",
+		"topo.pool.get",
+		GetLogicalPoolRequest{},
+		GetLogicalPool,
+	},
+	{
+		"POST",
 		"volume.list",
 		ListVolumeRequest{},
 		ListVolume,
+	},
+	{
+		"POST",
+		"volume.get",
+		GetVolumeRequest{},
+		GetVolume,
 	},
 	{
 		"POST",
@@ -181,9 +201,9 @@ var requests = []Request{
 	},
 	{
 		"POST",
-		"host.performance",
-		GetHostPerformanceRequest{},
-		GetHostPerformance,
+		"host.get",
+		GetHostRequest{},
+		GetHost,
 	},
 	{
 		"POST",

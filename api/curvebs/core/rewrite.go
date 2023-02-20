@@ -46,7 +46,7 @@ func Rewrite(r *pigeon.Request) bool {
 	// console version
 	r.HeadersOut[comm.HEADER_CURVE_CONSOLE_VERSION] = comm.VERSION
 
-	method := r.Args["method"]
+	method := r.Args[METHOD]
 	module, ok := BELONG[method]
 	if ok {
 		r.SetModuleCtx(module, true)

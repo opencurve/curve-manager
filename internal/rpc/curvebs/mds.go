@@ -103,8 +103,10 @@ const (
 	GET_COPYSET_IN_CHUNKSERVER_FUNC  = "GetCopySetsInChunkServer"
 	GET_CHUNKSERVER_LIST_IN_COPYSETS = "GetChunkServerListInCopySets"
 	GET_COPYSETS_IN_CLUSTER          = "GetCopySetsInCluster"
+	GET_LOGICAL_POOL                 = "GetLogicalPool"
 	GET_FILE_ALLOC_SIZE_FUNC         = "GetAllocatedSize"
 	LIST_DIR_FUNC                    = "ListDir"
+	GET_FILE_INFO                    = "GetFileInfo"
 )
 
 type mdsClient struct {
@@ -341,6 +343,35 @@ func (cli *mdsClient) ListLogicalPool() ([]LogicalPool, error) {
 		}
 	}
 	return pools, nil
+}
+
+func (cli *mdsClient) GetLogicalPool(poolId uint32) (LogicalPool, error) {
+	info := LogicalPool{}
+	Rpc := &GetLogicalPool{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_LOGICAL_POOL)
+	Rpc.Request = &topology.GetLogicalPoolRequest{
+		LogicalPoolID: &poolId,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return info, ret.Err
+	}
+
+	response := ret.Result.(*topology.GetLogicalPoolResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != int32(statuscode.TopoStatusCode_Success) {
+		return info, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
+	}
+
+	pool := response.GetLogicalPoolInfo()
+	info.Id = pool.GetLogicalPoolID()
+	info.Name = pool.GetLogicalPoolName()
+	info.PhysicalPoolId = pool.GetPhysicalPoolID()
+	info.Type = getLogicalPoolType(pool.GetType())
+	info.CreateTime = time.Unix(int64(pool.GetCreateTime()), 0).Format(common.TIME_FORMAT)
+	info.AllocateStatus = getLogicalPoolAllocateStatus(pool.GetAllocateStatus())
+	info.ScanEnable = pool.GetScanEnable()
+	return info, nil
 }
 
 // list zones of physical pool
@@ -736,4 +767,55 @@ func (cli *mdsClient) ListDir(filename, owner, sig string, date uint64) ([]FileI
 		infos = append(infos, info)
 	}
 	return infos, nil
+}
+
+func (cli *mdsClient) GetFileInfo(filename, owner, sig string, date uint64) (FileInfo, error) {
+	info := FileInfo{}
+	Rpc := &GetFileInfo{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_FILE_INFO)
+	Rpc.Request = &nameserver2.GetFileInfoRequest{
+		FileName:  &filename,
+		Owner:     &owner,
+		Date:      &date,
+		Signature: &sig,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return info, ret.Err
+	}
+
+	response := ret.Result.(*nameserver2.GetFileInfoResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != nameserver2.StatusCode_kOK {
+		return info, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
+	}
+	v := response.GetFileInfo()
+	info.Id = v.GetId()
+	info.FileName = v.GetFileName()
+	info.ParentId = v.GetParentId()
+	info.FileType = getFileType(v.GetFileType())
+	info.Owner = v.GetOwner()
+	info.ChunkSize = v.GetChunkSize()
+	info.SegmentSize = v.GetSegmentSize()
+	info.Length = v.GetLength() / common.GiB
+	info.Ctime = time.Unix(int64(v.GetCtime()/1000000), 0).Format(common.TIME_FORMAT)
+	info.SeqNum = v.GetSeqNum()
+	info.FileStatus = getFileStatus(v.GetFileStatus())
+	info.OriginalFullPathName = v.GetOriginalFullPathName()
+	info.CloneSource = v.GetCloneSource()
+	info.CloneLength = v.GetCloneLength()
+	info.StripeUnit = v.GetStripeUnit()
+	info.StripeCount = v.GetStripeCount()
+	info.ThrottleParams = []ThrottleParams{}
+	for _, p := range v.GetThrottleParams().GetThrottleParams() {
+		var param ThrottleParams
+		param.Type = getThrottleType(p.GetType())
+		param.Limit = p.GetLimit()
+		param.Burst = p.GetBurst()
+		param.BurstLength = p.GetBurstLength()
+		info.ThrottleParams = append(info.ThrottleParams, param)
+	}
+	info.Epoch = v.GetEpoch()
+
+	return info, nil
 }

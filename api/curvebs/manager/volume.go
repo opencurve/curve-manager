@@ -39,3 +39,12 @@ func ListVolume(r *pigeon.Request, ctx *Context) bool {
 	}
 	return core.ExitSuccessWithData(r, volumes)
 }
+
+func GetVolume(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetVolumeRequest)
+	volume, err := agent.GetVolume(r, data.VolumeName)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, volume)
+}

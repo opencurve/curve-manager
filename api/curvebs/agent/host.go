@@ -23,69 +23,198 @@
 package agent
 
 import (
+	"fmt"
+
+	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
 	"github.com/opencurve/pigeon"
 )
 
+const (
+	GET_HOST_INFO             = "GetHostInfo"
+	GET_HOST_CPU_INFO         = "GetHostCPUInfo"
+	GET_HOST_MEM_INFO         = "GetHostMemoryInfo"
+	GET_HOST_DISK_NUM         = "GetHostDiskNum"
+	GET_HOST_CPU_UTILIZATION  = "GetHostCPUUtilization"
+	GET_HOST_MEM_UTILIZATION  = "GetHostMemUtilization"
+	GET_HOST_DISK_PERFORMANCE = "GetDiskPerformance"
+	GET_HOST_NETWORK_TRAFFIC  = "GetNetWorkTraffic"
+)
+
+type HostInfo struct {
+	HostName    string            `json:"hostName" binding:"required"`
+	IP          string            `json:"ip" binding:"required"`
+	Machine     string            `json:"machine" binding:"required"`
+	Release     string            `json:"kernel-release" binding:"required"`
+	Version     string            `json:"kernel-version" binding:"required"`
+	System      string            `json:"operating-system" binding:"required"`
+	CPUCores    metricomm.CPUInfo `json:"cpuCores" binding:"required"`
+	DiskNum     uint32            `json:"diskNum" binding:"required"`
+	MemoryTotal uint64            `json:"memory" binding:"required"`
+}
+
+type HostInfoWithPerformance struct {
+	Host            HostInfo                           `json:"host" binding:"required"`
+	CPUUtilization  []metricomm.RangeMetricItem        `json:"cpuUtilization" binding:"required"`
+	MemUtilization  []metricomm.RangeMetricItem        `json:"memUtilization" binding:"required"`
+	DiskPerformance map[string][]metricomm.Performance `json:"diskPerformance" binding:"required"`
+	NetWorkTraffic  NetWorkTraffic                     `json:"networkTraffic" binding:"required"`
+}
+
+type NetWorkTraffic struct {
+	NetWorkReceive  map[string][]metricomm.RangeMetricItem `json:"receive" binding:"required"`
+	NetWorkTransmit map[string][]metricomm.RangeMetricItem `json:"transmit" binding:"required"`
+}
+
+type callback func(instance string) (interface{}, error)
+
+func getErrnoByName(name string) errno.Errno {
+	switch name {
+	case GET_HOST_INFO:
+		return errno.GET_HOST_INFO_FAILED
+	case GET_HOST_CPU_INFO:
+		return errno.GET_HOST_CPU_INFO_FAILED
+	case GET_HOST_MEM_INFO:
+		return errno.GET_HOST_MEM_INFO_FAILED
+	case GET_HOST_DISK_NUM:
+		return errno.GET_HOST_DISK_NUM_FAILED
+	case GET_HOST_CPU_UTILIZATION:
+		return errno.GET_HOST_CPU_UTILIZATION_FAILED
+	case GET_HOST_MEM_UTILIZATION:
+		return errno.GET_HOST_MEM_UTILIZATION_FAILED
+	case GET_HOST_DISK_PERFORMANCE:
+		return errno.GET_HOST_DISK_PERFORMANCE_FAILED
+	case GET_HOST_NETWORK_TRAFFIC:
+		return errno.GET_HOST_NETWORK_TRAFFIC_FAILED
+	}
+	return errno.UNKNOW_ERROR
+}
+
+func getInstanceByHostName(hostname string) (string, error) {
+	if hostname == "" {
+		return "", nil
+	}
+	baseInfo, err := metricomm.GetHostInfo("")
+	if err != nil {
+		return "", err
+	}
+	for k, info := range baseInfo.(map[string]metricomm.HostInfo) {
+		if info.HostName == hostname {
+			return k, nil
+		}
+	}
+	return "", fmt.Errorf("hostname not exist, hostname = %s", hostname)
+}
+
+func getHostNameByInstance(instances []string) (map[string]string, error) {
+	baseInfo, err := metricomm.GetHostInfo("")
+	if err != nil {
+		return nil, err
+	}
+	ret := make(map[string]string)
+	for inst, info := range baseInfo.(map[string]metricomm.HostInfo) {
+		ret[inst] = info.HostName
+	}
+	return ret, nil
+}
+
 func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
+	instance := ""
 	hostInfos := []HostInfo{}
 	// map[instance]*HostInfo
 	hostsMap := make(map[string]*HostInfo)
-	// 1. get host base info
-	baseInfo, err := metricomm.GetHostsInfo()
-	if err != nil {
-		r.Logger().Error("ListHost metricomm.GetHostsInfo failed",
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_INFO_FAILED
+	requests := []callback{
+		metricomm.GetHostInfo,
+		metricomm.GetHostCPUInfo,
+		metricomm.GetHostMemoryInfo,
+		metricomm.GetHostDiskNum,
 	}
-	for k, info := range baseInfo {
-		hostsMap[k] = &HostInfo{
-			HostName: info.HostName,
-			IP:       info.IP,
-			Machine:  info.Machine,
-			Release:  info.Release,
-			System:   info.System,
-			Version:  info.Version,
+	// TODO: improve with reflect func name
+	requestName := []string{
+		GET_HOST_INFO,
+		GET_HOST_CPU_INFO,
+		GET_HOST_MEM_INFO,
+		GET_HOST_DISK_NUM,
+	}
+	requestSize := len(requests)
+	ret := make(chan common.QueryResult, requestSize)
+	for index, fn := range requests {
+		go func(key string, fn callback) {
+			info, err := fn(instance)
+			ret <- common.QueryResult{
+				Key:    key,
+				Err:    err,
+				Result: info,
+			}
+		}(requestName[index], fn)
+	}
+	count := 0
+	for res := range ret {
+		if res.Err != nil {
+			r.Logger().Error("ListHost failed",
+				pigeon.Field("step", res.Key.(string)),
+				pigeon.Field("error", res.Err))
+			return nil, getErrnoByName(res.Key.(string))
 		}
-	}
-
-	// 2. get node cpu info
-	cupInfo, err := metricomm.GetHostCPUInfo()
-	if err != nil {
-		r.Logger().Error("ListHost metricomm.GetHostCPUInfo failed",
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_CPU_INFO_FAILED
-	}
-	for k, v := range cupInfo {
-		if info, ok := hostsMap[k]; ok {
-			(*info).CPUCores = v
+		switch res.Key.(string) {
+		case GET_HOST_INFO:
+			for k, info := range res.Result.(map[string]metricomm.HostInfo) {
+				if _, ok := hostsMap[k]; ok {
+					hostsMap[k].HostName = info.HostName
+					hostsMap[k].IP = info.IP
+					hostsMap[k].Machine = info.Machine
+					hostsMap[k].Release = info.Release
+					hostsMap[k].System = info.System
+					hostsMap[k].Version = info.Version
+				} else {
+					hostsMap[k] = &HostInfo{
+						HostName: info.HostName,
+						IP:       info.IP,
+						Machine:  info.Machine,
+						Release:  info.Release,
+						System:   info.System,
+						Version:  info.Version,
+					}
+				}
+			}
+		case GET_HOST_CPU_INFO:
+			cpuInfo := res.Result.(map[string]metricomm.CPUInfo)
+			for k, v := range cpuInfo {
+				if info, ok := hostsMap[k]; ok {
+					(*info).CPUCores = v
+				} else {
+					hostsMap[k] = &HostInfo{
+						CPUCores: v,
+					}
+				}
+			}
+		case GET_HOST_MEM_INFO:
+			memInfo := res.Result.(map[string]uint64)
+			for k, v := range memInfo {
+				if info, ok := hostsMap[k]; ok {
+					(*info).MemoryTotal = v
+				} else {
+					hostsMap[k] = &HostInfo{
+						MemoryTotal: v,
+					}
+				}
+			}
+		case GET_HOST_DISK_NUM:
+			diskNum := res.Result.(map[string]uint32)
+			for k, v := range diskNum {
+				if info, ok := hostsMap[k]; ok {
+					(*info).DiskNum = v
+				} else {
+					hostsMap[k] = &HostInfo{
+						DiskNum: v,
+					}
+				}
+			}
 		}
-	}
-
-	// 3. get memory info
-	memInfo, err := metricomm.GetHostMemoryInfo()
-	if err != nil {
-		r.Logger().Error("ListHost metricomm.GetHostMemoryInfo failed",
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_MEM_INFO_FAILED
-	}
-	for k, v := range memInfo {
-		if info, ok := hostsMap[k]; ok {
-			(*info).MemoryTotal = v
-		}
-	}
-
-	// 4. get disk num
-	diskNum, err := metricomm.GetHostDiskNum()
-	if err != nil {
-		r.Logger().Error("ListHost metricomm.GetHostDiskNum failed",
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_DISK_NUM_FAILED
-	}
-	for k, v := range diskNum {
-		if info, ok := hostsMap[k]; ok {
-			(*info).DiskNum = v
+		count += 1
+		if count >= requestSize {
+			break
 		}
 	}
 
@@ -95,8 +224,8 @@ func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 	return hostInfos, errno.OK
 }
 
-func GetHostPerformance(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
-	hostPerformance := HostPerformance{}
+func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
+	hostPerformance := HostInfoWithPerformance{}
 	instance, err := getInstanceByHostName(hostname)
 	if err != nil {
 		r.Logger().Error("GetHostPerformance getInstanceByHostName failed",
@@ -104,46 +233,87 @@ func GetHostPerformance(r *pigeon.Request, hostname string) (interface{}, errno.
 			pigeon.Field("error", err))
 		return nil, errno.GET_INSTANCE_BY_HOSTNAME_FAILED
 	}
-	// 1. get cpu utilization
-	cpuUtilization, err := metricomm.GetHostCPUUtilization(instance)
-	if err != nil {
-		r.Logger().Error("GetHostPerformance metricomm.GetHostCPUUtilization failed",
-			pigeon.Field("instance", instance),
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_CPU_UTILIZATION_FAILED
-	}
-	hostPerformance.CPUUtilization = cpuUtilization[instance]
 
-	// 2. get memory utilization
-	memUtilization, err := metricomm.GetHostMemUtilization(instance)
-	if err != nil {
-		r.Logger().Error("GetHostPerformance metricomm.GetHostMemUtilization failed",
-			pigeon.Field("instance", instance),
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_MEM_UTILIZATION_FAILED
+	requests := []callback{
+		metricomm.GetHostInfo,
+		metricomm.GetHostCPUInfo,
+		metricomm.GetHostMemoryInfo,
+		metricomm.GetHostDiskNum,
+		metricomm.GetHostCPUUtilization,
+		metricomm.GetHostMemUtilization,
+		metricomm.GetDiskPerformance,
+		metricomm.GetNetWorkTraffic,
 	}
-	hostPerformance.MemUtilization = memUtilization[instance]
 
-	// 3. get disk performance
-	diskPerformance, err := metricomm.GetDiskPerformance(instance)
-	if err != nil {
-		r.Logger().Error("GetHostPerformance metricomm.GetDiskPerformance failed",
-			pigeon.Field("instance", instance),
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_DISK_PERFORMANCE_FAILED
+	// TODO: improve with reflect func name
+	requestName := []string{
+		GET_HOST_INFO,
+		GET_HOST_CPU_INFO,
+		GET_HOST_MEM_INFO,
+		GET_HOST_DISK_NUM,
+		GET_HOST_CPU_UTILIZATION,
+		GET_HOST_MEM_UTILIZATION,
+		GET_HOST_DISK_PERFORMANCE,
+		GET_HOST_NETWORK_TRAFFIC,
 	}
-	hostPerformance.DiskPerformance = diskPerformance
-
-	// 4. get network traffic
-	networkReceive, networkTransmit, err := metricomm.GetNetWorkTraffic(instance)
-	if err != nil {
-		r.Logger().Error("GetHostPerformance metricomm.GetNetWorkTraffic failed",
-			pigeon.Field("instance", instance),
-			pigeon.Field("error", err))
-		return nil, errno.GET_HOST_NETWORK_TRAFFIC_FAILED
+	requestSize := len(requests)
+	ret := make(chan common.QueryResult, requestSize)
+	for index, fn := range requests {
+		go func(key string, fn callback) {
+			info, err := fn(instance)
+			ret <- common.QueryResult{
+				Key:    key,
+				Err:    err,
+				Result: info,
+			}
+		}(requestName[index], fn)
 	}
-	hostPerformance.NetWorkTraffic.NetWorkReceive = networkReceive
-	hostPerformance.NetWorkTraffic.NetWorkTransmit = networkTransmit
 
+	count := 0
+	for res := range ret {
+		if res.Err != nil {
+			r.Logger().Error("GetHost failed",
+				pigeon.Field("step", res.Key.(string)),
+				pigeon.Field("instance", instance),
+				pigeon.Field("error", res.Err))
+			return nil, getErrnoByName(res.Key.(string))
+		}
+		switch res.Key.(string) {
+		case GET_HOST_INFO:
+			info := res.Result.(map[string]metricomm.HostInfo)[instance]
+			hostPerformance.Host.HostName = info.HostName
+			hostPerformance.Host.IP = info.IP
+			hostPerformance.Host.Machine = info.Machine
+			hostPerformance.Host.Release = info.Release
+			hostPerformance.Host.System = info.System
+			hostPerformance.Host.Version = info.Version
+		case GET_HOST_CPU_INFO:
+			cpuInfo := res.Result.(map[string]metricomm.CPUInfo)
+			hostPerformance.Host.CPUCores = cpuInfo[instance]
+		case GET_HOST_MEM_INFO:
+			memInfo := res.Result.(map[string]uint64)
+			hostPerformance.Host.MemoryTotal = memInfo[instance]
+		case GET_HOST_DISK_NUM:
+			diskNum := res.Result.(map[string]uint32)
+			hostPerformance.Host.DiskNum = diskNum[instance]
+		case GET_HOST_CPU_UTILIZATION:
+			cpuUtilization := res.Result.(map[string][]metricomm.RangeMetricItem)
+			hostPerformance.CPUUtilization = cpuUtilization[instance]
+		case GET_HOST_MEM_UTILIZATION:
+			memUtilization := res.Result.(map[string][]metricomm.RangeMetricItem)
+			hostPerformance.MemUtilization = memUtilization[instance]
+		case GET_HOST_DISK_PERFORMANCE:
+			diskPerformance := res.Result.(map[string][]metricomm.Performance)
+			hostPerformance.DiskPerformance = diskPerformance
+		case GET_HOST_NETWORK_TRAFFIC:
+			networkTraffic := res.Result.(metricomm.NetworkTraffic)
+			hostPerformance.NetWorkTraffic.NetWorkReceive = networkTraffic.Receive
+			hostPerformance.NetWorkTraffic.NetWorkTransmit = networkTraffic.Transmit
+		}
+		count += 1
+		if count >= requestSize {
+			break
+		}
+	}
 	return hostPerformance, errno.OK
 }
