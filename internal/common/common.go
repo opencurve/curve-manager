@@ -64,8 +64,15 @@ type QueryResult struct {
 	Result interface{}
 }
 
-func Max(first, second uint64) uint64 {
+func MaxUint64(first, second uint64) uint64 {
 	if first < second {
+		return second
+	}
+	return first
+}
+
+func MinUint32(first, second uint32) uint32 {
+	if first > second {
 		return second
 	}
 	return first

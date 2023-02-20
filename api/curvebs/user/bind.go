@@ -88,7 +88,11 @@ type UpdateUserInfoRequest struct {
 	Permission int    `json:"permission" binding:"required"`
 }
 
-type ListUserRequest struct{}
+type ListUserRequest struct {
+	Size     uint32 `json:"size" binding:"required"`
+	Page     uint32 `json:"page" binding:"required"`
+	UserName string `json:"userName"`
+}
 
 var requests = []Request{
 	{
@@ -128,7 +132,7 @@ var requests = []Request{
 		UpdateUserInfo,
 	},
 	{
-		"GET",
+		"POST",
 		"user.list",
 		ListUserRequest{},
 		ListUser,

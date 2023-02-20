@@ -59,7 +59,7 @@ var (
 
 	GET_USER_PASSWORD = `SELECT password FROM user WHERE username = ?`
 
-	LIST_USER = `SELECT username, email, permission FROM user WHERE username != ?`
+	LIST_USER = `SELECT * FROM user WHERE username != ?`
 
 	UPDATE_PASSWORD = `UPDATE user SET password = ? WHERE username = ?`
 

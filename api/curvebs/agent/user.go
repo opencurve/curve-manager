@@ -23,6 +23,8 @@
 package agent
 
 import (
+	"sort"
+
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/email"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -153,15 +155,26 @@ func UpdateUserInfo(r *pigeon.Request, name, email string, permission int) errno
 	return errno.OK
 }
 
-func ListUser(r *pigeon.Request) (interface{}, errno.Errno) {
-	users, err := storage.ListUser()
+func sortUser(users []storage.UserInfo) {
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].UserName < users[j].UserName
+	})
+}
+
+func ListUser(r *pigeon.Request, size, page uint32, userName string) (interface{}, errno.Errno) {
+	users, err := storage.ListUser(userName)
 	if err != nil {
 		r.Logger().Error("ListUser failed",
 			pigeon.Field("error", err))
 		return nil, errno.LIST_USER_FAILED
 	}
-	var infos []ListUserInfo
-	for _, user := range *users {
+	sortUser(*users)
+	length := uint32(len(*users))
+	start := (page - 1) * size
+	end := common.MinUint32(page*size, length)
+
+	infos := []ListUserInfo{}
+	for _, user := range (*users)[start:end] {
 		var info ListUserInfo
 		info.UserName = user.UserName
 		info.Email = user.Email

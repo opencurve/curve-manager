@@ -121,9 +121,10 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 	}
 	sort.Strings(stringItems)
 	signStr := strings.Join(stringItems, ":")
-	r.Logger().Error("checkSignature",
-		pigeon.Field("sign", signStr))
 	sign := common.GetMd5Sum32Little(signStr)
+	r.Logger().Error("checkSignature",
+		pigeon.Field("signStr", signStr),
+		pigeon.Field("sign", sign))
 	return inSign == sign
 }
 

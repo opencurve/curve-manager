@@ -71,7 +71,8 @@ func UpdateUserInfo(r *pigeon.Request, ctx *Context) bool {
 }
 
 func ListUser(r *pigeon.Request, ctx *Context) bool {
-	users, err := agent.ListUser(r)
+	data := ctx.Data.(*ListUserRequest)
+	users, err := agent.ListUser(r, data.Size, data.Page, data.UserName)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

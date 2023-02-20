@@ -232,13 +232,7 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 	sortFile(fileInfos, key, direction)
 	length := uint32(len(fileInfos))
 	start := (page - 1) * size
-	var end uint32
-	if page*size > length {
-		end = length
-	} else {
-		end = page * size
-	}
-
+	end := common.MinUint32(page*size, length)
 	return fileInfos[start:end], errno.OK
 }
 

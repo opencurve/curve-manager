@@ -86,16 +86,27 @@ func UpdateUserInfo(name, email string, permission int) error {
 	return gStorage.execSQL(UPDATE_USER_INFO, email, permission, name)
 }
 
-func ListUser() (*[]UserInfo, error) {
-	rows, err := gStorage.db.Query(LIST_USER, USER_ADMIN_NAME)
+func ListUser(userName string) (*[]UserInfo, error) {
+	var users []UserInfo
+	var sql string
+	var params []interface{}
+	if userName == "" {
+		sql = LIST_USER
+		params = append(params, USER_ADMIN_NAME)
+	} else if userName == USER_ADMIN_NAME {
+		return &users, nil
+	} else {
+		sql = GET_USER
+		params = append(params, userName)
+	}
+	rows, err := gStorage.db.Query(sql, params...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var users []UserInfo
 	for rows.Next() {
 		var user UserInfo
-		err = rows.Scan(&user.UserName, &user.Email, &user.Permission)
+		err = rows.Scan(&user.UserName, &user.PassWord, &user.Email, &user.Permission)
 		if err != nil {
 			return nil, err
 		}

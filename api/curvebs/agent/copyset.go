@@ -281,7 +281,7 @@ func (cs *Copyset) checkHealthOnLeader(raftStatus *map[string]string) string {
 					return COPYSET_CHECK_PARSE_ERROR
 				}
 			}
-			gap = common.Max(gap, lastLogId-(nextIndex-1-flying))
+			gap = common.MaxUint64(gap, lastLogId-(nextIndex-1-flying))
 		}
 	}
 	if gap > common.RAFT_MARGIN {
