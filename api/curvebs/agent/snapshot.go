@@ -23,6 +23,7 @@
 package agent
 
 import (
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/pigeon"
@@ -38,7 +39,8 @@ func GetSnapshot(r *pigeon.Request, size, page uint32, uuid, user, fileName, sta
 			pigeon.Field("user", user),
 			pigeon.Field("fileName", fileName),
 			pigeon.Field("status", status),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_SNAPSHOT_FAILED
 	}
 	return snapshots, errno.OK

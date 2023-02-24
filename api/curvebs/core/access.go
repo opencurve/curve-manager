@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	apicomm "github.com/opencurve/curve-manager/api/common"
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/storage"
@@ -56,7 +56,7 @@ var (
 	enableCheck bool
 	// api expire time, default 60s
 	apiExpireSeconds int
-	// login expire time, default 600s
+	// login expire time, default 1800s
 	loginExpireSeconds int
 )
 
@@ -68,7 +68,7 @@ func InitAccess(cfg *pigeon.Configure) {
 	}
 	loginExpireSeconds = cfg.GetConfig().GetInt(ACCESS_LOGIN_EXPIRE_SECONDS)
 	if loginExpireSeconds <= 0 {
-		loginExpireSeconds = 600
+		loginExpireSeconds = 1800
 	}
 }
 
@@ -82,7 +82,7 @@ func isAdminRequest(r *pigeon.Request) bool {
 }
 
 func checkTimeOut(r *pigeon.Request) bool {
-	argTime := r.HeadersIn[apicomm.HEADER_AUTH_TIMESTAMP]
+	argTime := r.HeadersIn[comm.HEADER_AUTH_TIMESTAMP]
 	inTime, err := strconv.ParseInt(argTime, 10, 64)
 	if err != nil {
 		r.Logger().Error("checkTimeOut failed, invalid time argument",
@@ -108,9 +108,9 @@ func checkTimeOut(r *pigeon.Request) bool {
 * 4. Sign: MD532Little(Sign-String)
  */
 func checkSignature(r *pigeon.Request, data interface{}) bool {
-	token := r.HeadersIn[apicomm.HEADER_AUTH_TOKEN]
-	inSign := r.HeadersIn[apicomm.HEADER_AUTH_SIGN]
-	timeStamp := r.HeadersIn[apicomm.HEADER_AUTH_TIMESTAMP]
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	inSign := r.HeadersIn[comm.HEADER_AUTH_SIGN]
+	timeStamp := r.HeadersIn[comm.HEADER_AUTH_TIMESTAMP]
 	stringItems := []string{r.Method, r.Uri, timeStamp, token}
 	for _, v := range r.Args {
 		stringItems = append(stringItems, v)
@@ -129,7 +129,7 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 }
 
 func checkToken(r *pigeon.Request) bool {
-	token := r.HeadersIn[apicomm.HEADER_AUTH_TOKEN]
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
 	if !storage.CheckSession(token, apiExpireSeconds) {
 		return false
 	}

@@ -23,6 +23,7 @@
 package agent
 
 import (
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
@@ -290,7 +291,8 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	pools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
 		r.Logger().Error("ListLogicalPool bsrpc.ListLogicalPool failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_POOL_FAILED
 	}
 
@@ -310,14 +312,16 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	err = getPoolItemNum(&result)
 	if err != nil {
 		r.Logger().Error("ListLogicalPool getPoolItemNum failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_ITEM_NUMBER_FAILED
 	}
 
 	err = getPoolSpace(&result)
 	if err != nil {
 		r.Logger().Error("ListLogicalPool getPoolSpace failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_SPACE_FAILED
 	}
 	return &result, errno.OK
@@ -328,7 +332,8 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool bsrpc.GetLogicalPool failed",
 			pigeon.Field("poolId", poolId),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_FAILED
 	}
 
@@ -347,7 +352,8 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool getPoolItemNum failed",
 			pigeon.Field("poolId", poolId),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_ITEM_NUMBER_FAILED
 	}
 
@@ -355,7 +361,8 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool getPoolSpace failed",
 			pigeon.Field("poolId", poolId),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_SPACE_FAILED
 	}
 
@@ -365,7 +372,8 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool getPoolPerformance failed",
 			pigeon.Field("poolId", poolId),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_PERFORMANCE_FAILED
 	}
 	return result[0], errno.OK
@@ -376,7 +384,8 @@ func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {
 	logicalPools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
 		r.Logger().Error("ListTopology bsrpc.ListLogicalPool failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_POOL_FAILED
 	}
 	for _, lp := range logicalPools {
@@ -390,7 +399,8 @@ func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {
 	err = listPoolZone(&result)
 	if err != nil {
 		r.Logger().Error("ListTopology listPoolZone failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_POOL_ZONE_FAILED
 	}
 	return &result, errno.OK

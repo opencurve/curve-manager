@@ -25,7 +25,7 @@ package bsmetric
 import (
 	"fmt"
 
-	comm "github.com/opencurve/curve-manager/internal/metrics/common"
+	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
 	"github.com/opencurve/curve-manager/internal/metrics/core"
 )
 
@@ -40,9 +40,9 @@ const (
 
 func GetMdsStatus() ([]ServiceStatus, string) {
 	size := len(core.GMetricClient.MdsDummyAddr)
-	results := make(chan comm.MetricResult, size)
-	names := fmt.Sprintf("%s,%s,%s", comm.CURVEBS_VERSION, MDS_STATUS, MDS_CONF_LISTEN_ADDR)
-	comm.GetBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
+	results := make(chan metricomm.MetricResult, size)
+	names := fmt.Sprintf("%s,%s,%s", metricomm.CURVEBS_VERSION, MDS_STATUS, MDS_CONF_LISTEN_ADDR)
+	metricomm.GetBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
 
 	count := 0
 	var errors string
@@ -50,15 +50,15 @@ func GetMdsStatus() ([]ServiceStatus, string) {
 	for res := range results {
 		if res.Err == nil {
 			addr := ""
-			v, e := comm.ParseBvarMetric(res.Result.(string))
+			v, e := metricomm.ParseBvarMetric(res.Result.(string))
 			if e != nil {
 				errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, e.Error())
 			} else {
-				addr = comm.GetBvarConfMetricValue((*v)[MDS_CONF_LISTEN_ADDR])
+				addr = metricomm.GetBvarConfMetricValue((*v)[MDS_CONF_LISTEN_ADDR])
 			}
 			ret = append(ret, ServiceStatus{
 				Address: addr,
-				Version: (*v)[comm.CURVEBS_VERSION],
+				Version: (*v)[metricomm.CURVEBS_VERSION],
 				Online:  true,
 				Leader:  (*v)[MDS_STATUS] == MDS_LEADER,
 			})
@@ -81,21 +81,21 @@ func GetMdsStatus() ([]ServiceStatus, string) {
 
 func GetAuthInfoOfRoot() (string, string, string) {
 	size := len(core.GMetricClient.MdsDummyAddr)
-	results := make(chan comm.MetricResult, size)
+	results := make(chan metricomm.MetricResult, size)
 	names := fmt.Sprintf("%s,%s", MDS_CONF_AUTH_USERNAME, MDS_CONF_AUTH_PASSWORD)
-	comm.GetBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
+	metricomm.GetBvarMetric(core.GMetricClient.MdsDummyAddr, names, &results)
 
 	count := 0
 	var errors string
 	var userName, passWord string
 	for res := range results {
 		if res.Err == nil {
-			v, e := comm.ParseBvarMetric(res.Result.(string))
+			v, e := metricomm.ParseBvarMetric(res.Result.(string))
 			if e != nil {
 				errors = fmt.Sprintf("%s; %s:%s", errors, res.Key, e.Error())
 			} else {
-				userName = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_USERNAME])
-				passWord = comm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_PASSWORD])
+				userName = metricomm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_USERNAME])
+				passWord = metricomm.GetBvarConfMetricValue((*v)[MDS_CONF_AUTH_PASSWORD])
 				return userName, passWord, ""
 			}
 		} else {

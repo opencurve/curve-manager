@@ -23,6 +23,7 @@
 package agent
 
 import (
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
@@ -53,7 +54,8 @@ func GetClusterSpace(r *pigeon.Request) (interface{}, errno.Errno) {
 	pools, err := bsrpc.GMdsClient.ListLogicalPool()
 	if err != nil {
 		r.Logger().Error("GetClusterSpace bsrpc.ListLogicalPool failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_POOL_FAILED
 	}
 
@@ -68,7 +70,8 @@ func GetClusterSpace(r *pigeon.Request) (interface{}, errno.Errno) {
 	err = getPoolSpace(&poolInfos)
 	if err != nil {
 		r.Logger().Error("GetClusterSpace getPoolSpace failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_SPACE_FAILED
 	}
 	for _, info := range poolInfos {
@@ -83,7 +86,8 @@ func GetClusterPerformance(r *pigeon.Request) (interface{}, errno.Errno) {
 	performance, err := bsmetric.GetClusterPerformance()
 	if err != nil {
 		r.Logger().Error("GetClusterPerformance failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_CLUSTER_PERFORMANCE_FAILED
 	}
 	return performance, errno.OK
@@ -97,7 +101,8 @@ func GetClusterStatus(r *pigeon.Request) interface{} {
 		clusterStatus.Healthy = false
 		clusterStatus.PoolNum = 0
 		r.Logger().Error("GetClusterStatus bsrpc.ListLogicalPool failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 	}
 	clusterStatus.PoolNum = uint32(len(pools))
 
@@ -123,7 +128,8 @@ func GetClusterStatus(r *pigeon.Request) interface{} {
 		if res.Err != nil {
 			r.Logger().Error("GetClusterStatus check service status failed",
 				pigeon.Field("service", res.Key.(string)),
-				pigeon.Field("error", res.Err))
+				pigeon.Field("error", res.Err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		}
 		healthy = healthy && res.Result.(bool)
 		count += 1
@@ -137,7 +143,8 @@ func GetClusterStatus(r *pigeon.Request) interface{} {
 	health, err := cs.checkCopysetsInCluster()
 	if err != nil {
 		r.Logger().Error("GetClusterStatus checkCopysetsInCluster failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 	}
 	healthy = health && healthy
 	clusterStatus.Healthy = healthy

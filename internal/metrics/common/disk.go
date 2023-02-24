@@ -43,6 +43,12 @@ const (
 	// filesystem
 	NODE_FILESYSTEM_SIZE_TOTAL = "node_filesystem_size_bytes"
 	NODE_FILESYSTEM_SIZE_AVAIL = "node_filesystem_avail_bytes"
+
+	// disk
+	NODE_DISK_ROTATION_RATE      = "node_disk_ata_rotation_rate_rpm"
+	NODE_DISK_WRITE_CACHE_ENABLE = "node_disk_ata_write_cache_enabled"
+	SSD_TYPE                     = "SSD"
+	HDD_TYPE                     = "HDD"
 )
 
 // @return map[string][]Performance, key: device, value: performance at different timestamp
@@ -133,9 +139,9 @@ func GetDiskPerformance(instance string) (interface{}, error) {
 	return performance, nil
 }
 
-// @return map[string][]string, key: instance, value: device array
-func ListDisk(instance string) (map[string][]string, error) {
-	disks := make(map[string][]string)
+// @return map[instance][]map[key]value
+func ListDiskInfo(instance string) (map[string][]map[string]string, error) {
+	disks := make(map[string][]map[string]string)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
 	metricName := NODE_DISK_INFO
@@ -150,7 +156,7 @@ func ListDisk(instance string) (map[string][]string, error) {
 		}
 		ret := res.Result.(*QueryResponseOfVector)
 		for _, item := range ret.Data.Result {
-			disks[item.Metric[INSTANCE]] = append(disks[item.Metric[INSTANCE]], item.Metric[DEVICE])
+			disks[item.Metric[INSTANCE]] = append(disks[item.Metric[INSTANCE]], item.Metric)
 		}
 		count += 1
 		if count >= requestSize {
@@ -170,7 +176,7 @@ func getShortDeviceName(name string) string {
 }
 
 // @return ap[instance]map[device]FileSystemInfo
-func GetFileSystemInfo(instance string) (map[string]map[string]FileSystemInfo, error) {
+func GetDiskFileSystemInfo(instance string) (interface{}, error) {
 	fileSystemInfos := make(map[string]map[string]FileSystemInfo)
 	// totalSpace, freeSpace
 	requestSize := 2
@@ -225,4 +231,77 @@ func GetFileSystemInfo(instance string) (map[string]map[string]FileSystemInfo, e
 		}
 	}
 	return fileSystemInfos, nil
+}
+
+func getDiskTypeByRotationRate(rate string) string {
+	switch rate {
+	case "0":
+		return SSD_TYPE
+	default:
+		return HDD_TYPE
+	}
+}
+
+// @return map[instance]map[device]type
+func GetDiskType(instance string) (interface{}, error) {
+	diskTypes := make(map[string]map[string]string)
+	requestSize := 1
+	results := make(chan MetricResult, requestSize)
+	metricName := NODE_DISK_ROTATION_RATE
+	if instance != "" {
+		metricName = fmt.Sprintf("%s{instance=%q}", metricName, instance)
+	}
+	go QueryInstantMetric(metricName, &results)
+	count := 0
+	for res := range results {
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		ret := res.Result.(*QueryResponseOfVector)
+		for _, item := range ret.Data.Result {
+			inst := item.Metric[INSTANCE]
+			dev := item.Metric[DEVICE]
+			if _, ok := diskTypes[inst]; !ok {
+				diskTypes[inst] = make(map[string]string)
+			}
+			diskTypes[inst][dev] = getDiskTypeByRotationRate(item.Value[1].(string))
+		}
+		count += 1
+		if count >= requestSize {
+			break
+		}
+	}
+	return diskTypes, nil
+}
+
+// @return map[instance]map[device]writeCacheEnable
+func GetDiskWriteCacheEnableFlag(instance string) (interface{}, error) {
+	diskWriteCaches := make(map[string]map[string]string)
+	requestSize := 1
+	results := make(chan MetricResult, requestSize)
+	metricName := NODE_DISK_WRITE_CACHE_ENABLE
+	if instance != "" {
+		metricName = fmt.Sprintf("%s{instance=%q}", metricName, instance)
+	}
+	go QueryInstantMetric(metricName, &results)
+	count := 0
+	for res := range results {
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		ret := res.Result.(*QueryResponseOfVector)
+		for _, item := range ret.Data.Result {
+			inst := item.Metric[INSTANCE]
+			dev := item.Metric[DEVICE]
+			if _, ok := diskWriteCaches[inst]; !ok {
+				diskWriteCaches[inst] = make(map[string]string)
+			}
+			diskWriteCaches[inst][dev] = item.Value[1].(string)
+		}
+		count += 1
+		if count >= requestSize {
+			break
+		}
+	}
+	return diskWriteCaches, nil
 }

@@ -81,9 +81,10 @@ func getStrStatus(status int) string {
 	}
 }
 
-func transferSnapshotInfo(in *[]snapshot, out *[]Snapshot) {
-	for _, info := range *in {
-		var item Snapshot
+func transferSnapshotInfo(in *SnapShot, out *ListSnapshotInfo) {
+	out.Total = int(in.TotalCount)
+	for _, info := range in.Snapshots {
+		var item SnapshotInfo
 		item.UUID = info.UUID
 		item.Name = info.Name
 		item.User = info.User
@@ -93,12 +94,15 @@ func transferSnapshotInfo(in *[]snapshot, out *[]Snapshot) {
 		item.FileLength = info.FileLength / common.GiB
 		item.Status = getStrStatus(info.Status)
 		item.Progress = fmt.Sprintf("%d%%", info.Progress)
-		*out = append(*out, item)
+		out.Info = append(out.Info, item)
 	}
 }
 
-func GetSnapshot(size, page uint32, uuid, user, fileName, status string) ([]Snapshot, error) {
-	var snapshotInfo SnapShotInfo
+func GetSnapshot(size, page uint32, uuid, user, fileName, status string) (ListSnapshotInfo, error) {
+	var snapshotInfo SnapShot
+	listSnapshotInfo := ListSnapshotInfo{
+		Info: []SnapshotInfo{},
+	}
 	params := fmt.Sprintf("Action=%s&Version=%s&Limit=%d&Offset=%d",
 		ACTION_GET_SNAPSHOT_LIST, SNAPSHOT_CLONE_VERSION, size, (page-1)*size)
 	if uuid != "" {
@@ -113,26 +117,25 @@ func GetSnapshot(size, page uint32, uuid, user, fileName, status string) ([]Snap
 	if status != "" {
 		s := getNumericStatus(status)
 		if s < 0 {
-			return nil, fmt.Errorf("status not support")
+			return listSnapshotInfo, fmt.Errorf("status not support")
 		}
 		params = fmt.Sprintf("%s&Status=%d", params, s)
 	}
 
 	resp, err := GSnapshotCloneClient.sendHttp2SnapshotClone(params)
 	if err != nil {
-		return nil, err
+		return listSnapshotInfo, err
 	}
 
 	err = json.Unmarshal([]byte(resp), &snapshotInfo)
 	if err != nil {
-		return nil, err
+		return listSnapshotInfo, err
 	}
 
 	if snapshotInfo.Code != ERROR_CODE_SUCCESS {
-		return nil, fmt.Errorf(snapshotInfo.Message)
+		return listSnapshotInfo, fmt.Errorf(snapshotInfo.Message)
 	}
 
-	snapshots := []Snapshot{}
-	transferSnapshotInfo(&snapshotInfo.Snapshots, &snapshots)
-	return snapshots, nil
+	transferSnapshotInfo(&snapshotInfo, &listSnapshotInfo)
+	return listSnapshotInfo, nil
 }

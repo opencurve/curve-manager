@@ -24,7 +24,9 @@ package agent
 
 import (
 	"fmt"
+	"sort"
 
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
@@ -32,6 +34,7 @@ import (
 )
 
 const (
+	// request
 	GET_HOST_INFO             = "GetHostInfo"
 	GET_HOST_CPU_INFO         = "GetHostCPUInfo"
 	GET_HOST_MEM_INFO         = "GetHostMemoryInfo"
@@ -42,13 +45,18 @@ const (
 	GET_HOST_NETWORK_TRAFFIC  = "GetNetWorkTraffic"
 )
 
+type ListHostInfo struct {
+	Total int        `json:"total" binding:"required"`
+	Info  []HostInfo `json:"info" binding:"required"`
+}
+
 type HostInfo struct {
 	HostName    string            `json:"hostName" binding:"required"`
 	IP          string            `json:"ip" binding:"required"`
 	Machine     string            `json:"machine" binding:"required"`
-	Release     string            `json:"kernel-release" binding:"required"`
-	Version     string            `json:"kernel-version" binding:"required"`
-	System      string            `json:"operating-system" binding:"required"`
+	Release     string            `json:"kernelRelease" binding:"required"`
+	Version     string            `json:"kernelVersion" binding:"required"`
+	System      string            `json:"operatingSystem" binding:"required"`
 	CPUCores    metricomm.CPUInfo `json:"cpuCores" binding:"required"`
 	DiskNum     uint32            `json:"diskNum" binding:"required"`
 	MemoryTotal uint64            `json:"memory" binding:"required"`
@@ -69,7 +77,7 @@ type NetWorkTraffic struct {
 
 type callback func(instance string) (interface{}, error)
 
-func getErrnoByName(name string) errno.Errno {
+func getHostErrnoByName(name string) errno.Errno {
 	switch name {
 	case GET_HOST_INFO:
 		return errno.GET_HOST_INFO_FAILED
@@ -119,6 +127,12 @@ func getHostNameByInstance(instances []string) (map[string]string, error) {
 	return ret, nil
 }
 
+func sortHost(hosts []HostInfo) {
+	sort.Slice(hosts, func(i, j int) bool {
+		return hosts[i].HostName < hosts[j].HostName
+	})
+}
+
 func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 	instance := ""
 	hostInfos := []HostInfo{}
@@ -154,8 +168,9 @@ func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 		if res.Err != nil {
 			r.Logger().Error("ListHost failed",
 				pigeon.Field("step", res.Key.(string)),
-				pigeon.Field("error", res.Err))
-			return nil, getErrnoByName(res.Key.(string))
+				pigeon.Field("error", res.Err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return nil, getHostErrnoByName(res.Key.(string))
 		}
 		switch res.Key.(string) {
 		case GET_HOST_INFO:
@@ -221,7 +236,19 @@ func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 	for _, v := range hostsMap {
 		hostInfos = append(hostInfos, *v)
 	}
-	return hostInfos, errno.OK
+	sortHost(hostInfos)
+	length := uint32(len(hostInfos))
+	start := (page - 1) * size
+	end := common.MinUint32(page*size, length)
+	listHostInfo := ListHostInfo{
+		Info: []HostInfo{},
+	}
+	listHostInfo.Total = len(hostInfos)
+	if start >= length {
+		return listHostInfo, errno.OK
+	}
+	listHostInfo.Info = hostInfos[start:end]
+	return listHostInfo, errno.OK
 }
 
 func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
@@ -230,7 +257,8 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 	if err != nil {
 		r.Logger().Error("GetHostPerformance getInstanceByHostName failed",
 			pigeon.Field("hostname", hostname),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_INSTANCE_BY_HOSTNAME_FAILED
 	}
 
@@ -275,8 +303,9 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 			r.Logger().Error("GetHost failed",
 				pigeon.Field("step", res.Key.(string)),
 				pigeon.Field("instance", instance),
-				pigeon.Field("error", res.Err))
-			return nil, getErrnoByName(res.Key.(string))
+				pigeon.Field("error", res.Err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return nil, getHostErrnoByName(res.Key.(string))
 		}
 		switch res.Key.(string) {
 		case GET_HOST_INFO:

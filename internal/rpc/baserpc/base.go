@@ -25,12 +25,10 @@ package baserpc
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/opencurve/curve-manager/internal/common"
-	"github.com/shimingyah/pool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -50,8 +48,6 @@ type RpcResult common.QueryResult
 type BaseRpc struct {
 	timeout    time.Duration
 	retryTimes uint32
-	lock       sync.RWMutex
-	connPools  map[string]pool.Pool
 }
 
 type RpcContext struct {
@@ -75,45 +71,11 @@ func init() {
 	GBaseClient = &BaseRpc{
 		timeout:    time.Duration(DEFAULT_RPC_TIMEOUT_MS * int(time.Millisecond)),
 		retryTimes: uint32(DEFAULT_RPC_RETRY_TIMES),
-		lock:       sync.RWMutex{},
-		connPools:  make(map[string]pool.Pool),
 	}
 }
 
 func (cli *BaseRpc) getOrCreateConn(addr string, ctx context.Context) (*grpc.ClientConn, error) {
-	// cli.lock.RLock()
-	// cpool, ok := cli.connPools[addr]
-	// cli.lock.RUnlock()
-	// if ok {
-	// 	conn, err := cpool.Get()
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
-	// 	}
-	// 	return conn.Value(), nil
-	// }
-
-	// cli.lock.Lock()
-	// defer cli.lock.Unlock()
-	// cpool, ok = cli.connPools[addr]
-	// if ok {
-	// 	conn, err := cpool.Get()
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
-	// 	}
-	// 	return conn.Value(), nil
-	// }
-
-	// p, err := pool.New(addr, pool.DefaultOptions)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("new conn pool failed, addr: %s, err: %v", addr, err)
-	// }
-
-	// cli.connPools[addr] = p
-	// conn, err := p.Get()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("conn pool get conn failed, addr: %s, err: %v", addr, err)
-	// }
-	// return conn.Value(), nil
+	// TODO: conn pool maybe needed
 	ctx, cancel := context.WithTimeout(context.Background(), cli.timeout)
 	defer cancel()
 	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())

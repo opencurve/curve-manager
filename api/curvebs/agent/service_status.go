@@ -25,6 +25,7 @@ package agent
 import (
 	"fmt"
 
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
@@ -47,7 +48,8 @@ func GetEtcdStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	status, err := bsmetric.GetEtcdStatus()
 	if err != "" {
 		r.Logger().Error("GetEtcdStatus failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_ETCD_STATUS_FAILED
 	}
 	return status, errno.OK
@@ -57,7 +59,8 @@ func GetMdsStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	status, err := bsmetric.GetMdsStatus()
 	if err != "" {
 		r.Logger().Error("GetMdsStatus failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_MDS_STATUS_FAILED
 	}
 	return status, errno.OK
@@ -67,7 +70,8 @@ func GetSnapShotCloneServerStatus(r *pigeon.Request) (interface{}, errno.Errno) 
 	status, err := bsmetric.GetSnapShotCloneServerStatus()
 	if err != "" {
 		r.Logger().Error("GetSnapShotCloneServerStatus failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_SNAPSHOT_CLONE_STATUS_FAILED
 	}
 	return status, errno.OK
@@ -79,7 +83,8 @@ func GetChunkServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	chunkservers, err := bsrpc.GMdsClient.GetChunkServerInCluster()
 	if err != nil {
 		r.Logger().Error("GetChunkServerStatus bsrpc.GetChunkServerInCluster failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_CHUNKSERVER_IN_CLUSTER_FAILED
 	}
 
@@ -98,7 +103,8 @@ func GetChunkServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	versions, err := bsmetric.GetChunkServerVersion(&endponits)
 	if err != nil {
 		r.Logger().Error("GetChunkServerStatus bsmetric.GetChunkServerVersion failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_CHUNKSERVER_VERSION_FAILED
 	}
 	for k, v := range versions {

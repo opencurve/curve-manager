@@ -30,7 +30,7 @@ const (
 )
 
 // struct received from snapshot clone server
-type SnapShotInfo struct {
+type SnapShot struct {
 	Code       string     `json:"Code" binding:"required"`
 	Message    string     `json:"Message" binding:"required"`
 	RequestId  string     `json:"RequestId" binding:"required"`
@@ -51,7 +51,12 @@ type snapshot struct {
 }
 
 // struct return to uplayer
-type Snapshot struct {
+type ListSnapshotInfo struct {
+	Total int            `json:"total" binding:"required"`
+	Info  []SnapshotInfo `json:"info" binding:"required"`
+}
+
+type SnapshotInfo struct {
 	UUID       string `json:"uuid" binding:"required"`
 	User       string `json:"user" binding:"required"`
 	File       string `json:"file" binding:"required"`

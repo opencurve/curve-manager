@@ -25,6 +25,7 @@ package agent
 import (
 	"sort"
 
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/email"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -32,10 +33,15 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
-type ListUserInfo struct {
+type UserInfo struct {
 	UserName   string `json:"userName" binding:"required"`
 	Email      string `json:"email"`
 	Permission int    `json:"permission" binding:"required"`
+}
+
+type ListUserInfo struct {
+	Total int        `json:"total" binding:"required"`
+	Info  []UserInfo `json:"info" binding:"required"`
 }
 
 func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
@@ -44,7 +50,8 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 		r.Logger().Error("Login failed",
 			pigeon.Field("userName", name),
 			pigeon.Field("passWord", passwd),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_USER_FAILED
 	}
 	if passwd != userInfo.PassWord {
@@ -52,7 +59,8 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 			pigeon.Field("userName", name),
 			pigeon.Field("inPassWord", passwd),
 			pigeon.Field("storedPassword", userInfo.PassWord),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.USER_PASSWORD_NOT_MATCH
 	}
 	storage.AddSession(&userInfo)
@@ -66,7 +74,8 @@ func CreateUser(r *pigeon.Request, name, passwd, email string, permission int) e
 			pigeon.Field("userName", name),
 			pigeon.Field("passWord", passwd),
 			pigeon.Field("email", email),
-			pigeon.Field("permission", permission))
+			pigeon.Field("permission", permission),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.CREATE_USER_FAILED
 	}
 	return errno.OK
@@ -77,7 +86,8 @@ func DeleteUser(r *pigeon.Request, name string) errno.Errno {
 	if err != nil {
 		r.Logger().Error("Delete user failed",
 			pigeon.Field("userName", name),
-			pigeon.Field("err", err))
+			pigeon.Field("err", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.DELETE_USER_FAILED
 	}
 	return errno.OK
@@ -88,21 +98,24 @@ func ChangePassWord(r *pigeon.Request, name, oldPassword, newPassword string) er
 	if err != nil {
 		r.Logger().Error("GetUserPassword failed",
 			pigeon.Field("userName", name),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.GET_USER_PASSWORD_FAILED
 	}
 	if passwd != oldPassword {
 		r.Logger().Error("ChangePassWord failed, old password not match",
 			pigeon.Field("userName", name),
 			pigeon.Field("inPassword", oldPassword),
-			pigeon.Field("stored password", passwd))
+			pigeon.Field("stored password", passwd),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.USER_PASSWORD_NOT_MATCH
 	}
 	err = storage.UpdateUserPassWord(name, newPassword)
 	if err != nil {
 		r.Logger().Error("UpdateUserPassWord failed",
 			pigeon.Field("userName", name),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.UPDATE_USER_PASSWORD_FAILED
 	}
 	return errno.OK
@@ -113,13 +126,15 @@ func ResetPassWord(r *pigeon.Request, name string) errno.Errno {
 	if err != nil {
 		r.Logger().Error("GetUserEmail failed",
 			pigeon.Field("userName", name),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.GET_USER_EMAIL_FAILED
 	}
 
 	if emailAddr == "" {
 		r.Logger().Error("ResetPassWord failed, email is empty",
-			pigeon.Field("userName", name))
+			pigeon.Field("userName", name),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.USER_EMAIL_EMPTY
 	}
 	passwd := storage.GetNewPassWord()
@@ -128,7 +143,8 @@ func ResetPassWord(r *pigeon.Request, name string) errno.Errno {
 		r.Logger().Error("UpdateUserPassWord failed",
 			pigeon.Field("userName", name),
 			pigeon.Field("passWord", common.GetMd5Sum32Little(passwd)),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.UPDATE_USER_PASSWORD_FAILED
 	}
 
@@ -138,7 +154,8 @@ func ResetPassWord(r *pigeon.Request, name string) errno.Errno {
 			pigeon.Field("userName", name),
 			pigeon.Field("emailAddr", emailAddr),
 			pigeon.Field("newPassword", passwd),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.SEND_USER_PASSWORD_FAILED
 	}
 	return errno.OK
@@ -149,7 +166,8 @@ func UpdateUserInfo(r *pigeon.Request, name, email string, permission int) errno
 	if err != nil {
 		r.Logger().Error("UpdateUserInfo failed",
 			pigeon.Field("userName", name),
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.UPDATE_USER_INFO_FAILED
 	}
 	return errno.OK
@@ -165,7 +183,8 @@ func ListUser(r *pigeon.Request, size, page uint32, userName string) (interface{
 	users, err := storage.ListUser(userName)
 	if err != nil {
 		r.Logger().Error("ListUser failed",
-			pigeon.Field("error", err))
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_USER_FAILED
 	}
 	sortUser(*users)
@@ -173,13 +192,19 @@ func ListUser(r *pigeon.Request, size, page uint32, userName string) (interface{
 	start := (page - 1) * size
 	end := common.MinUint32(page*size, length)
 
-	infos := []ListUserInfo{}
-	for _, user := range (*users)[start:end] {
-		var info ListUserInfo
-		info.UserName = user.UserName
-		info.Email = user.Email
-		info.Permission = user.Permission
-		infos = append(infos, info)
+	info := ListUserInfo{
+		Info: []UserInfo{},
 	}
-	return infos, errno.OK
+	info.Total = len(*users)
+	if start >= length {
+		return info, errno.OK
+	}
+	for _, user := range (*users)[start:end] {
+		var item UserInfo
+		item.UserName = user.UserName
+		item.Email = user.Email
+		item.Permission = user.Permission
+		info.Info = append(info.Info, item)
+	}
+	return info, errno.OK
 }

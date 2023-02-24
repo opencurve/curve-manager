@@ -27,7 +27,7 @@ import (
 	"strconv"
 
 	"github.com/opencurve/curve-manager/internal/common"
-	comm "github.com/opencurve/curve-manager/internal/metrics/common"
+	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
 	"github.com/opencurve/curve-manager/internal/metrics/core"
 )
 
@@ -65,22 +65,22 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 
 	// version, leader
 	requestSize := 2
-	results := make(chan comm.MetricResult, requestSize)
-	go comm.QueryInstantMetric(comm.ETCD_CLUSTER_VERSION_NAME, &results)
-	go comm.QueryInstantMetric(comm.ETCD_SERVER_IS_LEADER_NAME, &results)
+	results := make(chan metricomm.MetricResult, requestSize)
+	go metricomm.QueryInstantMetric(metricomm.ETCD_CLUSTER_VERSION_NAME, &results)
+	go metricomm.QueryInstantMetric(metricomm.ETCD_SERVER_IS_LEADER_NAME, &results)
 
 	count := 0
 	for res := range results {
 		if res.Err != nil {
 			return ret, res.Err.Error()
 		}
-		if res.Key.(string) == comm.ETCD_CLUSTER_VERSION_NAME {
-			versions := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), false)
+		if res.Key.(string) == metricomm.ETCD_CLUSTER_VERSION_NAME {
+			versions := metricomm.ParseVectorMetric(res.Result.(*metricomm.QueryResponseOfVector), false)
 			for k, v := range versions {
-				(*retMap[k]).Version = v[comm.ETCD_CLUSTER_VERSION]
+				(*retMap[k]).Version = v[metricomm.ETCD_CLUSTER_VERSION]
 			}
 		} else {
-			leaders := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), true)
+			leaders := metricomm.ParseVectorMetric(res.Result.(*metricomm.QueryResponseOfVector), true)
 			for k, v := range leaders {
 				if v["value"] == "1" {
 					(*retMap[k]).Leader = true
@@ -101,25 +101,25 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 	return ret, ""
 }
 
-func GetPoolSpace(name string) (*comm.Space, error) {
-	space := comm.Space{}
-	poolName := comm.FormatToMetricName(name)
+func GetPoolSpace(name string) (*metricomm.Space, error) {
+	space := metricomm.Space{}
+	poolName := metricomm.FormatToMetricName(name)
 
 	// total, alloc
 	requestSize := 2
-	results := make(chan comm.MetricResult, requestSize)
+	results := make(chan metricomm.MetricResult, requestSize)
 	totalName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_LOGICAL_CAPACITY)
 	usedName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_LOGICAL_ALLOC)
 
-	go comm.QueryInstantMetric(totalName, &results)
-	go comm.QueryInstantMetric(usedName, &results)
+	go metricomm.QueryInstantMetric(totalName, &results)
+	go metricomm.QueryInstantMetric(usedName, &results)
 
 	count := 0
 	for res := range results {
 		if res.Err != nil {
 			return &space, res.Err
 		}
-		ret := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), true)
+		ret := metricomm.ParseVectorMetric(res.Result.(*metricomm.QueryResponseOfVector), true)
 		if res.Key.(string) == totalName {
 			for _, v := range ret {
 				total, ok := strconv.ParseUint(v["value"], 10, 64)
@@ -149,25 +149,25 @@ func GetPoolSpace(name string) (*comm.Space, error) {
 
 func GetPoolItemNum(name string) (*PoolItemNum, error) {
 	poolItemNum := PoolItemNum{}
-	poolName := comm.FormatToMetricName(name)
+	poolName := metricomm.FormatToMetricName(name)
 
 	// serverNUm, chunkserverNum, copysetNum
 	requestSize := 3
-	results := make(chan comm.MetricResult, requestSize)
+	results := make(chan metricomm.MetricResult, requestSize)
 	serverName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_SERVER_NUM)
 	chunkserverName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_CHUNKSERVER_NUM)
 	copysetName := fmt.Sprintf("%s%s%s", LOGICAL_POOL_METRIC_PREFIX, poolName, LOGICAL_POOL_COPYSET_NUM)
 
-	go comm.QueryInstantMetric(serverName, &results)
-	go comm.QueryInstantMetric(chunkserverName, &results)
-	go comm.QueryInstantMetric(copysetName, &results)
+	go metricomm.QueryInstantMetric(serverName, &results)
+	go metricomm.QueryInstantMetric(chunkserverName, &results)
+	go metricomm.QueryInstantMetric(copysetName, &results)
 
 	count := 0
 	for res := range results {
 		if res.Err != nil {
 			return &poolItemNum, res.Err
 		}
-		ret := comm.ParseVectorMetric(res.Result.(*comm.QueryResponseOfVector), true)
+		ret := metricomm.ParseVectorMetric(res.Result.(*metricomm.QueryResponseOfVector), true)
 		for _, v := range ret {
 			iv, ok := strconv.ParseUint(v["value"], 10, 32)
 			if ok != nil {
@@ -190,18 +190,18 @@ func GetPoolItemNum(name string) (*PoolItemNum, error) {
 	return &poolItemNum, nil
 }
 
-func GetPoolPerformance(name string) ([]comm.Performance, error) {
-	poolName := comm.FormatToMetricName(name)
+func GetPoolPerformance(name string) ([]metricomm.Performance, error) {
+	poolName := metricomm.FormatToMetricName(name)
 	prefix := fmt.Sprintf("%s%s_", LOGICAL_POOL_METRIC_PREFIX, poolName)
-	return comm.GetPerformance(prefix)
+	return metricomm.GetPerformance(prefix)
 }
 
-func GetClusterPerformance() ([]comm.Performance, error) {
-	return comm.GetPerformance(CLUSTER_METRIC_PREFIX)
+func GetClusterPerformance() ([]metricomm.Performance, error) {
+	return metricomm.GetPerformance(CLUSTER_METRIC_PREFIX)
 }
 
-func GetVolumePerformance(volumeName string) ([]comm.UserPerformance, error) {
-	name := comm.FormatToMetricName(volumeName)
+func GetVolumePerformance(volumeName string) ([]metricomm.UserPerformance, error) {
+	name := metricomm.FormatToMetricName(volumeName)
 	prefix := fmt.Sprintf("%s%s_", FILE_PREFIX, name)
-	return comm.GetUserPerformance(prefix)
+	return metricomm.GetUserPerformance(prefix)
 }
