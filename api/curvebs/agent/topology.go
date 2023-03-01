@@ -23,6 +23,8 @@
 package agent
 
 import (
+	"sort"
+
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -285,6 +287,12 @@ func getPoolPerformance(pools *[]PoolInfoWithPerformance) error {
 	return nil
 }
 
+func sortLogicalPool(pools []PoolInfo) {
+	sort.Slice(pools, func(i, j int) bool {
+		return pools[i].Name < pools[j].Name
+	})
+}
+
 func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	result := []PoolInfo{}
 	// get info from mds
@@ -324,6 +332,7 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_SPACE_FAILED
 	}
+	sortLogicalPool(result)
 	return &result, errno.OK
 }
 
@@ -367,6 +376,7 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	}
 
 	poolInfo.Info = tmp[0]
+	poolInfo.Performance = []metricomm.Performance{}
 	result := []PoolInfoWithPerformance{poolInfo}
 	err = getPoolPerformance(&result)
 	if err != nil {

@@ -77,17 +77,21 @@ func GetEtcdStatus() ([]ServiceStatus, string) {
 		if res.Key.(string) == metricomm.ETCD_CLUSTER_VERSION_NAME {
 			versions := metricomm.ParseVectorMetric(res.Result.(*metricomm.QueryResponseOfVector), false)
 			for k, v := range versions {
-				(*retMap[k]).Version = v[metricomm.ETCD_CLUSTER_VERSION]
+				if _, ok := retMap[k]; ok {
+					(*retMap[k]).Version = v[metricomm.ETCD_CLUSTER_VERSION]
+				}
 			}
 		} else {
 			leaders := metricomm.ParseVectorMetric(res.Result.(*metricomm.QueryResponseOfVector), true)
 			for k, v := range leaders {
-				if v["value"] == "1" {
-					(*retMap[k]).Leader = true
-				} else {
-					(*retMap[k]).Leader = false
+				if _, ok := retMap[k]; ok {
+					if v["value"] == "1" {
+						(*retMap[k]).Leader = true
+					} else {
+						(*retMap[k]).Leader = false
+					}
+					(*retMap[k]).Online = true
 				}
-				(*retMap[k]).Online = true
 			}
 		}
 		count += 1

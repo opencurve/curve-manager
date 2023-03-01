@@ -107,6 +107,7 @@ const (
 	GET_FILE_ALLOC_SIZE_FUNC         = "GetAllocatedSize"
 	LIST_DIR_FUNC                    = "ListDir"
 	GET_FILE_INFO                    = "GetFileInfo"
+	GET_FILE_SIZE                    = "GetFileSize"
 )
 
 type mdsClient struct {
@@ -508,8 +509,8 @@ func (cli *mdsClient) ListChunkServer(serverId uint32) ([]ChunkServer, error) {
 		info.DiskStatus = getDiskStatus(cs.GetDiskStatus())
 		info.OnlineStatus = getOnlineStatus(cs.GetOnlineState())
 		info.MountPoint = cs.GetMountPoint()
-		info.DiskCapacity = strconv.FormatUint(cs.GetDiskCapacity(), 10)
-		info.DiskUsed = strconv.FormatUint(cs.GetDiskUsed(), 10)
+		info.DiskCapacity = strconv.FormatUint(cs.GetDiskCapacity()/common.GiB, 10)
+		info.DiskUsed = strconv.FormatUint(cs.GetDiskUsed()/common.GiB, 10)
 		info.ExternalIp = cs.GetExternalIp()
 		infos = append(infos, info)
 	}
@@ -541,8 +542,8 @@ func (cli *mdsClient) GetChunkServerInCluster() ([]ChunkServer, error) {
 		info.DiskStatus = getDiskStatus(cs.GetDiskStatus())
 		info.OnlineStatus = getOnlineStatus(cs.GetOnlineState())
 		info.MountPoint = cs.GetMountPoint()
-		info.DiskCapacity = strconv.FormatUint(cs.GetDiskCapacity(), 10)
-		info.DiskUsed = strconv.FormatUint(cs.GetDiskUsed(), 10)
+		info.DiskCapacity = strconv.FormatUint(cs.GetDiskCapacity()/common.GiB, 10)
+		info.DiskUsed = strconv.FormatUint(cs.GetDiskUsed()/common.GiB, 10)
 		info.ExternalIp = cs.GetExternalIp()
 		infos = append(infos, info)
 	}
@@ -818,4 +819,25 @@ func (cli *mdsClient) GetFileInfo(filename, owner, sig string, date uint64) (Fil
 	info.Epoch = v.GetEpoch()
 
 	return info, nil
+}
+
+func (cli *mdsClient) GetFileSize(fileName string) (uint64, error) {
+	var size uint64
+	Rpc := &GetFileSize{}
+	Rpc.ctx = baserpc.NewRpcContext(cli.addrs, GET_FILE_SIZE)
+	Rpc.Request = &nameserver2.GetFileSizeRequest{
+		FileName: &fileName,
+	}
+	ret := baserpc.GBaseClient.SendRpc(Rpc.ctx, Rpc)
+	if ret.Err != nil {
+		return size, ret.Err
+	}
+
+	response := ret.Result.(*nameserver2.GetFileSizeResponse)
+	statusCode := response.GetStatusCode()
+	if statusCode != nameserver2.StatusCode_kOK {
+		return size, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
+	}
+	size = response.GetFileSize() / common.GiB
+	return size, nil
 }

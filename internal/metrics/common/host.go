@@ -227,6 +227,7 @@ func GetNetWorkTraffic(instance string) (interface{}, error) {
 		switch res.Key.(string) {
 		case receiveName:
 			networkTraffic.Receive = ret
+			
 		case transmitName:
 			networkTraffic.Transmit = ret
 		}

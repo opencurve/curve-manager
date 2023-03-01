@@ -183,6 +183,21 @@ func (rpc *GetLogicalPool) Stub_Func(ctx context.Context, opt ...grpc.CallOption
 }
 
 // nameserver2
+// get file/dir size
+type GetFileSize struct {
+	ctx     *baserpc.RpcContext
+	client  nameserver2.CurveFSServiceClient
+	Request *nameserver2.GetFileSizeRequest
+}
+
+func (rpc *GetFileSize) NewRpcClient(cc grpc.ClientConnInterface) {
+	rpc.client = nameserver2.NewCurveFSServiceClient(cc)
+}
+
+func (rpc *GetFileSize) Stub_Func(ctx context.Context, opt ...grpc.CallOption) (interface{}, error) {
+	return rpc.client.GetFileSize(ctx, rpc.Request, opt...)
+}
+
 // get file(include dir) allocated space
 type GetFileAllocatedSize struct {
 	ctx     *baserpc.RpcContext

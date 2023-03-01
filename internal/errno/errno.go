@@ -108,4 +108,5 @@ var (
 	LIST_VOLUME_FAILED                = Errno{503308, "list volume failed"}
 	GET_VOLUME_INFO_FAILED            = Errno{503309, "get volume failed"}
 	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{5033010, "get volume alloc size failed"}
+	GET_VOLUME_SIZE_FAILED            = Errno{5033011, "get volume size failed"}
 )

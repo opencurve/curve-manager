@@ -37,7 +37,6 @@ import (
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
-	"github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/pigeon"
 )
@@ -64,7 +63,7 @@ type VolumePoolInfo struct {
 	Alloc uint32 `json:"alloc" binding:"required"`
 }
 type VolumeInfo struct {
-	Info        curvebs.FileInfo            `json:"info" binding:"required"`
+	Info        bsrpc.FileInfo              `json:"info" binding:"required"`
 	Pools       []VolumePoolInfo            `json:"pools"`
 	Performance []metricomm.UserPerformance `json:"performance" binding:"required"`
 }
@@ -213,6 +212,37 @@ func getVolumePerformance(dir string, volumes *[]VolumeInfo) error {
 	return nil
 }
 
+func getVolumeSpaceSize(dir string, size int, volumes *[]VolumeInfo) error {
+	if size <= 0 {
+		return nil
+	}
+	ret := make(chan common.QueryResult, size)
+	for index, volume := range *volumes {
+		if volume.Info.FileType == bsrpc.INODE_DIRECTORY {
+			go func(vname string, addr *VolumeInfo) {
+				size, err := bsrpc.GMdsClient.GetFileSize(vname)
+				ret <- common.QueryResult{
+					Key:    addr,
+					Result: size,
+					Err:    err,
+				}
+			}(path.Join(dir, volume.Info.FileName), &(*volumes)[index])
+		}
+	}
+	count := 0
+	for res := range ret {
+		if res.Err != nil {
+			return res.Err
+		}
+		res.Key.(*VolumeInfo).Info.Length = res.Result.(uint64)
+		count += 1
+		if count >= size {
+			break
+		}
+	}
+	return nil
+}
+
 func ListVolume(r *pigeon.Request, size, page uint32, path, key string, direction int) (interface{}, errno.Errno) {
 	listVolumeInfo := ListVolumeInfo{
 		Info: []bsrpc.FileInfo{},
@@ -239,7 +269,6 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 	if len(fileInfos) == 0 {
 		return listVolumeInfo, errno.OK
 	}
-
 	sortFile(fileInfos, key, direction)
 	length := uint32(len(fileInfos))
 	start := (page - 1) * size
@@ -247,7 +276,38 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 	if start >= length {
 		return listVolumeInfo, errno.OK
 	}
-	listVolumeInfo.Info = fileInfos[start:end]
+
+	tmpVolumes := []VolumeInfo{}
+	dirSize := 0
+	for _, v := range fileInfos[start:end] {
+		tmpVolumes = append(tmpVolumes, VolumeInfo{
+			Info: v,
+		})
+		if v.FileType == bsrpc.INODE_DIRECTORY {
+			dirSize++
+		}
+	}
+	e = getVolumeSpaceSize(path, dirSize, &tmpVolumes)
+	r.Logger().Error("1111111111111111111111")
+	if e != nil {
+		r.Logger().Error("ListVolume getVolumeSpaceSize failed",
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return listVolumeInfo, errno.GET_VOLUME_SIZE_FAILED
+	}
+
+	e = getVolumeAllocSize(path, &tmpVolumes)
+	r.Logger().Error("22222222222222222222")
+	if e != nil {
+		r.Logger().Error("ListVolume getVolumeAllocSize failed",
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return listVolumeInfo, errno.GET_VOLUME_ALLOC_SIZE_FAILED
+	}
+
+	for _, v := range tmpVolumes {
+		listVolumeInfo.Info = append(listVolumeInfo.Info, v.Info)
+	}
 	return listVolumeInfo, errno.OK
 }
 
@@ -257,6 +317,7 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 		r.Logger().Error("GetVolume getAuthInfoOfRoot failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return nil, errno.GET_ROOT_AUTH_FAILED
 	}
 	fileInfo, e := bsrpc.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {

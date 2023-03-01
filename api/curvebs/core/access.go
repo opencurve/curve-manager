@@ -140,6 +140,9 @@ func checkToken(r *pigeon.Request) bool {
 }
 
 func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {
+	if !enableCheck {
+		return errno.OK
+	}
 	if !isLoginRequest(r) {
 		if !checkToken(r) {
 			return errno.USER_IS_UNAUTHORIZED
