@@ -344,5 +344,29 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 			break
 		}
 	}
+	// ensure performance data is time sequence
+	sort.Slice(hostPerformance.CPUUtilization, func(i, j int) bool {
+		return hostPerformance.CPUUtilization[i].Timestamp < hostPerformance.CPUUtilization[j].Timestamp
+	})
+	sort.Slice(hostPerformance.MemUtilization, func(i, j int) bool {
+		return hostPerformance.MemUtilization[i].Timestamp < hostPerformance.MemUtilization[j].Timestamp
+	})
+	for key := range hostPerformance.DiskPerformance {
+		sort.Slice(hostPerformance.DiskPerformance[key], func(i, j int) bool {
+			return hostPerformance.DiskPerformance[key][i].Timestamp < hostPerformance.DiskPerformance[key][j].Timestamp
+		})
+	}
+	for key := range hostPerformance.NetWorkTraffic.NetWorkReceive {
+		sort.Slice(hostPerformance.NetWorkTraffic.NetWorkReceive[key], func(i, j int) bool {
+			return hostPerformance.NetWorkTraffic.NetWorkReceive[key][i].Timestamp <
+			hostPerformance.NetWorkTraffic.NetWorkReceive[key][j].Timestamp
+		})
+	}
+	for key := range hostPerformance.NetWorkTraffic.NetWorkTransmit {
+		sort.Slice(hostPerformance.NetWorkTraffic.NetWorkTransmit[key], func(i, j int) bool {
+			return hostPerformance.NetWorkTraffic.NetWorkTransmit[key][i].Timestamp <
+			hostPerformance.NetWorkTraffic.NetWorkTransmit[key][j].Timestamp
+		})
+	}
 	return hostPerformance, errno.OK
 }

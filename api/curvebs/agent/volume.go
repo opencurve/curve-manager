@@ -288,7 +288,6 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 		}
 	}
 	e = getVolumeSpaceSize(path, dirSize, &tmpVolumes)
-	r.Logger().Error("1111111111111111111111")
 	if e != nil {
 		r.Logger().Error("ListVolume getVolumeSpaceSize failed",
 			pigeon.Field("error", e),
@@ -297,7 +296,6 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 	}
 
 	e = getVolumeAllocSize(path, &tmpVolumes)
-	r.Logger().Error("22222222222222222222")
 	if e != nil {
 		r.Logger().Error("ListVolume getVolumeAllocSize failed",
 			pigeon.Field("error", e),
@@ -353,5 +351,9 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_VOLUME_PERFORMANCE_FAILED
 	}
+	// ensure performance data is time sequence
+	sort.Slice(volumes[0].Performance, func(i, j int) bool {
+		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[i].Timestamp
+	})
 	return volumes[0], errno.OK
 }

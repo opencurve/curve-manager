@@ -23,6 +23,8 @@
 package agent
 
 import (
+	"sort"
+
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -90,6 +92,10 @@ func GetClusterPerformance(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_CLUSTER_PERFORMANCE_FAILED
 	}
+	// ensure performance data is time sequence
+	sort.Slice(performance, func(i, j int) bool {
+		return performance[i].Timestamp < performance[j].Timestamp
+	})
 	return performance, errno.OK
 }
 

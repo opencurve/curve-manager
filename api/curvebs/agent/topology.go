@@ -386,6 +386,10 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_PERFORMANCE_FAILED
 	}
+	// ensure performance data is time sequence
+	sort.Slice(result[0].Performance, func(i,j int) bool {
+		return result[0].Performance[i].Timestamp < result[0].Performance[j].Timestamp
+	})
 	return result[0], errno.OK
 }
 
