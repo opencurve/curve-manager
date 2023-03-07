@@ -39,6 +39,12 @@ func Login(r *pigeon.Request, ctx *Context) bool {
 	return core.ExitSuccessWithData(r, userInfo)
 }
 
+func Logout(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*LogoutRequest)
+	err := agent.Logout(r, data.UserName)
+	return core.Exit(r, err)
+}
+
 func CreateUser(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*CreateUserRequest)
 	defaults.SetDefaults(data)

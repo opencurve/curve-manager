@@ -61,11 +61,15 @@ type LoginRequest struct {
 	PassWord string `json:"passWord" binding:"required"`
 }
 
+type LogoutRequest struct {
+	UserName string `json:"userName" binding:"required"`
+}
+
 type CreateUserRequest struct {
 	UserName   string `json:"userName" binding:"required"`
 	PassWord   string `json:"passWord" binding:"required"`
 	Email      string `json:"email" binding:"required"`
-	Permission int    `json:"permission" default:"1"`
+	Permission int    `json:"permission" default:"4"`
 }
 
 type DeleteUserRequest struct {
@@ -96,44 +100,50 @@ type ListUserRequest struct {
 
 var requests = []Request{
 	{
-		"POST",
-		"user.login",
+		core.HTTP_POST,
+		core.USER_LOGIN,
 		LoginRequest{},
 		Login,
 	},
 	{
-		"POST",
-		"user.create",
+		core.HTTP_POST,
+		core.USER_LOGOUT,
+		LogoutRequest{},
+		Logout,
+	},
+	{
+		core.HTTP_POST,
+		core.USER_CREATE,
 		CreateUserRequest{},
 		CreateUser,
 	},
 	{
-		"POST",
-		"user.delete",
+		core.HTTP_POST,
+		core.USER_DELETE,
 		DeleteUserRequest{},
 		DeleteUser,
 	},
 	{
-		"POST",
-		"user.update.password",
+		core.HTTP_POST,
+		core.USER_UPDATE_PASSWORD,
 		ChangePassWordRequest{},
 		ChangePassWord,
 	},
 	{
-		"POST",
-		"user.reset.password",
+		core.HTTP_POST,
+		core.USER_RESET_PASSWORD,
 		ResetPassWordRequest{},
 		ResetPassWord,
 	},
 	{
-		"POST",
-		"user.update.info",
+		core.HTTP_POST,
+		core.USER_UPDATE_INFO,
 		UpdateUserInfoRequest{},
 		UpdateUserInfo,
 	},
 	{
-		"POST",
-		"user.list",
+		core.HTTP_POST,
+		core.USER_LIST,
 		ListUserRequest{},
 		ListUser,
 	},

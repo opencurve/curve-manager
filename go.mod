@@ -11,8 +11,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.6.0
 	github.com/mcuadros/go-defaults v1.2.0
 	github.com/opencurve/pigeon v0.6.0
-	github.com/processout/grpc-go-pool v1.2.1
-	google.golang.org/grpc v1.46.2
+	google.golang.org/grpc v1.50.0
 	google.golang.org/protobuf v1.28.1
 )
 
@@ -114,7 +113,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace google.golang.org/grpc => github.com/grpc/grpc-go v1.49.0
 
 replace github.com/opencurve/pigeon => ./external/pigeon

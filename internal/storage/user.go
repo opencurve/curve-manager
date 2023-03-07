@@ -32,9 +32,8 @@ const (
 	USER_ADMIN_NAME     = "admin"
 	USER_ADMIN_PASSWORD = "curve"
 
-	ADMIN_PERM      = 0
-	READ_PERM       = 1
-	READ_WRITE_PERM = 2
+	ADMIN_PERM = 7
+	WRITE_PERM = 2
 
 	NEW_PASSWORD_LENGTH = 8
 )

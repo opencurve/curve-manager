@@ -289,8 +289,27 @@ func getPoolPerformance(pools *[]PoolInfoWithPerformance) error {
 
 func sortLogicalPool(pools []PoolInfo) {
 	sort.Slice(pools, func(i, j int) bool {
-		return pools[i].Name < pools[j].Name
+		return pools[i].Id < pools[j].Id
 	})
+}
+
+func sortTopology(pools []Pool) {
+	sort.Slice(pools, func(i, j int) bool {
+		return pools[i].Id < pools[j].Id
+	})
+	for index := range pools {
+		sort.Slice(pools[index].Zones, func(i, j int) bool {
+			return pools[index].Zones[i].Id < pools[index].Zones[j].Id
+		})
+	}
+	for zindex := range pools {
+		for sindex := range pools[zindex].Zones {
+			sort.Slice(pools[zindex].Zones[sindex].Servers, func(i, j int) bool {
+				return pools[zindex].Zones[sindex].Servers[i].Id < pools[zindex].Zones[sindex].Servers[j].Id
+			})
+		}
+	}
+	
 }
 
 func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
@@ -417,5 +436,6 @@ func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_POOL_ZONE_FAILED
 	}
+	sortTopology(result)
 	return &result, errno.OK
 }

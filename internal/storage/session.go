@@ -30,8 +30,9 @@ import (
 )
 
 type sessionItem struct {
-	userName  string
-	timestamp int64
+	userName   string
+	permission int
+	timestamp  int64
 }
 
 func AddSession(userInfo *UserInfo) {
@@ -40,37 +41,55 @@ func AddSession(userInfo *UserInfo) {
 	sig := common.GetMd5Sum32Little(sigStr)
 	gStorage.sessionMutex.Lock()
 	defer gStorage.sessionMutex.Unlock()
+	// check if have logined, if so will disconnect old one
+	if oldSig, ok := gStorage.loginOnce[userInfo.UserName]; ok {
+		delete(gStorage.session, oldSig)
+	}
 	gStorage.session[sig] = sessionItem{
-		userName:  userInfo.UserName,
-		timestamp: now,
+		userName:   userInfo.UserName,
+		permission: userInfo.Permission,
+		timestamp:  now,
+	}
+	gStorage.loginOnce[userInfo.UserName] = sig
+	if userInfo.Permission&WRITE_PERM == WRITE_PERM {
+		gStorage.loginedWriteUser = userInfo.UserName
 	}
 	userInfo.Token = sig
 }
 
-func CheckSession(s string, expireSec int) bool {
+func CheckSession(s string, expireSec int) (bool, int) {
 	now := time.Now().Unix()
 	gStorage.sessionMutex.Lock()
 	defer gStorage.sessionMutex.Unlock()
 	if item, ok := gStorage.session[s]; ok {
 		if item.timestamp+int64(expireSec) < now {
 			delete(gStorage.session, s)
-			return false
+			delete(gStorage.loginOnce, item.userName)
+			if item.permission&WRITE_PERM == WRITE_PERM {
+				gStorage.loginedWriteUser = ""
+			}
+			return false, 0
 		}
 		item.timestamp = now
 		gStorage.session[s] = item
-		return true
+		return true, item.permission
 	}
-	return false
+	return false, 0
 }
 
-func IsAdmin(s string) bool {
+func GetLoginWriteUser() string {
 	gStorage.sessionMutex.Lock()
 	defer gStorage.sessionMutex.Unlock()
-	if item, ok := gStorage.session[s]; ok {
-		if item.userName == USER_ADMIN_NAME {
-			return true
-		}
-		return false
+	return gStorage.loginedWriteUser
+}
+
+func Logout(name string) {
+	gStorage.sessionMutex.Lock()
+	defer gStorage.sessionMutex.Unlock()
+	sig, _ := gStorage.loginOnce[name]
+	delete(gStorage.session, sig)
+	delete(gStorage.loginOnce, name)
+	if name == gStorage.loginedWriteUser {
+		gStorage.loginedWriteUser = ""
 	}
-	return false
 }
