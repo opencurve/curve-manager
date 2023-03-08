@@ -25,6 +25,7 @@ package agent
 import (
 	"sort"
 
+	"github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -39,13 +40,13 @@ const (
 )
 
 type Server struct {
-	Id           uint32              `json:"id" binding:"required"`
-	Hostname     string              `json:"hostname" binding:"required"`
-	InternalIp   string              `json:"internalIp" binding:"required"`
-	InternalPort uint32              `json:"internalPort" binding:"required"`
-	ExternalIp   string              `json:"externalIp" binding:"required"`
-	ExternalPort uint32              `json:"externalPort" binding:"required"`
-	ChunkServers []bsrpc.ChunkServer `json:"chunkservers" binding:"required"`
+	Id           uint32                `json:"id" binding:"required"`
+	Hostname     string                `json:"hostname" binding:"required"`
+	InternalIp   string                `json:"internalIp" binding:"required"`
+	InternalPort uint32                `json:"internalPort" binding:"required"`
+	ExternalIp   string                `json:"externalIp" binding:"required"`
+	ExternalPort uint32                `json:"externalPort" binding:"required"`
+	ChunkServers []curvebs.ChunkServer `json:"chunkservers" binding:"required"`
 }
 
 type Zone struct {
@@ -109,7 +110,7 @@ func listChunkServer(pools *[]Pool, size int) error {
 		if res.Err != nil {
 			return res.Err
 		}
-		for _, cs := range res.Result.([]bsrpc.ChunkServer) {
+		for _, cs := range res.Result.([]curvebs.ChunkServer) {
 			res.Key.(*Server).ChunkServers = append(res.Key.(*Server).ChunkServers, cs)
 		}
 		count += 1
@@ -141,7 +142,7 @@ func listZoneServer(pools *[]Pool, size int) error {
 		if res.Err != nil {
 			return res.Err
 		}
-		for _, s := range res.Result.([]bsrpc.Server) {
+		for _, s := range res.Result.([]curvebs.Server) {
 			var server Server
 			server.Id = s.Id
 			server.Hostname = s.HostName
@@ -180,7 +181,7 @@ func listPoolZone(pools *[]Pool) error {
 		if res.Err != nil {
 			return res.Err
 		}
-		for _, z := range res.Result.([]bsrpc.Zone) {
+		for _, z := range res.Result.([]curvebs.Zone) {
 			var zone Zone
 			zone.Id = z.Id
 			zone.Name = z.Name
@@ -309,7 +310,7 @@ func sortTopology(pools []Pool) {
 			})
 		}
 	}
-	
+
 }
 
 func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
@@ -406,7 +407,7 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 		return nil, errno.GET_POOL_PERFORMANCE_FAILED
 	}
 	// ensure performance data is time sequence
-	sort.Slice(result[0].Performance, func(i,j int) bool {
+	sort.Slice(result[0].Performance, func(i, j int) bool {
 		return result[0].Performance[i].Timestamp < result[0].Performance[j].Timestamp
 	})
 	return result[0], errno.OK

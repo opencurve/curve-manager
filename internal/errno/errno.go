@@ -82,11 +82,10 @@ var (
 	GET_HOST_INFO_FAILED             = Errno{503107, "get host info failed"}
 	GET_HOST_CPU_INFO_FAILED         = Errno{503108, "get host cpu info failed"}
 	GET_HOST_MEM_INFO_FAILED         = Errno{503109, "get host memory info failed"}
-	GET_HOST_DISK_NUM_FAILED         = Errno{503110, "get host disk number failed"}
-	GET_HOST_CPU_UTILIZATION_FAILED  = Errno{503111, "get host cpu utilization failed"}
-	GET_HOST_MEM_UTILIZATION_FAILED  = Errno{503112, "get host momery utilization failed"}
-	GET_HOST_DISK_PERFORMANCE_FAILED = Errno{503113, "get host disk performance failed"}
-	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503114, "get host network traffic failed"}
+	GET_HOST_CPU_UTILIZATION_FAILED  = Errno{503110, "get host cpu utilization failed"}
+	GET_HOST_MEM_UTILIZATION_FAILED  = Errno{503111, "get host momery utilization failed"}
+	GET_HOST_DISK_PERFORMANCE_FAILED = Errno{503112, "get host disk performance failed"}
+	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503113, "get host network traffic failed"}
 
 	// curve/metric
 	GET_ETCD_STATUS_FAILED           = Errno{503201, "get etcd status failed"}

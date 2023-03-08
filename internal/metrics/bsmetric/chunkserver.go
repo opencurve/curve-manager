@@ -61,7 +61,7 @@ func GetCopysetRaftStatus(endpoints *[]string) (map[string][]map[string]string, 
 	ret := map[string][]map[string]string{}
 	for res := range results {
 		if res.Err == nil {
-			v, e := metricomm.ParseRaftStatusMetric(res.Result.(string))
+			v, e := metricomm.ParseRaftStatusMetric(res.Key.(string), res.Result.(string))
 			if e != nil {
 				return nil, e
 			} else {

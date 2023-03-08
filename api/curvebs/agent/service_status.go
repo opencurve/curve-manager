@@ -25,6 +25,7 @@ package agent
 import (
 	"fmt"
 
+	"github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -50,7 +51,6 @@ func GetEtcdStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 		r.Logger().Error("GetEtcdStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return nil, errno.GET_ETCD_STATUS_FAILED
 	}
 	return status, errno.OK
 }
@@ -61,7 +61,6 @@ func GetMdsStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 		r.Logger().Error("GetMdsStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return nil, errno.GET_MDS_STATUS_FAILED
 	}
 	return status, errno.OK
 }
@@ -72,7 +71,6 @@ func GetSnapShotCloneServerStatus(r *pigeon.Request) (interface{}, errno.Errno) 
 		r.Logger().Error("GetSnapShotCloneServerStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return nil, errno.GET_SNAPSHOT_CLONE_STATUS_FAILED
 	}
 	return status, errno.OK
 }
@@ -91,10 +89,10 @@ func GetChunkServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	online := 0
 	var endponits []string
 	for _, cs := range chunkservers {
-		if cs.OnlineStatus == bsrpc.ONLINE_STATUS {
+		if cs.OnlineStatus == curvebs.ONLINE_STATUS {
 			online += 1
+			endponits = append(endponits, fmt.Sprintf("%s:%d", cs.HostIp, cs.Port))
 		}
-		endponits = append(endponits, fmt.Sprintf("%s:%d", cs.HostIp, cs.Port))
 	}
 	result.TotalNum = len(chunkservers)
 	result.OnlineNum = online
@@ -105,7 +103,6 @@ func GetChunkServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 		r.Logger().Error("GetChunkServerStatus bsmetric.GetChunkServerVersion failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return nil, errno.GET_CHUNKSERVER_VERSION_FAILED
 	}
 	for k, v := range versions {
 		result.Versions = append(result.Versions, VersionNum{

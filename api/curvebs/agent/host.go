@@ -38,7 +38,7 @@ const (
 	GET_HOST_INFO             = "GetHostInfo"
 	GET_HOST_CPU_INFO         = "GetHostCPUInfo"
 	GET_HOST_MEM_INFO         = "GetHostMemoryInfo"
-	GET_HOST_DISK_NUM         = "GetHostDiskNum"
+	LIST_DISK_INFO            = "ListDiskInfo"
 	GET_HOST_CPU_UTILIZATION  = "GetHostCPUUtilization"
 	GET_HOST_MEM_UTILIZATION  = "GetHostMemUtilization"
 	GET_HOST_DISK_PERFORMANCE = "GetDiskPerformance"
@@ -85,8 +85,8 @@ func getHostErrnoByName(name string) errno.Errno {
 		return errno.GET_HOST_CPU_INFO_FAILED
 	case GET_HOST_MEM_INFO:
 		return errno.GET_HOST_MEM_INFO_FAILED
-	case GET_HOST_DISK_NUM:
-		return errno.GET_HOST_DISK_NUM_FAILED
+	case LIST_DISK_INFO:
+		return errno.LIST_DISK_INFO_FAILED
 	case GET_HOST_CPU_UTILIZATION:
 		return errno.GET_HOST_CPU_UTILIZATION_FAILED
 	case GET_HOST_MEM_UTILIZATION:
@@ -142,14 +142,14 @@ func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 		metricomm.GetHostInfo,
 		metricomm.GetHostCPUInfo,
 		metricomm.GetHostMemoryInfo,
-		metricomm.GetHostDiskNum,
+		metricomm.ListDiskInfo,
 	}
 	// TODO: improve with reflect func name
 	requestName := []string{
 		GET_HOST_INFO,
 		GET_HOST_CPU_INFO,
 		GET_HOST_MEM_INFO,
-		GET_HOST_DISK_NUM,
+		LIST_DISK_INFO,
 	}
 	requestSize := len(requests)
 	ret := make(chan common.QueryResult, requestSize)
@@ -215,14 +215,14 @@ func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 					}
 				}
 			}
-		case GET_HOST_DISK_NUM:
-			diskNum := res.Result.(map[string]uint32)
+		case LIST_DISK_INFO:
+			diskNum := res.Result.(map[string][]map[string]string)
 			for k, v := range diskNum {
 				if info, ok := hostsMap[k]; ok {
-					(*info).DiskNum = v
+					(*info).DiskNum = uint32(len(v))
 				} else {
 					hostsMap[k] = &HostInfo{
-						DiskNum: v,
+						DiskNum: uint32(len(v)),
 					}
 				}
 			}
@@ -266,7 +266,7 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 		metricomm.GetHostInfo,
 		metricomm.GetHostCPUInfo,
 		metricomm.GetHostMemoryInfo,
-		metricomm.GetHostDiskNum,
+		metricomm.ListDiskInfo,
 		metricomm.GetHostCPUUtilization,
 		metricomm.GetHostMemUtilization,
 		metricomm.GetDiskPerformance,
@@ -278,7 +278,7 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 		GET_HOST_INFO,
 		GET_HOST_CPU_INFO,
 		GET_HOST_MEM_INFO,
-		GET_HOST_DISK_NUM,
+		LIST_DISK_INFO,
 		GET_HOST_CPU_UTILIZATION,
 		GET_HOST_MEM_UTILIZATION,
 		GET_HOST_DISK_PERFORMANCE,
@@ -322,9 +322,9 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 		case GET_HOST_MEM_INFO:
 			memInfo := res.Result.(map[string]uint64)
 			hostPerformance.Host.MemoryTotal = memInfo[instance]
-		case GET_HOST_DISK_NUM:
-			diskNum := res.Result.(map[string]uint32)
-			hostPerformance.Host.DiskNum = diskNum[instance]
+		case LIST_DISK_INFO:
+			diskNum := res.Result.(map[string][]map[string]string)
+			hostPerformance.Host.DiskNum = uint32(len(diskNum[instance]))
 		case GET_HOST_CPU_UTILIZATION:
 			cpuUtilization := res.Result.(map[string][]metricomm.RangeMetricItem)
 			hostPerformance.CPUUtilization = cpuUtilization[instance]
@@ -359,13 +359,13 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 	for key := range hostPerformance.NetWorkTraffic.NetWorkReceive {
 		sort.Slice(hostPerformance.NetWorkTraffic.NetWorkReceive[key], func(i, j int) bool {
 			return hostPerformance.NetWorkTraffic.NetWorkReceive[key][i].Timestamp <
-			hostPerformance.NetWorkTraffic.NetWorkReceive[key][j].Timestamp
+				hostPerformance.NetWorkTraffic.NetWorkReceive[key][j].Timestamp
 		})
 	}
 	for key := range hostPerformance.NetWorkTraffic.NetWorkTransmit {
 		sort.Slice(hostPerformance.NetWorkTraffic.NetWorkTransmit[key], func(i, j int) bool {
 			return hostPerformance.NetWorkTraffic.NetWorkTransmit[key][i].Timestamp <
-			hostPerformance.NetWorkTraffic.NetWorkTransmit[key][j].Timestamp
+				hostPerformance.NetWorkTraffic.NetWorkTransmit[key][j].Timestamp
 		})
 	}
 	return hostPerformance, errno.OK
