@@ -51,6 +51,9 @@ var (
 
 	// 403
 	REQUEST_IS_DENIED_FOR_SIGNATURE = Errno{403000, "request is denied for signature"}
+	GET_USER_FAILED                 = Errno{403001, "user not exist"}
+	USER_PASSWORD_NOT_MATCH         = Errno{403002, "user password not match"}
+	WRITE_USER_LOGIN_FAILED         = Errno{403003, "only permit one write user login"}
 
 	// 405
 	UNSUPPORT_HTTP_METHOD = Errno{405001, "unsupport http method"}
@@ -59,17 +62,15 @@ var (
 	UNKNOW_ERROR = Errno{503001, "unknown error"}
 
 	// user/storage
-	GET_USER_FAILED             = Errno{503002, "get user failed"}
-	USER_PASSWORD_NOT_MATCH     = Errno{503003, "user password not match"}
-	CREATE_USER_FAILED          = Errno{503004, "create user failed"}
-	DELETE_USER_FAILED          = Errno{503005, "delete user failed"}
-	GET_USER_PASSWORD_FAILED    = Errno{503006, "get user password failed"}
-	UPDATE_USER_PASSWORD_FAILED = Errno{503007, "update user password failed"}
-	GET_USER_EMAIL_FAILED       = Errno{503008, "get user email failed"}
-	USER_EMAIL_EMPTY            = Errno{503009, "user email is empty"}
-	SEND_USER_PASSWORD_FAILED   = Errno{503010, "send user email failed"}
-	UPDATE_USER_INFO_FAILED     = Errno{503011, "update user info failed"}
-	LIST_USER_FAILED            = Errno{503012, "list user failed"}
+	CREATE_USER_FAILED          = Errno{503002, "create user failed"}
+	DELETE_USER_FAILED          = Errno{503003, "delete user failed"}
+	GET_USER_PASSWORD_FAILED    = Errno{503004, "get user password failed"}
+	UPDATE_USER_PASSWORD_FAILED = Errno{503005, "update user password failed"}
+	GET_USER_EMAIL_FAILED       = Errno{503006, "get user email failed"}
+	USER_EMAIL_EMPTY            = Errno{503007, "user email is empty"}
+	SEND_USER_PASSWORD_FAILED   = Errno{503008, "send user email failed"}
+	UPDATE_USER_INFO_FAILED     = Errno{503009, "update user info failed"}
+	LIST_USER_FAILED            = Errno{503010, "list user failed"}
 
 	// hadware/metric
 	GET_INSTANCE_BY_HOSTNAME_FAILED  = Errno{503101, "get instance by hostname failed"}
@@ -81,11 +82,10 @@ var (
 	GET_HOST_INFO_FAILED             = Errno{503107, "get host info failed"}
 	GET_HOST_CPU_INFO_FAILED         = Errno{503108, "get host cpu info failed"}
 	GET_HOST_MEM_INFO_FAILED         = Errno{503109, "get host memory info failed"}
-	GET_HOST_DISK_NUM_FAILED         = Errno{503110, "get host disk number failed"}
-	GET_HOST_CPU_UTILIZATION_FAILED  = Errno{503111, "get host cpu utilization failed"}
-	GET_HOST_MEM_UTILIZATION_FAILED  = Errno{503112, "get host momery utilization failed"}
-	GET_HOST_DISK_PERFORMANCE_FAILED = Errno{503113, "get host disk performance failed"}
-	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503114, "get host network traffic failed"}
+	GET_HOST_CPU_UTILIZATION_FAILED  = Errno{503110, "get host cpu utilization failed"}
+	GET_HOST_MEM_UTILIZATION_FAILED  = Errno{503111, "get host momery utilization failed"}
+	GET_HOST_DISK_PERFORMANCE_FAILED = Errno{503112, "get host disk performance failed"}
+	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503113, "get host network traffic failed"}
 
 	// curve/metric
 	GET_ETCD_STATUS_FAILED           = Errno{503201, "get etcd status failed"}
@@ -108,4 +108,5 @@ var (
 	LIST_VOLUME_FAILED                = Errno{503308, "list volume failed"}
 	GET_VOLUME_INFO_FAILED            = Errno{503309, "get volume failed"}
 	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{5033010, "get volume alloc size failed"}
+	GET_VOLUME_SIZE_FAILED            = Errno{5033011, "get volume size failed"}
 )

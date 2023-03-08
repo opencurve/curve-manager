@@ -1,6 +1,6 @@
 [submodule "external/pigeon"]
 	path = external/pigeon
 	url = ssh://git@g.hz.netease.com:22222/opencurve/pigeon.git
-[submodule "external/_curve"]
-	path = external/_curve
-	url = git@github.com:opencurve/curve.git
+[submodule "external/curve-go-rpc"]
+	path = external/curve-go-rpc
+	url = git@github.com:SeanHai/curve-go-rpc.git

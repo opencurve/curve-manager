@@ -34,7 +34,6 @@ import (
 const (
 	// disk info
 	NODE_DISK_INFO                  = "node_disk_info"
-	NODE_DISK_NUMBER                = "count(node_disk_info)by(instance)"
 	NODE_DISK_READ_COMPLETED_TOTAL  = "node_disk_reads_completed_total"
 	NODE_DISK_WRITE_COMPLETED_TOTAL = "node_disk_writes_completed_total"
 	NODE_DISK_READ_BYTES_TOTAL      = "node_disk_read_bytes_total"
@@ -49,6 +48,9 @@ const (
 	NODE_DISK_WRITE_CACHE_ENABLE = "node_disk_ata_write_cache_enabled"
 	SSD_TYPE                     = "SSD"
 	HDD_TYPE                     = "HDD"
+
+	// disk modle
+	MODLE = "model"
 )
 
 // @return map[string][]Performance, key: device, value: performance at different timestamp
@@ -140,7 +142,7 @@ func GetDiskPerformance(instance string) (interface{}, error) {
 }
 
 // @return map[instance][]map[key]value
-func ListDiskInfo(instance string) (map[string][]map[string]string, error) {
+func ListDiskInfo(instance string) (interface{}, error) {
 	disks := make(map[string][]map[string]string)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
@@ -156,7 +158,9 @@ func ListDiskInfo(instance string) (map[string][]map[string]string, error) {
 		}
 		ret := res.Result.(*QueryResponseOfVector)
 		for _, item := range ret.Data.Result {
-			disks[item.Metric[INSTANCE]] = append(disks[item.Metric[INSTANCE]], item.Metric)
+			if _, ok := item.Metric[MODLE]; ok {
+				disks[item.Metric[INSTANCE]] = append(disks[item.Metric[INSTANCE]], item.Metric)
+			}
 		}
 		count += 1
 		if count >= requestSize {

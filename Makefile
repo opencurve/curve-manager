@@ -45,25 +45,20 @@ TEST_FLAGS += $(DEBUG_FLAGS)
 # test env
 TEST_ENV := ROOT=$(PWD)
 
-install_grpc_protobuf:
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
-
-proto:
-	@bash mk-proto.sh
+# curve-go-rpc path
+RPC_PATH = external/curve-go-rpc
 
 init:
 	$(GO) mod init
 
-build: proto
+build:
 	$(GOENV) $(GO) build -o $(OUTPUT) $(BUILD_FLAGS) $(PACKAGES)
 
-debug: proto
+debug:
 	$(GOENV) $(GO) build -o $(OUTPUT) $(DEBUG_FLAGS) $(PACKAGES)
 
-test: proto
+test:
 	$(TEST_ENV) $(GO) test $(TEST_FLAGS) ./...
 
 clean:
-	rm -rf internal/proto
 	rm -f bin/*

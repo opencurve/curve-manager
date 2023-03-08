@@ -171,33 +171,6 @@ func GetHostMemoryInfo(instance string) (interface{}, error) {
 	return memoryInfo, nil
 }
 
-func GetHostDiskNum(instance string) (interface{}, error) {
-	diskNum := make(map[string]uint32)
-	requestSize := 1
-	results := make(chan MetricResult, requestSize)
-	QueryInstantMetric(NODE_DISK_NUMBER, &results)
-	count := 0
-	for res := range results {
-		if res.Err != nil {
-			return nil, res.Err
-		}
-		ret := ParseVectorMetric(res.Result.(*QueryResponseOfVector), true)
-		for k, v := range ret {
-			num, err := strconv.ParseUint(v["value"], 10, 32)
-			if err == nil {
-				diskNum[k] = uint32(num)
-			} else {
-				return nil, err
-			}
-		}
-		count += 1
-		if count >= requestSize {
-			break
-		}
-	}
-	return diskNum, nil
-}
-
 /*
 * return: reveive, transmit, error
 * map[string][]RangeMetricItem: key: network device, value: performance in different timestamp
@@ -227,6 +200,7 @@ func GetNetWorkTraffic(instance string) (interface{}, error) {
 		switch res.Key.(string) {
 		case receiveName:
 			networkTraffic.Receive = ret
+			
 		case transmitName:
 			networkTraffic.Transmit = ret
 		}

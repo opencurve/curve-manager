@@ -23,6 +23,9 @@
 package agent
 
 import (
+	"sort"
+
+	"github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -37,13 +40,13 @@ const (
 )
 
 type Server struct {
-	Id           uint32              `json:"id" binding:"required"`
-	Hostname     string              `json:"hostname" binding:"required"`
-	InternalIp   string              `json:"internalIp" binding:"required"`
-	InternalPort uint32              `json:"internalPort" binding:"required"`
-	ExternalIp   string              `json:"externalIp" binding:"required"`
-	ExternalPort uint32              `json:"externalPort" binding:"required"`
-	ChunkServers []bsrpc.ChunkServer `json:"chunkservers" binding:"required"`
+	Id           uint32                `json:"id" binding:"required"`
+	Hostname     string                `json:"hostname" binding:"required"`
+	InternalIp   string                `json:"internalIp" binding:"required"`
+	InternalPort uint32                `json:"internalPort" binding:"required"`
+	ExternalIp   string                `json:"externalIp" binding:"required"`
+	ExternalPort uint32                `json:"externalPort" binding:"required"`
+	ChunkServers []curvebs.ChunkServer `json:"chunkservers" binding:"required"`
 }
 
 type Zone struct {
@@ -107,7 +110,7 @@ func listChunkServer(pools *[]Pool, size int) error {
 		if res.Err != nil {
 			return res.Err
 		}
-		for _, cs := range res.Result.([]bsrpc.ChunkServer) {
+		for _, cs := range res.Result.([]curvebs.ChunkServer) {
 			res.Key.(*Server).ChunkServers = append(res.Key.(*Server).ChunkServers, cs)
 		}
 		count += 1
@@ -139,7 +142,7 @@ func listZoneServer(pools *[]Pool, size int) error {
 		if res.Err != nil {
 			return res.Err
 		}
-		for _, s := range res.Result.([]bsrpc.Server) {
+		for _, s := range res.Result.([]curvebs.Server) {
 			var server Server
 			server.Id = s.Id
 			server.Hostname = s.HostName
@@ -178,7 +181,7 @@ func listPoolZone(pools *[]Pool) error {
 		if res.Err != nil {
 			return res.Err
 		}
-		for _, z := range res.Result.([]bsrpc.Zone) {
+		for _, z := range res.Result.([]curvebs.Zone) {
 			var zone Zone
 			zone.Id = z.Id
 			zone.Name = z.Name
@@ -285,6 +288,31 @@ func getPoolPerformance(pools *[]PoolInfoWithPerformance) error {
 	return nil
 }
 
+func sortLogicalPool(pools []PoolInfo) {
+	sort.Slice(pools, func(i, j int) bool {
+		return pools[i].Id < pools[j].Id
+	})
+}
+
+func sortTopology(pools []Pool) {
+	sort.Slice(pools, func(i, j int) bool {
+		return pools[i].Id < pools[j].Id
+	})
+	for index := range pools {
+		sort.Slice(pools[index].Zones, func(i, j int) bool {
+			return pools[index].Zones[i].Id < pools[index].Zones[j].Id
+		})
+	}
+	for zindex := range pools {
+		for sindex := range pools[zindex].Zones {
+			sort.Slice(pools[zindex].Zones[sindex].Servers, func(i, j int) bool {
+				return pools[zindex].Zones[sindex].Servers[i].Id < pools[zindex].Zones[sindex].Servers[j].Id
+			})
+		}
+	}
+
+}
+
 func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	result := []PoolInfo{}
 	// get info from mds
@@ -324,6 +352,7 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_SPACE_FAILED
 	}
+	sortLogicalPool(result)
 	return &result, errno.OK
 }
 
@@ -367,6 +396,7 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	}
 
 	poolInfo.Info = tmp[0]
+	poolInfo.Performance = []metricomm.Performance{}
 	result := []PoolInfoWithPerformance{poolInfo}
 	err = getPoolPerformance(&result)
 	if err != nil {
@@ -376,6 +406,10 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_POOL_PERFORMANCE_FAILED
 	}
+	// ensure performance data is time sequence
+	sort.Slice(result[0].Performance, func(i, j int) bool {
+		return result[0].Performance[i].Timestamp < result[0].Performance[j].Timestamp
+	})
 	return result[0], errno.OK
 }
 
@@ -403,5 +437,6 @@ func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_POOL_ZONE_FAILED
 	}
+	sortTopology(result)
 	return &result, errno.OK
 }

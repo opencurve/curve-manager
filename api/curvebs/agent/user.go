@@ -26,6 +26,7 @@ import (
 	"sort"
 
 	comm "github.com/opencurve/curve-manager/api/common"
+	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/email"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -43,6 +44,10 @@ type ListUserInfo struct {
 	Total int        `json:"total" binding:"required"`
 	Info  []UserInfo `json:"info" binding:"required"`
 }
+
+const (
+	ENABLE_MULTIPLE_WRITER_USER_LOGIN = "enable.multiple.write.user.login"
+)
 
 func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 	userInfo, err := storage.GetUser(name)
@@ -63,8 +68,25 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.USER_PASSWORD_NOT_MATCH
 	}
+	// check multiple write user login
+	if userInfo.Permission&core.WRITE_PERM == core.WRITE_PERM &&
+		!r.GetConfig().GetBool(ENABLE_MULTIPLE_WRITER_USER_LOGIN) {
+		user := storage.GetLoginWriteUser()
+		if user != "" && userInfo.UserName != user {
+			r.Logger().Error("Login failed, there is already a write user logined",
+				pigeon.Field("userName", name),
+				pigeon.Field("permission", userInfo.Permission),
+				pigeon.Field("login write user", user))
+			return nil, errno.WRITE_USER_LOGIN_FAILED
+		}
+	}
 	storage.AddSession(&userInfo)
 	return userInfo, errno.OK
+}
+
+func Logout(r *pigeon.Request, name string) errno.Errno {
+	storage.Logout(name)
+	return errno.OK
 }
 
 func CreateUser(r *pigeon.Request, name, passwd, email string, permission int) errno.Errno {

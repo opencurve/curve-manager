@@ -103,9 +103,9 @@ func ListDisk(r *pigeon.Request, size, page uint32, hostname string) (interface{
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_DISK_INFO_FAILED
 	}
-	// nstance -> hostname
-	insts := make([]string, len(disks))
-	for k := range disks {
+	// instance -> hostname
+	insts := make([]string, len(disks.(map[string][]map[string]string)))
+	for k := range disks.(map[string][]map[string]string) {
 		insts = append(insts, k)
 	}
 	inst2host, err := getHostNameByInstance(insts)
@@ -115,7 +115,7 @@ func ListDisk(r *pigeon.Request, size, page uint32, hostname string) (interface{
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_HOSTNAME_BY_INSTANCE_FAILED
 	}
-	for inst, devs := range disks {
+	for inst, devs := range disks.(map[string][]map[string]string) {
 		retMap[inst] = make(map[string]*DiskInfo)
 		hostName := inst2host[inst]
 		for _, dev := range devs {

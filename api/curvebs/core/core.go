@@ -30,6 +30,43 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+const (
+	// http method
+	HTTP_POST = "POST"
+	HTTP_GET  = "GET"
+
+	// method
+	METHOD = "method"
+
+	// user
+	USER_LOGIN           = "user.login"
+	USER_LOGOUT          = "user.logout"
+	USER_CREATE          = "user.create"
+	USER_DELETE          = "user.delete"
+	USER_UPDATE_PASSWORD = "user.update.password"
+	USER_RESET_PASSWORD  = "user.reset.password"
+	USER_UPDATE_INFO     = "user.update.info"
+	USER_LIST            = "user.list"
+
+	// manager
+	STATUS_ETCD                = "status.etcd"
+	STATUS_MDS                 = "status.mds"
+	STATUS_SNAPSHOTCLONESERVER = "status.snapshotcloneserver"
+	STATUS_CHUNKSERVER         = "status.chunkserver"
+	STATUS_CLUSTER             = "status.cluster"
+	SPACE_CLUSTER              = "space.cluster"
+	PERFORMANCE_CLUSTER        = "performance.cluster"
+	TOPO_LIST                  = "topo.list"
+	TOPO_POOL_LIST             = "topo.pool.list"
+	TOPO_POOL_GET              = "topo.pool.get"
+	VOLUME_LIST                = "volume.list"
+	VOLUME_GET                 = "volume.get"
+	SNAPSHOT_LIST              = "snapshot.list"
+	HOST_LIST                  = "host.list"
+	HOST_GET                   = "host.get"
+	DISK_LIST                  = "disk.list"
+)
+
 func Exit(r *pigeon.Request, code errno.Errno) bool {
 	r.SendJSON(pigeon.JSON{
 		"errorCode": strconv.Itoa(code.Code()),
