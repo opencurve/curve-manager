@@ -70,9 +70,15 @@ func ResetPassWord(r *pigeon.Request, ctx *Context) bool {
 	return core.Exit(r, err)
 }
 
-func UpdateUserInfo(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*UpdateUserInfoRequest)
-	err := agent.UpdateUserInfo(r, data.UserName, data.Email, data.Permission)
+func UpdateUserEmail(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*UpdateUserEmailRequest)
+	err := agent.UpdateUserEmail(r, data.UserName, data.Email)
+	return core.Exit(r, err)
+}
+
+func UpdateUserPermission(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*UpdateUserPermissionRequest)
+	err := agent.UpdateUserPermission(r, data.UserName, data.Permission)
 	return core.Exit(r, err)
 }
 

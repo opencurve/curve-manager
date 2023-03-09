@@ -183,14 +183,28 @@ func ResetPassWord(r *pigeon.Request, name string) errno.Errno {
 	return errno.OK
 }
 
-func UpdateUserInfo(r *pigeon.Request, name, email string, permission int) errno.Errno {
-	err := storage.UpdateUserInfo(name, email, permission)
+func UpdateUserEmail(r *pigeon.Request, name, email string) errno.Errno {
+	err := storage.UpdateUserEmail(name, email)
 	if err != nil {
-		r.Logger().Error("UpdateUserInfo failed",
+		r.Logger().Error("UpdateUserEmail failed",
 			pigeon.Field("userName", name),
+			pigeon.Field("email", email),
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return errno.UPDATE_USER_INFO_FAILED
+		return errno.UPDATE_USER_EMAIL_FAILED
+	}
+	return errno.OK
+}
+
+func UpdateUserPermission(r *pigeon.Request, name string, permission int) errno.Errno {
+	err := storage.UpdateUserPermission(name, permission)
+	if err != nil {
+		r.Logger().Error("UpdateUserPermission failed",
+			pigeon.Field("userName", name),
+			pigeon.Field("permission", permission),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.UPDATE_USER_PERMISSION_FAILED
 	}
 	return errno.OK
 }

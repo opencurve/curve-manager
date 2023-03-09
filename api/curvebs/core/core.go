@@ -39,14 +39,15 @@ const (
 	METHOD = "method"
 
 	// user
-	USER_LOGIN           = "user.login"
-	USER_LOGOUT          = "user.logout"
-	USER_CREATE          = "user.create"
-	USER_DELETE          = "user.delete"
-	USER_UPDATE_PASSWORD = "user.update.password"
-	USER_RESET_PASSWORD  = "user.reset.password"
-	USER_UPDATE_INFO     = "user.update.info"
-	USER_LIST            = "user.list"
+	USER_LOGIN             = "user.login"
+	USER_LOGOUT            = "user.logout"
+	USER_CREATE            = "user.create"
+	USER_DELETE            = "user.delete"
+	USER_UPDATE_PASSWORD   = "user.update.password"
+	USER_RESET_PASSWORD    = "user.reset.password"
+	USER_UPDATE_EMAIL      = "user.update.email"
+	USER_UPDATE_PERMISSION = "user.update.permission"
+	USER_LIST              = "user.list"
 
 	// manager
 	STATUS_ETCD                = "status.etcd"

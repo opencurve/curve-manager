@@ -62,15 +62,16 @@ var (
 	UNKNOW_ERROR = Errno{503001, "unknown error"}
 
 	// user/storage
-	CREATE_USER_FAILED          = Errno{503002, "create user failed"}
-	DELETE_USER_FAILED          = Errno{503003, "delete user failed"}
-	GET_USER_PASSWORD_FAILED    = Errno{503004, "get user password failed"}
-	UPDATE_USER_PASSWORD_FAILED = Errno{503005, "update user password failed"}
-	GET_USER_EMAIL_FAILED       = Errno{503006, "get user email failed"}
-	USER_EMAIL_EMPTY            = Errno{503007, "user email is empty"}
-	SEND_USER_PASSWORD_FAILED   = Errno{503008, "send user email failed"}
-	UPDATE_USER_INFO_FAILED     = Errno{503009, "update user info failed"}
-	LIST_USER_FAILED            = Errno{503010, "list user failed"}
+	CREATE_USER_FAILED            = Errno{503002, "create user failed"}
+	DELETE_USER_FAILED            = Errno{503003, "delete user failed"}
+	GET_USER_PASSWORD_FAILED      = Errno{503004, "get user password failed"}
+	UPDATE_USER_PASSWORD_FAILED   = Errno{503005, "update user password failed"}
+	GET_USER_EMAIL_FAILED         = Errno{503006, "get user email failed"}
+	USER_EMAIL_EMPTY              = Errno{503007, "user email is empty"}
+	SEND_USER_PASSWORD_FAILED     = Errno{503008, "send user email failed"}
+	LIST_USER_FAILED              = Errno{503009, "list user failed"}
+	UPDATE_USER_EMAIL_FAILED      = Errno{503010, "update user email failed"}
+	UPDATE_USER_PERMISSION_FAILED = Errno{503011, "update user permission failed"}
 
 	// hadware/metric
 	GET_INSTANCE_BY_HOSTNAME_FAILED  = Errno{503101, "get instance by hostname failed"}

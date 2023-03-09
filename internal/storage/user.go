@@ -78,11 +78,15 @@ func DeleteUser(name string) error {
 }
 
 func UpdateUserPassWord(name, passwd string) error {
-	return gStorage.execSQL(UPDATE_PASSWORD, passwd, name)
+	return gStorage.execSQL(UPDATE_USER_PASSWORD, passwd, name)
 }
 
-func UpdateUserInfo(name, email string, permission int) error {
-	return gStorage.execSQL(UPDATE_USER_INFO, email, permission, name)
+func UpdateUserEmail(name, email string) error {
+	return gStorage.execSQL(UPDATE_USER_EMAIL, email, name)
+}
+
+func UpdateUserPermission(name string, perm int) error {
+	return gStorage.execSQL(UPDATE_USER_PERMISSION, perm, name)
 }
 
 func ListUser(userName string) (*[]UserInfo, error) {
