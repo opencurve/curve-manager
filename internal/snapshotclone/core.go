@@ -95,10 +95,7 @@ func (cli *snapshotCloneClient) sendHttp2SnapshotClone(queryParam string) (strin
 		SetHeader("User-Agent", "Curve-Manager").
 		Execute("GET", url)
 	if err != nil {
-		return "", fmt.Errorf("get snapshot failed: %v", err)
-	} else if resp.StatusCode() != 200 {
-		return "", fmt.Errorf("get snapshot failed, status = %s",
-			resp.Status())
+		return "", fmt.Errorf("sendHttp2SnapshotClone failed: %v", err)
 	}
 	return resp.String(), nil
 }

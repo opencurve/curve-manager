@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,16 +40,23 @@ import (
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
+	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/pigeon"
 )
 
 const (
+	ROOT_DIR        = "/"
+	RECYCLEBIN_NAME = "RecycleBin"
+	CLONE_NAME      = "clone"
+
 	ORDER_BY_ID              = "id"
 	ORDER_BY_CTIME           = "ctime"
 	ORDER_BY_LENGTH          = "length"
 	ORDER_DIRECTION_INCREASE = 1
 	ORDER_DIRECTION_DECREASE = -1
 )
+
+var RECYCLEBIN_DIR = path.Join(ROOT_DIR, RECYCLEBIN_NAME)
 
 type AuthInfo struct {
 	userName  string
@@ -266,6 +274,18 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.LIST_VOLUME_FAILED
 	}
+	// exclude /RecycleBin and /clone
+	var tmpSlice []curvebs.FileInfo
+	if path == ROOT_DIR {
+		for i := range fileInfos {
+			if fileInfos[i].FileName == RECYCLEBIN_NAME || fileInfos[i].FileName == CLONE_NAME {
+				continue
+			}
+			tmpSlice = append(tmpSlice, fileInfos[i])
+		}
+		fileInfos = tmpSlice
+	}
+
 	listVolumeInfo.Total = len(fileInfos)
 	if len(fileInfos) == 0 {
 		return listVolumeInfo, errno.OK
@@ -357,4 +377,277 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[i].Timestamp
 	})
 	return volumes[0], errno.OK
+}
+
+func needDelete(file *curvebs.FileInfo, expiration uint64) bool {
+	if file == nil {
+		return false
+	}
+	items := strings.Split(file.FileName, "-")
+	size := len(items)
+	now := time.Now().Unix()
+	dtime, err := strconv.ParseUint(items[size-1], 10, 64)
+	if len(items) >= 2 && items[size-2] == strconv.FormatUint(file.Id, 10) &&
+		err == nil && uint64(now)-dtime < expiration {
+		return false
+	}
+	return true
+}
+
+func CleanRecycleBin(r *pigeon.Request, expiration uint64) errno.Errno {
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("CleanRecycleBin getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+
+	fileInfos, e := bsrpc.GMdsClient.ListDir(RECYCLEBIN_DIR, authInfo.userName, authInfo.signatrue, authInfo.date)
+	if e != nil {
+		r.Logger().Error("CleanRecycleBin bsrpc.ListDir failed",
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.LIST_VOLUME_FAILED
+	}
+	success := true
+	for _, file := range fileInfos {
+		if needDelete(&file, expiration) {
+			fileName := path.Join(RECYCLEBIN_DIR, file.FileName)
+			e = bsrpc.GMdsClient.DeleteFile(fileName, authInfo.userName, authInfo.signatrue, 0, authInfo.date, true)
+			if e != nil {
+				r.Logger().Error("CleanRecycleBin bsrpc.DeleteFile failed",
+					pigeon.Field("fileName", fileName),
+					pigeon.Field("error", e),
+					pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+				success = false
+			}
+		}
+	}
+	if !success {
+		return errno.DELETE_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func CreateNameSpace(r *pigeon.Request, name, user, passwrord string) errno.Errno {
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("CreateNameSpace getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+	sig := ""
+	if user == authInfo.userName && passwrord != "" {
+		sig = authInfo.signatrue
+	}
+	e := bsrpc.GMdsClient.CreateFile(name, curvebs.INODE_DIRECTORY, user, sig, 0, authInfo.date, 0, 0)
+	if e != nil {
+		r.Logger().Error("CreateNameSpace failed",
+			pigeon.Field("name", name),
+			pigeon.Field("user", user),
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.CREATE_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func CreateVolume(r *pigeon.Request, name, user string, passwrord string, length, stripUnit, stripCount uint64) errno.Errno {
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("CreateVolume getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+	sig := ""
+	if user == authInfo.userName && passwrord != "" {
+		sig = authInfo.signatrue
+	}
+	e := bsrpc.GMdsClient.CreateFile(name, curvebs.INODE_PAGEFILE, user, sig, length*common.GiB, authInfo.date, stripUnit, stripCount)
+	if e != nil {
+		r.Logger().Error("CreateVolume failed",
+			pigeon.Field("name", name),
+			pigeon.Field("user", user),
+			pigeon.Field("length(GiB)", length),
+			pigeon.Field("stripUnit", stripUnit),
+			pigeon.Field("stripCount", stripCount),
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.CREATE_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func ExtendVolume(r *pigeon.Request, name string, length uint64) errno.Errno {
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("ExtendVolume getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+	e := bsrpc.GMdsClient.ExtendFile(name, authInfo.userName, authInfo.signatrue, length*common.GiB, authInfo.date)
+	if e != nil {
+		r.Logger().Error("ExtendVolume failed",
+			pigeon.Field("name", name),
+			pigeon.Field("length(GiB)", length),
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.EXTEND_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func VolumeThrottle(r *pigeon.Request, name, throttleType string, limit, burst, burstLength uint64) errno.Errno {
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("VolumeThrottle getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+	e := bsrpc.GMdsClient.UpdateFileThrottleParams(name, authInfo.userName, authInfo.signatrue, authInfo.date,
+		curvebs.ThrottleParams{
+			Type:        throttleType,
+			Limit:       limit,
+			Burst:       burst,
+			BurstLength: burstLength,
+		})
+	if e != nil {
+		r.Logger().Error("VolumeThrottle failed",
+			pigeon.Field("name", name),
+			pigeon.Field("type", throttleType),
+			pigeon.Field("limit", limit),
+			pigeon.Field("burst", burst),
+			pigeon.Field("burstLength", burstLength),
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.VOLUME_THROTTLE_FAILED
+	}
+	return errno.OK
+}
+
+func deleteVolume(r *pigeon.Request, volumes *map[string]string, auth *AuthInfo) bool {
+	success := true
+	for name, ftype := range *volumes {
+		if ftype == curvebs.INODE_DIRECTORY {
+			fileInfos, e := bsrpc.GMdsClient.ListDir(name, auth.userName, auth.signatrue, auth.date)
+			if e != nil {
+				r.Logger().Error("DeleteVolume ListDir failed",
+					pigeon.Field("path", name),
+					pigeon.Field("error", e))
+				success = false
+			}
+			v := make(map[string]string)
+			for _, file := range fileInfos {
+				v[path.Join(name, file.FileName)] = file.FileType
+			}
+			deleteVolume(r, &v, auth)
+		}
+		e := bsrpc.GMdsClient.DeleteFile(name, auth.userName, auth.signatrue, 0, auth.date, false)
+		if e != nil {
+			r.Logger().Error("DeleteVolume failed",
+				pigeon.Field("name", name),
+				pigeon.Field("error", e),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			success = false
+		}
+	}
+	return success
+}
+
+func DeleteVolume(r *pigeon.Request, volumes map[string]string) errno.Errno {
+	if len(volumes) == 0 {
+		return errno.OK
+	}
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("VolumeThrottle getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+	if !deleteVolume(r, &volumes, authInfo) {
+		return errno.DELETE_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func RecoverVolume(r *pigeon.Request, ids map[string]uint64) errno.Errno {
+	if len(ids) == 0 {
+		return errno.OK
+	}
+	// get auth info
+	authInfo, err := getAuthInfoOfRoot()
+	if err != "" {
+		r.Logger().Error("VolumeThrottle getAuthInfoOfRoot failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ROOT_AUTH_FAILED
+	}
+	success := true
+	for name, id := range ids {
+		e := bsrpc.GMdsClient.RecoverFile(name, authInfo.userName, authInfo.signatrue, id, authInfo.date)
+		if e != nil {
+			r.Logger().Error("RecoverVolume failed",
+				pigeon.Field("name", name),
+				pigeon.Field("id", id),
+				pigeon.Field("error", e),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			success = false
+		}
+	}
+	if !success {
+		return errno.RECOVER_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func CloneVolume(r *pigeon.Request, src, dest, user string, lazy bool) errno.Errno {
+	err := snapshotclone.CreateClone(src, dest, user, lazy)
+	if err != nil {
+		r.Logger().Error("CloneVolume failed",
+			pigeon.Field("src", src),
+			pigeon.Field("dest", dest),
+			pigeon.Field("user", user),
+			pigeon.Field("lazy", lazy),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.CLONE_VOLUME_FAILED
+	}
+	return errno.OK
+}
+
+func Flatten(r *pigeon.Request, volumeName, user string) errno.Errno {
+	uuids, err := snapshotclone.GetCloneTaskNeedFlatten(r, volumeName, user)
+	if err != nil || len(uuids) == 0 {
+		r.Logger().Error("Flatten GetCloneTaskNeedFlatten failed",
+			pigeon.Field("volumeName", volumeName),
+			pigeon.Field("user", user),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_CLONE_TASKS_FAILED
+	}
+	for _, uuid := range uuids {
+		err = snapshotclone.Flatten(user, uuid)
+		if err != nil {
+			r.Logger().Error("Flatten failed",
+				pigeon.Field("volumeName", volumeName),
+				pigeon.Field("user", user),
+				pigeon.Field("uuid", uuid),
+				pigeon.Field("error", err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return errno.FLATTEN_FAILED
+		}
+	}
+	return errno.OK
 }

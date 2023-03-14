@@ -24,6 +24,7 @@ package agent
 
 import (
 	comm "github.com/opencurve/curve-manager/api/common"
+	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/pigeon"
@@ -44,4 +45,114 @@ func GetSnapshot(r *pigeon.Request, size, page uint32, uuid, user, fileName, sta
 		return nil, errno.LIST_SNAPSHOT_FAILED
 	}
 	return snapshots, errno.OK
+}
+
+func CreateSnapshot(r *pigeon.Request, volumeName, user, snapshotName string) errno.Errno {
+	err := snapshotclone.CreateSnapshot(volumeName, user, snapshotName)
+	if err != nil {
+		r.Logger().Error("CreateSnapshot failed",
+			pigeon.Field("volumeName", volumeName),
+			pigeon.Field("user", user),
+			pigeon.Field("snapshotName", snapshotName),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.CREATE_SNAPSHOT_FAILED
+	}
+	return errno.OK
+}
+
+func CancelSnapshot(r *pigeon.Request, uuids []string) errno.Errno {
+	size := len(uuids)
+	if size == 0 {
+		return errno.OK
+	}
+	ret := make(chan common.QueryResult, size)
+	for _, uuid := range uuids {
+		go func(uuid string) {
+			err := snapshotclone.CancelSnapshot(uuid)
+			ret <- common.QueryResult{
+				Key:    uuid,
+				Err:    err,
+				Result: nil,
+			}
+		}(uuid)
+	}
+
+	count := 0
+	success := true
+	for res := range ret {
+		if res.Err != nil {
+			r.Logger().Error("CancelSnapshot failed",
+				pigeon.Field("uuid", res.Key.(string)),
+				pigeon.Field("error", res.Err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			success = false
+		}
+		count += 1
+		if count >= size {
+			break
+		}
+	}
+	if !success {
+		return errno.CANCEL_SNAPSHOT_FAILED
+	}
+	return errno.OK
+}
+
+func DeleteSnapshot(r *pigeon.Request, fileName, user string, uuids []string, failed bool) errno.Errno {
+	toDelete := []string{}
+	if fileName == "" && user == "" && len(uuids) == 0 && !failed {
+		return errno.OK
+	}
+
+	status := ""
+	if failed {
+		status = snapshotclone.STATUS_ERROR
+	}
+	if len(uuids) != 0 {
+		for _, uuid := range uuids {
+			info, err := snapshotclone.GetSnapshot(1, 1, uuid, user, fileName, status)
+			if err != nil {
+				r.Logger().Error("DeleteSnapshot GetSnapshot failed",
+					pigeon.Field("fileName", fileName),
+					pigeon.Field("user", user),
+					pigeon.Field("uuids", uuids),
+					pigeon.Field("status", status),
+					pigeon.Field("uuid", uuid),
+					pigeon.Field("error", err),
+					pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+				return errno.GET_SNAPSHOT_FAILED
+			}
+			if info.Total > 0 {
+				toDelete = append(toDelete, uuid)
+			}
+		}
+	} else {
+		snapshots, err := snapshotclone.GetAllSnapshot(user, fileName, status)
+		if err != nil {
+			r.Logger().Error("DeleteSnapshot GetAllSnapshot failed",
+				pigeon.Field("fileName", fileName),
+				pigeon.Field("user", user),
+				pigeon.Field("status", status),
+				pigeon.Field("error", err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return errno.GET_SNAPSHOT_FAILED
+		}
+		for _, item := range snapshots {
+			toDelete = append(toDelete, item.UUID)
+		}
+	}
+	for _, uuid := range toDelete {
+		err := snapshotclone.DeleteSnapshot(uuid, fileName, user)
+		if err != nil {
+			r.Logger().Error("DeleteSnapshot failed",
+				pigeon.Field("fileName", fileName),
+				pigeon.Field("user", user),
+				pigeon.Field("uuid", uuid),
+				pigeon.Field("error", err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return errno.DELETE_SNAPSHOT_FAILED
+		}
+	}
+	return errno.OK
 }

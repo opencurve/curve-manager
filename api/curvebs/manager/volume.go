@@ -48,3 +48,58 @@ func GetVolume(r *pigeon.Request, ctx *Context) bool {
 	}
 	return core.ExitSuccessWithData(r, volume)
 }
+
+func CleanRecycleBin(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*CleanRecycleBinRequest)
+	defaults.SetDefaults(data)
+	err := agent.CleanRecycleBin(r, data.Expiration)
+	return core.Exit(r, err)
+}
+
+func CreateNameSpace(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*CreateNameSpaceRequest)
+	err := agent.CreateNameSpace(r, data.Name, data.User, data.PassWord)
+	return core.Exit(r, err)
+}
+
+func CreateVolume(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*CreateVolumeRequest)
+	err := agent.CreateVolume(r, data.VolumeName, data.User, data.PassWord, data.Length, data.StripUnit, data.StripCount)
+	return core.Exit(r, err)
+}
+
+func ExtendVolume(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*ExtendVolumeRequest)
+	err := agent.ExtendVolume(r, data.VolumeName, data.Length)
+	return core.Exit(r, err)
+}
+
+func VolumeThrottle(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*VolumeThrottleRequest)
+	err := agent.VolumeThrottle(r, data.VolumeName, data.ThrottleType, data.Limit, data.Burst, data.BurstLength)
+	return core.Exit(r, err)
+}
+
+func DeleteVolume(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*DeleteVolumeRequest)
+	err := agent.DeleteVolume(r, data.VolumeNames)
+	return core.Exit(r, err)
+}
+
+func RecoverVolume(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*RecoverVolumeRequest)
+	err := agent.RecoverVolume(r, data.VolumeIds)
+	return core.Exit(r, err)
+}
+
+func CloneVolume(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*CloneVolumeRequest)
+	err := agent.CloneVolume(r, data.Src, data.Dest, data.User, *data.Lazy)
+	return core.Exit(r, err)
+}
+
+func Flatten(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*FlattenRequest)
+	err := agent.Flatten(r, data.VolumeName, data.User)
+	return core.Exit(r, err)
+}

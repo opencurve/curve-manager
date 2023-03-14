@@ -35,10 +35,6 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
-const (
-	RECYCLEBIN_DIR = "/RecycleBin"
-)
-
 type Server struct {
 	Id           uint32                `json:"id" binding:"required"`
 	Hostname     string                `json:"hostname" binding:"required"`

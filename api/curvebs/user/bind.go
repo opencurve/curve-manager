@@ -86,9 +86,13 @@ type ResetPassWordRequest struct {
 	UserName string `json:"userName" binding:"required"`
 }
 
-type UpdateUserInfoRequest struct {
+type UpdateUserEmailRequest struct {
+	UserName string `json:"userName" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+}
+
+type UpdateUserPermissionRequest struct {
 	UserName   string `json:"userName" binding:"required"`
-	Email      string `json:"email" binding:"required"`
 	Permission int    `json:"permission" binding:"required"`
 }
 
@@ -137,9 +141,15 @@ var requests = []Request{
 	},
 	{
 		core.HTTP_POST,
-		core.USER_UPDATE_INFO,
-		UpdateUserInfoRequest{},
-		UpdateUserInfo,
+		core.USER_UPDATE_EMAIL,
+		UpdateUserEmailRequest{},
+		UpdateUserEmail,
+	},
+	{
+		core.HTTP_POST,
+		core.USER_UPDATE_PERMISSION,
+		UpdateUserPermissionRequest{},
+		UpdateUserPermission,
 	},
 	{
 		core.HTTP_POST,

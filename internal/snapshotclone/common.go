@@ -30,7 +30,7 @@ const (
 )
 
 // struct received from snapshot clone server
-type SnapShot struct {
+type GetSnapShotResponse struct {
 	Code       string     `json:"Code" binding:"required"`
 	Message    string     `json:"Message" binding:"required"`
 	RequestId  string     `json:"RequestId" binding:"required"`
@@ -66,4 +66,39 @@ type SnapshotInfo struct {
 	FileLength uint64 `json:"length" binding:"required"`
 	Status     string `json:"status" binding:"required"`
 	Progress   string `json:"Progress" binding:"required"`
+}
+
+type CreateSnapshotCloneResponse struct {
+	Code      string `json:"Code" binding:"required"`
+	Message   string `json:"Message" binding:"required"`
+	RequestId string `json:"RequestId" binding:"required"`
+	UUID      string `json:"UUID"`
+}
+
+type SnapshotCloneResponse struct {
+	Code      string `json:"Code" binding:"required"`
+	Message   string `json:"Message" binding:"required"`
+	RequestId string `json:"RequestId" binding:"required"`
+}
+
+type TaskInfo struct {
+	File       string `json:"File"`
+	FileType   int    `json:"FileType"`
+	IsLazy     bool   `json:"IsLazy"`
+	NextStep   int    `json:"NextStep"`
+	Progress   int    `json:"Progress"`
+	Src        string `json:"Src"`
+	TaskStatus int    `json:"TaskStatus"`
+	TaskType   int    `json:"TaskType"`
+	Time       uint64 `json:"Time"`
+	UUID       string `json:"UUID"`
+	User       string `json:"User"`
+}
+
+type GetCloneTasksResponse struct {
+	Code       string     `json:"Code" binding:"required"`
+	Message    string     `json:"Message" binding:"required"`
+	RequestId  string     `json:"RequestId" binding:"required"`
+	TaskInfos  []TaskInfo `json:"TaskInfos"`
+	TotalCount uint64     `json:"TotalCount"`
 }

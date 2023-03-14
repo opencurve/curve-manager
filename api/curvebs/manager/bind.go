@@ -114,6 +114,83 @@ type ListDiskRequest struct {
 	HostName string `json:"hostName"`
 }
 
+type CleanRecycleBinRequest struct {
+	Expiration uint64 `json:"expiration" default:"0"`
+}
+
+type CreateNameSpaceRequest struct {
+	Name     string `json:"name" binding:"required"`
+	User     string `json:"user" binding:"required"`
+	PassWord string `json:"password"`
+}
+
+type CreateVolumeRequest struct {
+	VolumeName string `json:"volumeName" binding:"required"`
+	User       string `json:"user" binding:"required"`
+	Length     uint64 `json:"length" binding:"required"`
+	PassWord   string `json:"password"`
+	StripUnit  uint64 `json:"stripUnit"`
+	StripCount uint64 `json:"stripCount"`
+}
+
+type ExtendVolumeRequest struct {
+	VolumeName string `json:"volumeName" binding:"required"`
+	Length     uint64 `json:"length" binding:"required"`
+}
+
+type VolumeThrottleRequest struct {
+	VolumeName   string `json:"volumeName" binding:"required"`
+	ThrottleType string `json:"throttleType" binding:"required"`
+	Limit        uint64 `json:"limit" binding:"required"`
+	Burst        uint64 `json:"burst"`
+	BurstLength  uint64 `json:"burstLength"`
+}
+
+type DeleteVolumeRequest struct {
+	VolumeNames map[string]string `json:"volumeNames" binding:"required"`
+}
+
+type RecoverVolumeRequest struct {
+	VolumeIds map[string]uint64 `json:"volumeIds" binding:"required"`
+}
+
+type CloneVolumeRequest struct {
+	Src  string `json:"src" binding:"required"`
+	Dest string `json:"dest" binding:"required"`
+	User string `json:"user" binding:"required"`
+	Lazy *bool  `json:"lazy" binding:"required"`
+}
+
+type CreateSnapshotRequest struct {
+	VolumeName   string `json:"volumeName" binding:"required"`
+	User         string `json:"user" binding:"required"`
+	SnapshotName string `json:"snapshotName" binding:"required"`
+}
+
+// type snapshot struct {
+
+// }
+
+// type CancelSnapshotRequest struct {
+// 	Snapshots []snapshot `json:"snapshots" binding:"required"`
+// }
+
+type CancelSnapshotRequest struct {
+	UUIDs []string `json:"uuids" binding:"required"`
+}
+
+type DeleteSnapshotRequest struct {
+	FileName string   `json:"fileName"`
+	User     string   `json:"user"`
+	UUIDs    []string `json:"uuids"`
+	Failed   bool     `json:"failed" default:"false"`
+}
+
+type FlattenRequest struct {
+	VolumeName string `json:"volumeName" binding:"required"`
+	User       string `json:"user" binding:"required"`
+}
+
 var requests = []Request{
 	{
 		core.HTTP_GET,
@@ -210,5 +287,77 @@ var requests = []Request{
 		core.DISK_LIST,
 		ListDiskRequest{},
 		ListDisk,
+	},
+	{
+		core.HTTP_POST,
+		core.CLEAN_RECYCLEBIN,
+		CleanRecycleBinRequest{},
+		CleanRecycleBin,
+	},
+	{
+		core.HTTP_POST,
+		core.CREATE_NAMESPACE,
+		CreateNameSpaceRequest{},
+		CreateNameSpace,
+	},
+	{
+		core.HTTP_POST,
+		core.CREATE_VOLUME,
+		CreateVolumeRequest{},
+		CreateVolume,
+	},
+	{
+		core.HTTP_POST,
+		core.EXTEND_VOLUME,
+		ExtendVolumeRequest{},
+		ExtendVolume,
+	},
+	{
+		core.HTTP_POST,
+		core.VOLUME_THROTTLE,
+		VolumeThrottleRequest{},
+		VolumeThrottle,
+	},
+	{
+		core.HTTP_POST,
+		core.DELETE_VOLUME,
+		DeleteVolumeRequest{},
+		DeleteVolume,
+	},
+	{
+		core.HTTP_POST,
+		core.RECOVER_VOLUME,
+		RecoverVolumeRequest{},
+		RecoverVolume,
+	},
+	{
+		core.HTTP_POST,
+		core.CLONE_VOLUME,
+		CloneVolumeRequest{},
+		CloneVolume,
+	},
+	{
+		core.HTTP_POST,
+		core.CREATE_SNAPSHOT,
+		CreateSnapshotRequest{},
+		CreateSnapshot,
+	},
+	{
+		core.HTTP_POST,
+		core.CANCEL_SNAPSHOT,
+		CancelSnapshotRequest{},
+		CancelSnapshot,
+	},
+	{
+		core.HTTP_POST,
+		core.DELETE_SNAPSHOT,
+		DeleteSnapshotRequest{},
+		DeleteSnapshot,
+	},
+	{
+		core.HTTP_POST,
+		core.FLATTEN,
+		FlattenRequest{},
+		Flatten,
 	},
 }
