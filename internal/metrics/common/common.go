@@ -270,6 +270,9 @@ func ParseRaftStatusMetric(addr string, value string) ([]map[string]string, erro
 			if index == 0 {
 				start := strings.Index(line, "[") + 1
 				end := strings.Index(line, "]")
+				if start >= end {
+					return nil, fmt.Errorf(fmt.Sprintf("format error1: %s, %s", line, addr))
+				}
 				tmap[common.RAFT_STATUS_KEY_GROUPID] = line[start:end]
 				continue
 			}
@@ -277,7 +280,7 @@ func ParseRaftStatusMetric(addr string, value string) ([]map[string]string, erro
 			if hit == 1 {
 				c := strings.Split(line, ": ")
 				if len(c) != 2 {
-					return nil, fmt.Errorf(fmt.Sprintf("format error1: %s, %s", line, addr))
+					return nil, fmt.Errorf(fmt.Sprintf("format error2: %s, %s", line, addr))
 				}
 				if strings.Contains(c[0], common.RAFT_STATUS_KEY_REPLICATOR) {
 					c[0] = fmt.Sprintf("%s%d", common.RAFT_STATUS_KEY_REPLICATOR, raplicatorIndex)
@@ -288,12 +291,12 @@ func ParseRaftStatusMetric(addr string, value string) ([]map[string]string, erro
 				// line: [changing_conf: NO    stage: STAGE_NONE]
 				v := strings.Split(line, "    ")
 				if len(v) != 2 {
-					return nil, fmt.Errorf(fmt.Sprintf("format error2: %s, %s", line, addr))
+					return nil, fmt.Errorf(fmt.Sprintf("format error3: %s, %s", line, addr))
 				}
 				for _, i := range v {
 					j := strings.Split(i, ": ")
 					if len(j) != 2 {
-						return nil, fmt.Errorf(fmt.Sprintf("format error3: %s, %s", i, addr))
+						return nil, fmt.Errorf(fmt.Sprintf("format error4: %s, %s", i, addr))
 					}
 					tmap[j[0]] = j[1]
 				}
@@ -302,7 +305,7 @@ func ParseRaftStatusMetric(addr string, value string) ([]map[string]string, erro
 				for _, sitem := range storageItems {
 					sitemArr := strings.Split(sitem, ": ")
 					if len(sitemArr) != 2 {
-						return nil, fmt.Errorf(fmt.Sprintf("format error4: %s, %s", sitem, addr))
+						return nil, fmt.Errorf(fmt.Sprintf("format error5: %s, %s", sitem, addr))
 					}
 					tmap[sitemArr[0]] = sitemArr[1]
 				}
