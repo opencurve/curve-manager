@@ -66,6 +66,18 @@ const (
 	HOST_LIST                  = "host.list"
 	HOST_GET                   = "host.get"
 	DISK_LIST                  = "disk.list"
+	CLEAN_RECYCLEBIN           = "recyclebin.clean"
+	CREATE_NAMESPACE           = "namespace.create"
+	CREATE_VOLUME              = "volume.create"
+	EXTEND_VOLUME              = "volume.extend"
+	VOLUME_THROTTLE            = "volume.throttle"
+	DELETE_VOLUME              = "volume.delete"
+	RECOVER_VOLUME             = "volume.recover"
+	CLONE_VOLUME               = "volume.clone"
+	CREATE_SNAPSHOT            = "snapshot.create"
+	CANCEL_SNAPSHOT            = "snapshot.cancel"
+	DELETE_SNAPSHOT            = "snapshot.delete"
+	FLATTEN                    = "volume.flatten"
 )
 
 func Exit(r *pigeon.Request, code errno.Errno) bool {

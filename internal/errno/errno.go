@@ -89,25 +89,33 @@ var (
 	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503113, "get host network traffic failed"}
 
 	// curve/metric
-	GET_ETCD_STATUS_FAILED           = Errno{503201, "get etcd status failed"}
-	GET_MDS_STATUS_FAILED            = Errno{503202, "get mds status failed"}
-	GET_SNAPSHOT_CLONE_STATUS_FAILED = Errno{503203, "get snapshotcloneserver status failed"}
-	GET_CHUNKSERVER_VERSION_FAILED   = Errno{503204, "get host network traffic failed"}
-	GET_POOL_ITEM_NUMBER_FAILED      = Errno{503205, "get pool item number failed"}
-	GET_POOL_PERFORMANCE_FAILED      = Errno{503206, "get pool performance failed"}
-	GET_ROOT_AUTH_FAILED             = Errno{503207, "get root auth failed"}
-	GET_VOLUME_PERFORMANCE_FAILED    = Errno{503208, "get volume performance failed"}
+	GET_POOL_ITEM_NUMBER_FAILED   = Errno{503201, "get pool item number failed"}
+	GET_POOL_PERFORMANCE_FAILED   = Errno{503202, "get pool performance failed"}
+	GET_ROOT_AUTH_FAILED          = Errno{503203, "get root auth failed"}
+	GET_VOLUME_PERFORMANCE_FAILED = Errno{503204, "get volume performance failed"}
 
 	// rpc
-	LIST_SNAPSHOT_FAILED              = Errno{503301, "list snapshot failed"}
-	GET_CHUNKSERVER_IN_CLUSTER_FAILED = Errno{503302, "get chunkserver in cluster failed"}
-	LIST_POOL_FAILED                  = Errno{503303, "list pool failed"}
-	GET_POOL_FAILED                   = Errno{503304, "get pool failed"}
-	GET_POOL_SPACE_FAILED             = Errno{503305, "get pool space failed"}
-	GET_CLUSTER_PERFORMANCE_FAILED    = Errno{503306, "get cluster performance failed"}
-	LIST_POOL_ZONE_FAILED             = Errno{503307, "list pool zone failed"}
-	LIST_VOLUME_FAILED                = Errno{503308, "list volume failed"}
-	GET_VOLUME_INFO_FAILED            = Errno{503309, "get volume failed"}
-	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{5033010, "get volume alloc size failed"}
-	GET_VOLUME_SIZE_FAILED            = Errno{5033011, "get volume size failed"}
+	GET_CHUNKSERVER_IN_CLUSTER_FAILED = Errno{503301, "get chunkserver in cluster failed"}
+	LIST_POOL_FAILED                  = Errno{503302, "list pool failed"}
+	GET_POOL_FAILED                   = Errno{503303, "get pool failed"}
+	GET_POOL_SPACE_FAILED             = Errno{503304, "get pool space failed"}
+	GET_CLUSTER_PERFORMANCE_FAILED    = Errno{503305, "get cluster performance failed"}
+	LIST_POOL_ZONE_FAILED             = Errno{503306, "list pool zone failed"}
+	LIST_VOLUME_FAILED                = Errno{503307, "list volume failed"}
+	GET_VOLUME_INFO_FAILED            = Errno{503308, "get volume failed"}
+	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{503309, "get volume alloc size failed"}
+	GET_VOLUME_SIZE_FAILED            = Errno{503310, "get volume size failed"}
+	DELETE_VOLUME_FAILED              = Errno{503311, "delete volume failed"}
+	CREATE_VOLUME_FAILED              = Errno{503312, "create volume failed"}
+	EXTEND_VOLUME_FAILED              = Errno{503313, "extend volume failed"}
+	VOLUME_THROTTLE_FAILED            = Errno{503314, "update volume throttle params failed"}
+	RECOVER_VOLUME_FAILED             = Errno{503315, "recover volume failed"}
+	CLONE_VOLUME_FAILED               = Errno{503316, "create clone volume failed"}
+	CREATE_SNAPSHOT_FAILED            = Errno{503317, "create snapshot failed"}
+	LIST_SNAPSHOT_FAILED              = Errno{503318, "list snapshot failed"}
+	CANCEL_SNAPSHOT_FAILED            = Errno{503318, "cancel snapshot failed"}
+	GET_CLONE_TASKS_FAILED            = Errno{503319, "get clone tasks failed"}
+	FLATTEN_FAILED                    = Errno{503320, "flatten failed"}
+	GET_SNAPSHOT_FAILED               = Errno{503321, "get snapshot failed"}
+	DELETE_SNAPSHOT_FAILED            = Errno{503322, "delete snapshot failed"}
 )

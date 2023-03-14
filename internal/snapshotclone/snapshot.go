@@ -31,16 +31,21 @@ import (
 )
 
 const (
+	ACTION_CREATE_SANPSHOT   = "CreateSnapshot"
+	ACTION_CANCEL_SNAPSHOT   = "CancelSnapshot"
 	ACTION_GET_SNAPSHOT_LIST = "GetFileSnapshotList"
+	ACTION_DELETE_SNAPSHOT   = "DeleteSnapshot"
 
 	// snapshot status
 	STATUS_DONE           = "done"
-	STATUS_IN_PROCESS     = "in-process"
+	STATUS_IN_PROCESS     = "inProcess"
 	STATUS_DELETING       = "deleting"
 	STATUS_ERROR_DELETING = "errorDeleting"
 	STATUS_CANCELING      = "canceling"
 	STATUS_ERROR          = "error"
-	STATUS_NOT_SUPPORT    = "not-support"
+	STATUS_NOT_SUPPORT    = "notSupport"
+
+	LIST_SNAPSHOT_LIMIT = 100
 )
 
 func getNumericStatus(status string) int {
@@ -81,7 +86,7 @@ func getStrStatus(status int) string {
 	}
 }
 
-func transferSnapshotInfo(in *SnapShot, out *ListSnapshotInfo) {
+func transferSnapshotInfo(in *GetSnapShotResponse, out *ListSnapshotInfo) {
 	out.Total = int(in.TotalCount)
 	for _, info := range in.Snapshots {
 		var item SnapshotInfo
@@ -99,7 +104,7 @@ func transferSnapshotInfo(in *SnapShot, out *ListSnapshotInfo) {
 }
 
 func GetSnapshot(size, page uint32, uuid, user, fileName, status string) (ListSnapshotInfo, error) {
-	var snapshotInfo SnapShot
+	var snapshotInfo GetSnapShotResponse
 	listSnapshotInfo := ListSnapshotInfo{
 		Info: []SnapshotInfo{},
 	}
@@ -138,4 +143,76 @@ func GetSnapshot(size, page uint32, uuid, user, fileName, status string) (ListSn
 
 	transferSnapshotInfo(&snapshotInfo, &listSnapshotInfo)
 	return listSnapshotInfo, nil
+}
+
+func GetAllSnapshot(user, fileName, status string) ([]SnapshotInfo, error) {
+	result := []SnapshotInfo{}
+	page := 1
+	limit := LIST_SNAPSHOT_LIMIT
+	for true {
+		infos, err := GetSnapshot(uint32(limit), uint32(page), "", user, fileName, status)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, infos.Info...)
+		if infos.Total < limit {
+			break
+		}
+		page++
+	}
+	return result, nil
+}
+
+func CreateSnapshot(volumeName, user, snapshotName string) error {
+	params := fmt.Sprintf("Action=%s&Version=%s&User=%s&File=%s&Name=%s",
+		ACTION_CREATE_SANPSHOT, SNAPSHOT_CLONE_VERSION, user, volumeName, snapshotName)
+	resp, err := GSnapshotCloneClient.sendHttp2SnapshotClone(params)
+	if err != nil {
+		return fmt.Errorf("err:%v, params:%s", err, params)
+	}
+	var response CreateSnapshotCloneResponse
+	err = json.Unmarshal([]byte(resp), &response)
+	if err != nil {
+		return fmt.Errorf("err:%v, params:%s", err, params)
+	}
+	if response.Code != ERROR_CODE_SUCCESS {
+		return fmt.Errorf("err:%s, params:%s", response.Message, params)
+	}
+	return nil
+}
+
+func CancelSnapshot(uuid string) error {
+	params := fmt.Sprintf("Action=%s&Version=%s&User=\"\"&File=\"\"&UUID=%s",
+		ACTION_CANCEL_SNAPSHOT, SNAPSHOT_CLONE_VERSION, uuid)
+	resp, err := GSnapshotCloneClient.sendHttp2SnapshotClone(params)
+	if err != nil {
+		return fmt.Errorf("err:%v, params:%s", err, params)
+	}
+	var response SnapshotCloneResponse
+	err = json.Unmarshal([]byte(resp), &response)
+	if err != nil {
+		return fmt.Errorf("err:%v, params:%s", err, params)
+	}
+	if response.Code != ERROR_CODE_SUCCESS {
+		return fmt.Errorf("err:%s, params:%s", response.Message, params)
+	}
+	return nil
+}
+
+func DeleteSnapshot(uuid, volumeName, user string) error {
+	params := fmt.Sprintf("Action=%s&Version=%s&User=%s&File=%s&UUID=%s",
+		ACTION_DELETE_SNAPSHOT, SNAPSHOT_CLONE_VERSION, user, volumeName, uuid)
+	resp, err := GSnapshotCloneClient.sendHttp2SnapshotClone(params)
+	if err != nil {
+		return fmt.Errorf("err:%v, params:%s", err, params)
+	}
+	var response SnapshotCloneResponse
+	err = json.Unmarshal([]byte(resp), &response)
+	if err != nil {
+		return fmt.Errorf("err:%v, params:%s", err, params)
+	}
+	if response.Code != ERROR_CODE_SUCCESS {
+		return fmt.Errorf("err:%s, params:%s", response.Message, params)
+	}
+	return nil
 }

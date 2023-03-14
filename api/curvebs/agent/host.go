@@ -59,7 +59,8 @@ type HostInfo struct {
 	System      string            `json:"operatingSystem" binding:"required"`
 	CPUCores    metricomm.CPUInfo `json:"cpuCores" binding:"required"`
 	DiskNum     uint32            `json:"diskNum" binding:"required"`
-	MemoryTotal uint64            `json:"memory" binding:"required"`
+	disks       []map[string]string
+	MemoryTotal uint64 `json:"memory" binding:"required"`
 }
 
 type HostInfoWithPerformance struct {
@@ -323,8 +324,9 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 			memInfo := res.Result.(map[string]uint64)
 			hostPerformance.Host.MemoryTotal = memInfo[instance]
 		case LIST_DISK_INFO:
-			diskNum := res.Result.(map[string][]map[string]string)
-			hostPerformance.Host.DiskNum = uint32(len(diskNum[instance]))
+			disks := res.Result.(map[string][]map[string]string)
+			hostPerformance.Host.DiskNum = uint32(len(disks[instance]))
+			hostPerformance.Host.disks = disks[instance]
 		case GET_HOST_CPU_UTILIZATION:
 			cpuUtilization := res.Result.(map[string][]metricomm.RangeMetricItem)
 			hostPerformance.CPUUtilization = cpuUtilization[instance]
@@ -344,6 +346,16 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 			break
 		}
 	}
+	// remove some virtual disks
+	tmpDiskPerformance := make(map[string][]metricomm.Performance)
+	for _, diskInfo := range hostPerformance.Host.disks {
+		dev := diskInfo[DEVICE]
+		if p, ok := hostPerformance.DiskPerformance[dev]; ok {
+			tmpDiskPerformance[dev] = p
+		}
+	}
+	hostPerformance.DiskPerformance = tmpDiskPerformance
+
 	// ensure performance data is time sequence
 	sort.Slice(hostPerformance.CPUUtilization, func(i, j int) bool {
 		return hostPerformance.CPUUtilization[i].Timestamp < hostPerformance.CPUUtilization[j].Timestamp
