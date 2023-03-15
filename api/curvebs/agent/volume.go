@@ -54,6 +54,8 @@ const (
 	ORDER_BY_LENGTH          = "length"
 	ORDER_DIRECTION_INCREASE = 1
 	ORDER_DIRECTION_DECREASE = -1
+
+	FILE_NOT_EXIST = "kFileNotExists"
 )
 
 var RECYCLEBIN_DIR = path.Join(ROOT_DIR, RECYCLEBIN_NAME)
@@ -340,13 +342,15 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 	}
 	fileInfo, e := bsrpc.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
-		r.Logger().Error("GetVolume bsrpc.GetFileInfo failed",
-			pigeon.Field("fileName", volumeName),
-			pigeon.Field("error", err),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		r.Logger().Error("GetVolume failed",
+				pigeon.Field("fileName", volumeName),
+				pigeon.Field("error", e),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		if e.Error() == FILE_NOT_EXIST {
+			return nil, errno.OK
+		}
 		return nil, errno.GET_VOLUME_INFO_FAILED
 	}
-
 	volume := VolumeInfo{}
 	volume.Info = fileInfo
 	volume.Pools = []VolumePoolInfo{}
