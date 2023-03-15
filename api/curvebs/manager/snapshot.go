@@ -47,7 +47,7 @@ func CreateSnapshot(r *pigeon.Request, ctx *Context) bool {
 
 func CancelSnapshot(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*CancelSnapshotRequest)
-	err := agent.CancelSnapshot(r, data.UUIDs)
+	err := agent.CancelSnapshot(r, data.Snapshots)
 	return core.Exit(r, err)
 }
 

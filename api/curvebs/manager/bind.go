@@ -24,6 +24,7 @@ package manager
 
 import (
 	"github.com/opencurve/curve-manager/api/curvebs/core"
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/pigeon"
 )
 
@@ -167,16 +168,8 @@ type CreateSnapshotRequest struct {
 	SnapshotName string `json:"snapshotName" binding:"required"`
 }
 
-// type snapshot struct {
-
-// }
-
-// type CancelSnapshotRequest struct {
-// 	Snapshots []snapshot `json:"snapshots" binding:"required"`
-// }
-
 type CancelSnapshotRequest struct {
-	UUIDs []string `json:"uuids" binding:"required"`
+	Snapshots []agent.Snapshot `json:"snapshots" binding:"required"`
 }
 
 type DeleteSnapshotRequest struct {

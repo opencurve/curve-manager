@@ -118,4 +118,5 @@ var (
 	FLATTEN_FAILED                    = Errno{503320, "flatten failed"}
 	GET_SNAPSHOT_FAILED               = Errno{503321, "get snapshot failed"}
 	DELETE_SNAPSHOT_FAILED            = Errno{503322, "delete snapshot failed"}
+	FIND_VOLUME_MOUNTPOINT_FAILED     = Errno{503323, "find volume mountpoint failed"}
 )

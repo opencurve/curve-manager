@@ -181,9 +181,9 @@ func CreateSnapshot(volumeName, user, snapshotName string) error {
 	return nil
 }
 
-func CancelSnapshot(uuid string) error {
-	params := fmt.Sprintf("Action=%s&Version=%s&User=\"\"&File=\"\"&UUID=%s",
-		ACTION_CANCEL_SNAPSHOT, SNAPSHOT_CLONE_VERSION, uuid)
+func CancelSnapshot(uuid, user, volumeName string) error {
+	params := fmt.Sprintf("Action=%s&Version=%s&User=%s&File=%s&UUID=%s",
+		ACTION_CANCEL_SNAPSHOT, SNAPSHOT_CLONE_VERSION, user, volumeName, uuid)
 	resp, err := GSnapshotCloneClient.sendHttp2SnapshotClone(params)
 	if err != nil {
 		return fmt.Errorf("err:%v, params:%s", err, params)
