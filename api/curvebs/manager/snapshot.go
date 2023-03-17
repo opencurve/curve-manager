@@ -23,7 +23,6 @@
 package manager
 
 import (
-	"github.com/mcuadros/go-defaults"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -53,7 +52,6 @@ func CancelSnapshot(r *pigeon.Request, ctx *Context) bool {
 
 func DeleteSnapshot(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*DeleteSnapshotRequest)
-	defaults.SetDefaults(data)
 	err := agent.DeleteSnapshot(r, data.FileName, data.User, data.UUIDs, data.Failed)
 	return core.Exit(r, err)
 }

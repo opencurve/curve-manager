@@ -426,7 +426,7 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 	}
 	// ensure performance data is time sequence
 	sort.Slice(volumes[0].Performance, func(i, j int) bool {
-		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[i].Timestamp
+		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[j].Timestamp
 	})
 	return volumes[0], errno.OK
 }

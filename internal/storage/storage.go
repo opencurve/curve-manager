@@ -40,13 +40,14 @@ const (
 )
 
 type Storage struct {
-	db      *sql.DB
-	mutex   *sync.Mutex
+	db *sql.DB
+	// token->sessionItem
 	session map[string]sessionItem
+	// user->token
+	loginOnce map[string]string
+	mutex     *sync.Mutex
 	// only one person with write permission is allowed to login
 	loginedWriteUser string
-	loginOnce        map[string]string
-	sessionMutex     *sync.Mutex
 }
 
 func Init(cfg *pigeon.Configure) error {
@@ -60,16 +61,20 @@ func Init(cfg *pigeon.Configure) error {
 	if err != nil {
 		return err
 	}
-	gStorage = &Storage{db: db, mutex: &sync.Mutex{}, session: make(map[string]sessionItem),
-		loginedWriteUser: "", loginOnce: make(map[string]string), sessionMutex: &sync.Mutex{}}
+	gStorage = &Storage{db: db, session: make(map[string]sessionItem), loginedWriteUser: "",
+		loginOnce: make(map[string]string), mutex: &sync.Mutex{}}
 
 	// init user table
 	if err = gStorage.execSQL(CREATE_USER_TABLE); err != nil {
 		return err
 	}
-
 	// create admin user
 	if err = createAdminUser(); err != nil {
+		return err
+	}
+
+	// init system operation log table
+	if err = gStorage.execSQL(CREATE_SYSTEM_LOG_TABLE); err != nil {
 		return err
 	}
 
@@ -81,8 +86,6 @@ func (s *Storage) Close() error {
 }
 
 func (s *Storage) execSQL(query string, args ...interface{}) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	stmt, err := s.db.Prepare(query)
 	if err != nil {
 		return err

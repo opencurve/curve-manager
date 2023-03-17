@@ -171,7 +171,7 @@ func GetNodeDiskPerformanceName(typeName, instance string) string {
 }
 
 func GetNodeNetWorkReveiveName(typeName, instance string) string {
-	return fmt.Sprintf("irate(%s{instance=%q,device!~%q}[%ds])/128",
+	return fmt.Sprintf("irate(%s{instance=%q,device!~%q}[%ds])",
 		typeName, instance, NODE_NETWORK_DEVICE_FILTER, DEFAULT_STEP)
 }
 

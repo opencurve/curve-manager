@@ -23,11 +23,14 @@
 package manager
 
 import (
+	"encoding/json"
 	"reflect"
 
+	"github.com/mcuadros/go-defaults"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
+	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
 )
 
@@ -57,8 +60,15 @@ func Entrypoint(r *pigeon.Request) bool {
 		return core.Exit(r, errno.BAD_REQUEST_FORM_PARAM)
 	}
 
+	defaults.SetDefaults(data)
 	if e := core.AccessAllowed(r, data); e != errno.OK {
 		return core.Exit(r, e)
+	}
+
+	if core.NeedRecordLog(r) {
+		c, _ := json.Marshal(data)
+		r.HeadersIn[comm.HEADER_LOG_CONTENT] = string(c)
+		r.HeadersIn[comm.HEADER_LOG_USER] = storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
 	}
 	return request.handler(r, &Context{data})
 }

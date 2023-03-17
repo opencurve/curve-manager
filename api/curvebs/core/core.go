@@ -26,6 +26,7 @@ import (
 	"strconv"
 
 	comm "github.com/opencurve/curve-manager/api/common"
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/pigeon"
 )
@@ -78,6 +79,7 @@ const (
 	CANCEL_SNAPSHOT            = "snapshot.cancel"
 	DELETE_SNAPSHOT            = "snapshot.delete"
 	FLATTEN                    = "volume.flatten"
+	GET_SYSTEM_LOG             = "syslog.get"
 )
 
 func Exit(r *pigeon.Request, code errno.Errno) bool {
@@ -88,7 +90,10 @@ func Exit(r *pigeon.Request, code errno.Errno) bool {
 	if code != errno.OK {
 		r.HeadersOut[comm.HEADER_ERROR_CODE] = strconv.Itoa(code.Code())
 	}
-
+	if NeedRecordLog(r) {
+		agent.WriteSystemLog(r.Context.RemoteIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
+			r.Args[METHOD], code.Description(), r.HeadersIn[comm.HEADER_LOG_CONTENT], code.Code())
+	}
 	return r.Exit(code.HTTPCode())
 }
 
@@ -103,5 +108,9 @@ func ExitSuccessWithData(r *pigeon.Request, data interface{}) bool {
 		"errorCode": "0",
 		"errorMsg":  "success",
 	})
+	if NeedRecordLog(r) {
+		agent.WriteSystemLog(r.Context.RemoteIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
+			r.Args[METHOD], "success", r.HeadersIn[comm.HEADER_LOG_CONTENT], 0)
+	}
 	return r.Exit(200)
 }

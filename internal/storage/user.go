@@ -69,7 +69,7 @@ func GetUser(name string) (UserInfo, error) {
 	return user, nil
 }
 
-func SetUser(name, passwd, email string, permission int) error {
+func CreateUser(name, passwd, email string, permission int) error {
 	return gStorage.execSQL(CREATE_USER, name, passwd, email, permission)
 }
 

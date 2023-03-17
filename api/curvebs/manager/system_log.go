@@ -16,20 +16,24 @@
 
 /*
 * Project: Curve-Manager
-* Created Date: 2023-02-11
+* Created Date: 2023-03-17
 * Author: wanghai (SeanHai)
  */
 
-package common
+package manager
 
-const (
-	HEADER_REQUEST_ID            = "X-Pigeon-Request-Id"
-	HEADER_ERROR_CODE            = "X-Pigeon-Error-Code"
-	HEADER_AUTH_SIGN             = "X-Pigeon-Auth-Sign"
-	HEADER_AUTH_TOKEN            = "X-Pigeon-Auth-Token"
-	HEADER_AUTH_TIMESTAMP        = "X-Pigeon-Auth-Timestamp"
-	HEADER_CURVE_CONSOLE_VERSION = "X-Pigeon-Curve-Manager-Version"
-
-	HEADER_LOG_USER    = "X-Pigeon-Log-User"
-	HEADER_LOG_CONTENT = "X-Pigeon-Log-Content"
+import (
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
+	"github.com/opencurve/curve-manager/api/curvebs/core"
+	"github.com/opencurve/curve-manager/internal/errno"
+	"github.com/opencurve/pigeon"
 )
+
+func GetSysLog(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetSysLogRequest)
+	logs, err := agent.GetSysLog(r, data.Start, data.End, data.Page, data.Size)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, logs)
+}

@@ -23,34 +23,27 @@
 package agent
 
 import (
-	"fmt"
-	"strings"
-
-	bsrpc "github.com/SeanHai/curve-go-rpc/rpc/curvebs"
-	"github.com/opencurve/curve-manager/internal/common"
+	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
 )
 
-var (
-	GMdsClient *bsrpc.MdsClient
-)
-
 const (
-	CURVEBS_MDS_ADDRESS = "mds.address"
-
-	DEFAULT_RPC_TIMEOUT_MS  = 500
-	DEFAULT_RPC_RETRY_TIMES = 3
+	SYSTEM_LOG_EXPIRATION_DAYS         = "system.log.expiration.days"
+	DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS = 30
 )
 
-func Init(cfg *pigeon.Configure) error {
-	addrs := cfg.GetConfig().GetString(CURVEBS_MDS_ADDRESS)
-	if len(addrs) == 0 {
-		return fmt.Errorf("no cluster mds address found")
+var (
+	GSystemLogChann chan storage.SystemLog
+)
+
+func Init(cfg *pigeon.Configure, logger *pigeon.Logger) {
+	expirationDays := cfg.GetConfig().GetInt(SYSTEM_LOG_EXPIRATION_DAYS)
+	if expirationDays <= 0 {
+		expirationDays = DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS
 	}
-	GMdsClient = bsrpc.NewMdsClient(bsrpc.MdsClientOption{
-		TimeoutMs:  DEFAULT_RPC_TIMEOUT_MS,
-		RetryTimes: DEFAULT_RPC_RETRY_TIMES,
-		Addrs:      strings.Split(addrs, common.CURVEBS_ADDRESS_DELIMITER),
-	})
-	return nil
+	// write system operation log
+	GSystemLogChann = make(chan storage.SystemLog, 128)
+	go writeSystemLog(logger)
+	// clear expired logs
+	go clearExpiredSystemLog(expirationDays, logger)
 }

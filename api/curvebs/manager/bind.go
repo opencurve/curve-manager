@@ -23,8 +23,8 @@
 package manager
 
 import (
-	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
+	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/pigeon"
 )
 
@@ -182,6 +182,13 @@ type DeleteSnapshotRequest struct {
 type FlattenRequest struct {
 	VolumeName string `json:"volumeName" binding:"required"`
 	User       string `json:"user" binding:"required"`
+}
+
+type GetSysLogRequest struct {
+	Start int64  `json:"start" default:"0"`
+	End   int64  `json:"end" default:"0"`
+	Page  uint32 `json:"page" binding:"required"`
+	Size  uint32 `json:"size" binding:"required"`
 }
 
 var requests = []Request{
@@ -352,5 +359,11 @@ var requests = []Request{
 		core.FLATTEN,
 		FlattenRequest{},
 		Flatten,
+	},
+	{
+		core.HTTP_POST,
+		core.GET_SYSTEM_LOG,
+		GetSysLogRequest{},
+		GetSysLog,
 	},
 }

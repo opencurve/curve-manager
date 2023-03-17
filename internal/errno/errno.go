@@ -54,6 +54,7 @@ var (
 	GET_USER_FAILED                 = Errno{403001, "user not exist"}
 	USER_PASSWORD_NOT_MATCH         = Errno{403002, "user password not match"}
 	WRITE_USER_LOGIN_FAILED         = Errno{403003, "only permit one write user login"}
+	OPERATION_IS_NOT_PERMIT         = Errno{403004, "operation is not permitted"}
 
 	// 405
 	UNSUPPORT_HTTP_METHOD = Errno{405001, "unsupport http method"}
@@ -119,4 +120,5 @@ var (
 	GET_SNAPSHOT_FAILED               = Errno{503321, "get snapshot failed"}
 	DELETE_SNAPSHOT_FAILED            = Errno{503322, "delete snapshot failed"}
 	FIND_VOLUME_MOUNTPOINT_FAILED     = Errno{503323, "find volume mountpoint failed"}
+	GET_SYSTEM_LOG_FAILED             = Errno{503324, "get system operation log failed"}
 )

@@ -38,15 +38,30 @@
 package storage
 
 var (
-	// table user
+	// user table
 	CREATE_USER_TABLE = `
 		CREATE TABLE IF NOT EXISTS user (
 			username TEXT NOT NULL PRIMARY KEY,
 			password TEXT NOT NULL,
 			email TEXT,
-			permission INTERER NOT NULL
+			permission INTEGER NOT NULL
 		)
 	`
+	// system log table
+	CREATE_SYSTEM_LOG_TABLE = `
+		CREATE TABLE IF NOT EXISTS system_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			timestamp INTEGER,
+			ip TEXT,
+			user TEXT,
+			module TEXT,
+			method TEXT,
+			error_code INTEGER,
+			error_msg TEXT,
+			content TEXT
+		)
+	`
+	// user
 	CREATE_ADMIN           = `INSERT OR IGNORE INTO user(username, password, email, permission) VALUES(?, ?, ?, ?)`
 	CREATE_USER            = `INSERT INTO user(username, password, email, permission) VALUES(?, ?, ?, ?)`
 	DELETE_USER            = `DELETE FROM user WHERE username = ?`
@@ -57,4 +72,10 @@ var (
 	UPDATE_USER_PASSWORD   = `UPDATE user SET password = ? WHERE username = ?`
 	UPDATE_USER_EMAIL      = `UPDATE user SET email = ? WHERE username = ?`
 	UPDATE_USER_PERMISSION = `UPDATE user SET permission = ? WHERE username = ?`
+
+	// system log
+	ADD_SYSTEM_LOG     = `INSERT INTO system_log(timestamp, ip, user, module, method, error_code, error_msg, content) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
+	GET_SYSTEM_LOG_NUM = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? and timestamp <= ?`
+	GET_SYSTEM_LOG     = `SELECT * FROM system_log WHERE timestamp >= ? and timestamp <= ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
+	DELETE_SYSTEM_LOG  = `DELETE FROM system_log WHERE timestamp < ?`
 )

@@ -96,6 +96,7 @@ var (
 		CANCEL_SNAPSHOT:            READ_PERM + WRITE_PERM,
 		FLATTEN:                    READ_PERM + WRITE_PERM,
 		DELETE_SNAPSHOT:            READ_PERM + WRITE_PERM,
+		GET_SYSTEM_LOG:             READ_PERM + MANAGER_PERM,
 	}
 )
 
@@ -111,8 +112,14 @@ func InitAccess(cfg *pigeon.Configure) {
 	}
 }
 
-func isLoginRequest(r *pigeon.Request) bool {
+func IsLoginRequest(r *pigeon.Request) bool {
 	return r.Args[METHOD] == USER_LOGIN
+}
+
+func NeedRecordLog(r *pigeon.Request) bool {
+	method := r.Args[METHOD]
+	return method == USER_LOGIN || method == USER_LOGOUT ||
+		(method2permission[method]&(WRITE_PERM+MANAGER_PERM) > 0 && method != GET_SYSTEM_LOG)
 }
 
 func checkPermission(r *pigeon.Request, perm int) bool {
@@ -166,40 +173,44 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 	sort.Strings(stringItems)
 	signStr := strings.Join(stringItems, ":")
 	sign := common.GetMd5Sum32Little(signStr)
-	r.Logger().Error("checkSignature",
-		pigeon.Field("signStr", signStr),
-		pigeon.Field("sign", sign),
-		pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-	return inSign == sign
-}
-
-func checkToken(r *pigeon.Request) bool {
-	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
-	ok, perm := storage.CheckSession(token, apiExpireSeconds)
-	if !ok {
-		r.Logger().Error("checkToken CheckSession failed",
-			pigeon.Field("token", token),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return false
-	}
-	if !checkPermission(r, perm) {
-		r.Logger().Error("checkToken checkPermission failed",
-			pigeon.Field("method", r.Args[METHOD]),
-			pigeon.Field("user perm", perm),
+	if inSign != sign {
+		r.Logger().Error("checkSignature failed",
+			pigeon.Field("signStr", signStr),
+			pigeon.Field("sign", sign),
+			pigeon.Field("inSign", inSign),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return false
 	}
 	return true
 }
 
+func checkToken(r *pigeon.Request) (bool, int) {
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	return storage.CheckSession(token, apiExpireSeconds)
+}
+
 func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {
 	if !enableCheck {
 		return errno.OK
 	}
-	if !isLoginRequest(r) {
-		if !checkToken(r) {
+	if !IsLoginRequest(r) {
+		// check user token valied
+		ok, perm := checkToken(r)
+		if !ok {
+			r.Logger().Error("checkToken failed",
+				pigeon.Field("token", r.HeadersIn[comm.HEADER_AUTH_TOKEN]),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 			return errno.USER_IS_UNAUTHORIZED
 		}
+		// check request method is allowed to this user
+		if !checkPermission(r, perm) {
+			r.Logger().Error("checkToken checkPermission failed",
+				pigeon.Field("method", r.Args[METHOD]),
+				pigeon.Field("user perm", perm),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return errno.OPERATION_IS_NOT_PERMIT
+		}
+		// check request ttl and sigenatrue
 		if !checkTimeOut(r) || !checkSignature(r, data) {
 			return errno.REQUEST_IS_DENIED_FOR_SIGNATURE
 		}
