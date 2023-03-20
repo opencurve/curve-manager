@@ -23,6 +23,7 @@
 package storage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/opencurve/curve-manager/internal/common"
@@ -55,10 +56,11 @@ func DeleteSystemLog(expirationMs int64) error {
 	return gStorage.execSQL(DELETE_SYSTEM_LOG, expirationMs)
 }
 
-func GetSystemLog(start, end int64, limit, offset uint32) (SystemLogInfo, error) {
+func GetSystemLog(start, end int64, limit, offset uint32, filter string) (SystemLogInfo, error) {
 	logs := SystemLogInfo{}
+	filter = fmt.Sprintf("%%%s%%", filter)
 	// get total
-	num, err := gStorage.db.Query(GET_SYSTEM_LOG_NUM, start, end)
+	num, err := gStorage.db.Query(GET_SYSTEM_LOG_NUM, start, end, filter)
 	if err != nil {
 		return logs, err
 	}
@@ -68,7 +70,7 @@ func GetSystemLog(start, end int64, limit, offset uint32) (SystemLogInfo, error)
 	}
 
 	if logs.Total > int(offset) {
-		rows, err := gStorage.db.Query(GET_SYSTEM_LOG, start, end, limit, offset)
+		rows, err := gStorage.db.Query(GET_SYSTEM_LOG, start, end, filter, limit, offset)
 		if err != nil {
 			return logs, err
 		}

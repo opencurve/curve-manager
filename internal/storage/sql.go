@@ -74,8 +74,11 @@ var (
 	UPDATE_USER_PERMISSION = `UPDATE user SET permission = ? WHERE username = ?`
 
 	// system log
-	ADD_SYSTEM_LOG     = `INSERT INTO system_log(timestamp, ip, user, module, method, error_code, error_msg, content) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
-	GET_SYSTEM_LOG_NUM = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? and timestamp <= ?`
-	GET_SYSTEM_LOG     = `SELECT * FROM system_log WHERE timestamp >= ? and timestamp <= ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
-	DELETE_SYSTEM_LOG  = `DELETE FROM system_log WHERE timestamp < ?`
+	ADD_SYSTEM_LOG = `INSERT INTO system_log(timestamp, ip, user, module, method, error_code, error_msg, content)
+	 VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
+	GET_SYSTEM_LOG_NUM = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND
+	 timestamp||ip||user||module||method||error_code||error_msg||content LIKE ?`
+	GET_SYSTEM_LOG = `SELECT * FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND
+	 timestamp||ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
+	DELETE_SYSTEM_LOG = `DELETE FROM system_log WHERE timestamp < ?`
 )

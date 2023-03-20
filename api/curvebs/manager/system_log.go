@@ -31,7 +31,7 @@ import (
 
 func GetSysLog(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*GetSysLogRequest)
-	logs, err := agent.GetSysLog(r, data.Start, data.End, data.Page, data.Size)
+	logs, err := agent.GetSysLog(r, data.Start, data.End, data.Page, data.Size, data.Filter)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

@@ -86,15 +86,16 @@ func WriteSystemLog(ip, user, module, method, error_msg, content string, error_c
 	GSystemLogChann <- logItem
 }
 
-func GetSysLog(r *pigeon.Request, start, end int64, page, size uint32) (interface{}, errno.Errno) {
+func GetSysLog(r *pigeon.Request, start, end int64, page, size uint32, filter string) (interface{}, errno.Errno) {
 	if start == 0 && end == 0 {
 		end = time.Now().UnixMilli()
 	}
-	info, err := storage.GetSystemLog(start, end, size, (page-1)*size)
+	info, err := storage.GetSystemLog(start, end, size, (page-1)*size, filter)
 	if err != nil {
 		r.Logger().Error("GetSysLog failed",
 			pigeon.Field("start", start),
 			pigeon.Field("end", end),
+			pigeon.Field("filter", filter),
 			pigeon.Field("page", page),
 			pigeon.Field("size", size),
 			pigeon.Field("error", err),

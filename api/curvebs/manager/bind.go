@@ -191,10 +191,11 @@ type FlattenRequest struct {
 }
 
 type GetSysLogRequest struct {
-	Start int64  `json:"start" default:"0"`
-	End   int64  `json:"end" default:"0"`
-	Page  uint32 `json:"page" binding:"required"`
-	Size  uint32 `json:"size" binding:"required"`
+	Start  int64  `json:"start" default:"0"`
+	End    int64  `json:"end" default:"0"`
+	Page   uint32 `json:"page" binding:"required"`
+	Size   uint32 `json:"size" binding:"required"`
+	Filter string `json:"filter"`
 }
 
 var requests = []Request{
