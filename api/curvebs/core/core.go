@@ -57,6 +57,7 @@ const (
 	STATUS_CHUNKSERVER         = "status.chunkserver"
 	STATUS_CLUSTER             = "status.cluster"
 	SPACE_CLUSTER              = "space.cluster"
+	SPACE_TREND_CLUSTER        = "space.trend.cluster"
 	PERFORMANCE_CLUSTER        = "performance.cluster"
 	TOPO_LIST                  = "topo.list"
 	TOPO_POOL_LIST             = "topo.pool.list"

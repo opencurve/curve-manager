@@ -32,7 +32,9 @@ import (
 )
 
 const (
-	CLUSTER_METRIC_PREFIX = "topology_metric_cluster_"
+	CLUSTER_METRIC_PREFIX    = "topology_metric_cluster_"
+	CLUSTER_LOGICAL_CAPACITY = "topology_metric_cluster_logical_capacity"
+	CLUSTER_LOGICAL_ALLOC    = "topology_metric_cluster_logical_alloc"
 
 	LOGICAL_POOL_METRIC_PREFIX    = "topology_metric_logical_pool_"
 	LOGICAL_POOL_LOGICAL_CAPACITY = "_logical_capacity"
@@ -208,4 +210,68 @@ func GetVolumePerformance(volumeName string) ([]metricomm.UserPerformance, error
 	name := metricomm.FormatToMetricName(volumeName)
 	prefix := fmt.Sprintf("%s%s_", FILE_PREFIX, name)
 	return metricomm.GetUserPerformance(prefix)
+}
+
+func GetClusterSpace(start, end, interval uint64) ([]metricomm.SpaceTrend, error) {
+	spaces := []metricomm.SpaceTrend{}
+	retMap := make(map[float64]*metricomm.SpaceTrend)
+
+	// total, alloc
+	requestSize := 2
+	results := make(chan metricomm.MetricResult, requestSize)
+	totalName := fmt.Sprintf("%s&start=%d&end=%d&step=%d", CLUSTER_LOGICAL_CAPACITY, start, end, interval)
+	usedName := fmt.Sprintf("%s&start=%d&end=%d&step=%d", CLUSTER_LOGICAL_ALLOC, start, end, interval)
+	go metricomm.QueryRangeMetric(totalName, &results)
+	go metricomm.QueryRangeMetric(usedName, &results)
+
+	count := 0
+	for res := range results {
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		ret := metricomm.ParseMatrixMetric(res.Result.(*metricomm.QueryResponseOfMatrix), metricomm.INSTANCE)
+		if res.Key.(string) == totalName {
+			for _, v := range ret {
+				for _, item := range v {
+					total, e := strconv.ParseUint(item.Value, 10, 64)
+					if e != nil {
+						return nil, e
+					}
+					if _, ok := retMap[item.Timestamp]; ok {
+						retMap[item.Timestamp].Total = total / common.GiB
+					} else {
+						retMap[item.Timestamp] = &metricomm.SpaceTrend{
+							Timestamp: item.Timestamp,
+							Total:     total / common.GiB,
+						}
+					}
+				}
+			}
+		} else if res.Key.(string) == usedName {
+			for _, v := range ret {
+				for _, item := range v {
+					used, e := strconv.ParseUint(item.Value, 10, 64)
+					if e != nil {
+						return nil, e
+					}
+					if _, ok := retMap[item.Timestamp]; ok {
+						retMap[item.Timestamp].Used = used / common.GiB
+					} else {
+						retMap[item.Timestamp] = &metricomm.SpaceTrend{
+							Timestamp: item.Timestamp,
+							Used:      used / common.GiB,
+						}
+					}
+				}
+			}
+		}
+		count += 1
+		if count >= requestSize {
+			break
+		}
+	}
+	for _, v := range retMap {
+		spaces = append(spaces, *v)
+	}
+	return spaces, nil
 }

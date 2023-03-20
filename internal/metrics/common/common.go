@@ -77,6 +77,12 @@ type Space struct {
 	Used  uint64
 }
 
+type SpaceTrend struct {
+	Timestamp float64 `json:"timestamp"`
+	Total     uint64  `json:"total"`
+	Used      uint64  `json:"alloc"`
+}
+
 type FileSystemInfo struct {
 	Device     string
 	FsType     string

@@ -84,6 +84,21 @@ func GetClusterSpace(r *pigeon.Request) (interface{}, errno.Errno) {
 	return &result, errno.OK
 }
 
+func GetClusterSpaceTrend(r *pigeon.Request, start, end, interval uint64) (interface{}, errno.Errno) {
+	spaces, err := bsmetric.GetClusterSpace(start, end, interval)
+	if err != nil {
+		r.Logger().Error("GetClusterSpaceTrend failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return nil, errno.GET_CLUSTER_SPACE_FAILED
+	}
+	// sort by timestamp
+	sort.Slice(spaces, func(i, j int) bool {
+		return spaces[i].Timestamp < spaces[j].Timestamp
+	})
+	return spaces, errno.OK
+}
+
 func GetClusterPerformance(r *pigeon.Request) (interface{}, errno.Errno) {
 	performance, err := bsmetric.GetClusterPerformance()
 	if err != nil {

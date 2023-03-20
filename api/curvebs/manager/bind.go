@@ -77,6 +77,12 @@ type GetClusterStatusRequest struct{}
 
 type GetClusterSpaceRequest struct{}
 
+type GetClusterSpaceTrendRequest struct {
+	Start    uint64 `json:"start" binding:"required"`
+	End      uint64 `json:"end" binding:"required"`
+	Interval uint64 `json:"interval" binding:"required"`
+}
+
 type GetClusterPerformanceRequest struct{}
 
 type ListHostRequest struct {
@@ -227,6 +233,12 @@ var requests = []Request{
 		core.SPACE_CLUSTER,
 		GetClusterSpaceRequest{},
 		GetClusterSpace,
+	},
+	{
+		core.HTTP_POST,
+		core.SPACE_TREND_CLUSTER,
+		GetClusterSpaceTrendRequest{},
+		GetClusterSpaceTrend,
 	},
 	{
 		core.HTTP_GET,

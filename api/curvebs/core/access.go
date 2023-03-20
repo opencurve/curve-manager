@@ -74,6 +74,7 @@ var (
 		STATUS_CHUNKSERVER:         READ_PERM,
 		STATUS_CLUSTER:             READ_PERM,
 		SPACE_CLUSTER:              READ_PERM,
+		SPACE_TREND_CLUSTER:        READ_PERM,
 		PERFORMANCE_CLUSTER:        READ_PERM,
 		TOPO_LIST:                  READ_PERM,
 		TOPO_POOL_LIST:             READ_PERM,

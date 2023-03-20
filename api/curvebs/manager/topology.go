@@ -37,6 +37,15 @@ func GetClusterSpace(r *pigeon.Request, ctx *Context) bool {
 	return core.ExitSuccessWithData(r, space)
 }
 
+func GetClusterSpaceTrend(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetClusterSpaceTrendRequest)
+	space, err := agent.GetClusterSpaceTrend(r, data.Start, data.End, data.Interval)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, space)
+}
+
 func GetClusterPerformance(r *pigeon.Request, ctx *Context) bool {
 	performance, err := agent.GetClusterPerformance(r)
 	if err != errno.OK {
