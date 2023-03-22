@@ -249,3 +249,18 @@ func ListUser(r *pigeon.Request, size, page uint32, userName string) (interface{
 	}
 	return info, errno.OK
 }
+
+func GetUser(r *pigeon.Request) (interface{}, errno.Errno) {
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	userName := storage.GetLoginUserByToken(token)
+	info, err := storage.GetUser(userName)
+	if err != nil {
+		r.Logger().Error("GetUser failed",
+			pigeon.Field("token", token),
+			pigeon.Field("userName", userName),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return nil, errno.GET_USER_FAILED
+	}
+	return info, errno.OK
+}

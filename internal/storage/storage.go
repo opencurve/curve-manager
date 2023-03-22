@@ -73,11 +73,20 @@ func Init(cfg *pigeon.Configure) error {
 		return err
 	}
 
-	// init system operation log table
+	// create system operation log table
 	if err = gStorage.execSQL(CREATE_SYSTEM_LOG_TABLE); err != nil {
 		return err
 	}
 
+	// create system alert table
+	if err = gStorage.execSQL(CREATE_SYSTEM_ALERT_TABLE); err != nil {
+		return err
+	}
+
+	// create user system alert table
+	if err = gStorage.execSQL(CREATE_USER_SYSTEM_LOG_TABLE); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -65,6 +65,9 @@ var (
 		USER_DELETE:                READ_PERM + MANAGER_PERM,
 		USER_LIST:                  READ_PERM + MANAGER_PERM,
 		USER_UPDATE_PERMISSION:     READ_PERM + MANAGER_PERM,
+		USER_LOGIN:                 READ_PERM,
+		USER_LOGOUT:                READ_PERM,
+		USER_GET:                   READ_PERM,
 		USER_UPDATE_PASSWORD:       READ_PERM,
 		USER_RESET_PASSWORD:        READ_PERM,
 		USER_UPDATE_EMAIL:          READ_PERM,
@@ -97,7 +100,7 @@ var (
 		CANCEL_SNAPSHOT:            READ_PERM + WRITE_PERM,
 		FLATTEN:                    READ_PERM + WRITE_PERM,
 		DELETE_SNAPSHOT:            READ_PERM + WRITE_PERM,
-		GET_SYSTEM_LOG:             READ_PERM + MANAGER_PERM,
+		GET_SYSTEM_LOG:             READ_PERM,
 	}
 )
 
@@ -117,9 +120,13 @@ func IsLoginRequest(r *pigeon.Request) bool {
 	return r.Args[METHOD] == USER_LOGIN
 }
 
+func IsResetPasswordRequest(r *pigeon.Request) bool {
+	return r.Args[METHOD] == USER_RESET_PASSWORD
+}
+
 func NeedRecordLog(r *pigeon.Request) bool {
 	method := r.Args[METHOD]
-	return method == USER_LOGIN || method == USER_LOGOUT ||
+	return method == USER_LOGIN || method == USER_LOGOUT || method == USER_RESET_PASSWORD ||
 		(method2permission[method]&(WRITE_PERM+MANAGER_PERM) > 0 && method != GET_SYSTEM_LOG)
 }
 
@@ -169,7 +176,10 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 	}
 	v := reflect.ValueOf(data)
 	for i := 0; i < v.Elem().NumField(); i++ {
-		stringItems = append(stringItems, fmt.Sprintf("%+v", v.Elem().Field(i)))
+		value := fmt.Sprintf("%+v", v.Elem().Field(i))
+		if value != "" {
+			stringItems = append(stringItems, value)
+		}
 	}
 	sort.Strings(stringItems)
 	signStr := strings.Join(stringItems, ":")
@@ -187,14 +197,11 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 
 func checkToken(r *pigeon.Request) (bool, int) {
 	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
-	return storage.CheckSession(token, apiExpireSeconds)
+	return storage.CheckSession(token, loginExpireSeconds)
 }
 
 func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {
-	if !enableCheck {
-		return errno.OK
-	}
-	if !IsLoginRequest(r) {
+	if !IsLoginRequest(r) && !IsResetPasswordRequest(r) {
 		// check user token valied
 		ok, perm := checkToken(r)
 		if !ok {
@@ -211,9 +218,11 @@ func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {
 				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 			return errno.OPERATION_IS_NOT_PERMIT
 		}
-		// check request ttl and sigenatrue
-		if !checkTimeOut(r) || !checkSignature(r, data) {
-			return errno.REQUEST_IS_DENIED_FOR_SIGNATURE
+		if enableCheck {
+			// check request ttl and sigenatrue
+			if !checkTimeOut(r) || !checkSignature(r, data) {
+				return errno.REQUEST_IS_DENIED_FOR_SIGNATURE
+			}
 		}
 	}
 	return errno.OK

@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	GSystemLogChann chan storage.SystemLog
+	systemLogChann chan storage.SystemLog
 )
 
 func Init(cfg *pigeon.Configure, logger *pigeon.Logger) {
@@ -42,7 +42,7 @@ func Init(cfg *pigeon.Configure, logger *pigeon.Logger) {
 		expirationDays = DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS
 	}
 	// write system operation log
-	GSystemLogChann = make(chan storage.SystemLog, 128)
+	systemLogChann = make(chan storage.SystemLog, 128)
 	go writeSystemLog(logger)
 	// clear expired logs
 	go clearExpiredSystemLog(expirationDays, logger)

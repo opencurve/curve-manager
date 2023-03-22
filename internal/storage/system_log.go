@@ -23,6 +23,7 @@
 package storage
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 type SystemLog struct {
 	id        int64
 	TimeMs    int64  `json:"-"`
+	Time      string `json:"time"`
 	IP        string `json:"ip"`
 	User      string `json:"user"`
 	Module    string `json:"module"`
@@ -39,7 +41,6 @@ type SystemLog struct {
 	ErrorCode int    `json:"errorCode"`
 	ErrorMsg  string `json:"errorMsg"`
 	Content   string `json:"content"`
-	Time      string `json:"time"`
 }
 
 type SystemLogInfo struct {
@@ -56,25 +57,36 @@ func DeleteSystemLog(expirationMs int64) error {
 	return gStorage.execSQL(DELETE_SYSTEM_LOG, expirationMs)
 }
 
-func GetSystemLog(start, end int64, limit, offset uint32, filter string) (SystemLogInfo, error) {
+func GetSystemLog(start, end int64, limit, offset uint32, filter, userName string) (SystemLogInfo, error) {
 	logs := SystemLogInfo{}
 	filter = fmt.Sprintf("%%%s%%", filter)
 	// get total
-	num, err := gStorage.db.Query(GET_SYSTEM_LOG_NUM, start, end, filter)
+	// admin can get all system operation log, others can only get themself's
+	var rows *sql.Rows
+	var err error
+	if userName == USER_ADMIN_NAME {
+		rows, err = gStorage.db.Query(GET_SYSTEM_LOG_NUM, start, end, filter)
+	} else {
+		rows, err = gStorage.db.Query(GET_SYSTEM_LOG_NUM_OF_USER, start, end, userName, filter)
+	}
 	if err != nil {
 		return logs, err
 	}
-	defer num.Close()
-	for num.Next() {
-		num.Scan(&logs.Total)
+	defer rows.Close()
+	if rows.Next() {
+		rows.Scan(&logs.Total)
 	}
 
 	if logs.Total > int(offset) {
-		rows, err := gStorage.db.Query(GET_SYSTEM_LOG, start, end, filter, limit, offset)
+		rows.Close()
+		if userName == USER_ADMIN_NAME {
+			rows, err = gStorage.db.Query(GET_SYSTEM_LOG, start, end, filter, limit, offset)
+		} else {
+			rows, err = gStorage.db.Query(GET_SYSTEM_LOG_OF_USER, start, end, userName, filter, limit, offset)
+		}
 		if err != nil {
 			return logs, err
 		}
-		defer rows.Close()
 		for rows.Next() {
 			var log SystemLog
 			err = rows.Scan(&log.id, &log.TimeMs, &log.IP, &log.User, &log.Module, &log.Method, &log.ErrorCode,

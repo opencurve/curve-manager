@@ -43,7 +43,7 @@ type UserInfo struct {
 	PassWord   string `json:"-"`
 	Email      string `json:"email"`
 	Permission int    `json:"permission" binding:"required"`
-	Token      string `json:"token" binding:"required"`
+	Token      string `json:"token,omitempty" binding:"required"`
 }
 
 func createAdminUser() error {

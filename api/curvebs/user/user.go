@@ -88,3 +88,11 @@ func ListUser(r *pigeon.Request, ctx *Context) bool {
 	}
 	return core.ExitSuccessWithData(r, users)
 }
+
+func GetUser(r *pigeon.Request, ctx *Context) bool {
+	users, err := agent.GetUser(r)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, users)
+}

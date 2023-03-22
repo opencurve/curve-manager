@@ -102,6 +102,8 @@ type ListUserRequest struct {
 	UserName string `json:"userName"`
 }
 
+type GetUserRequest struct{}
+
 var requests = []Request{
 	{
 		core.HTTP_POST,
@@ -156,5 +158,11 @@ var requests = []Request{
 		core.USER_LIST,
 		ListUserRequest{},
 		ListUser,
+	},
+	{
+		core.HTTP_GET,
+		core.USER_GET,
+		GetUserRequest{},
+		GetUser,
 	},
 }

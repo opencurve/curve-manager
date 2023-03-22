@@ -57,7 +57,7 @@ func writeSystemLog(logger *pigeon.Logger) {
 	defer timer.Stop()
 	for {
 		select {
-		case data, ok := <-GSystemLogChann:
+		case data, ok := <-systemLogChann:
 			if ok {
 				err := storage.AddSystemLog(&data)
 				if err != nil {
@@ -83,14 +83,15 @@ func WriteSystemLog(ip, user, module, method, error_msg, content string, error_c
 		ErrorMsg:  error_msg,
 		Content:   content,
 	}
-	GSystemLogChann <- logItem
+	systemLogChann <- logItem
 }
 
 func GetSysLog(r *pigeon.Request, start, end int64, page, size uint32, filter string) (interface{}, errno.Errno) {
 	if start == 0 && end == 0 {
 		end = time.Now().UnixMilli()
 	}
-	info, err := storage.GetSystemLog(start, end, size, (page-1)*size, filter)
+	userName := storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
+	info, err := storage.GetSystemLog(start, end, size, (page-1)*size, filter, userName)
 	if err != nil {
 		r.Logger().Error("GetSysLog failed",
 			pigeon.Field("start", start),

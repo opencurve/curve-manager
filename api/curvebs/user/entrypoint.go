@@ -70,6 +70,8 @@ func Entrypoint(r *pigeon.Request) bool {
 		r.HeadersIn[comm.HEADER_LOG_CONTENT] = string(c)
 		if core.IsLoginRequest(r) {
 			r.HeadersIn[comm.HEADER_LOG_USER] = data.(*LoginRequest).UserName
+		} else if core.IsResetPasswordRequest(r) {
+			r.HeadersIn[comm.HEADER_LOG_USER] = data.(*ResetPassWordRequest).UserName
 		} else {
 			r.HeadersIn[comm.HEADER_LOG_USER] = storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
 		}

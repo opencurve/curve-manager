@@ -49,6 +49,7 @@ const (
 	USER_UPDATE_EMAIL      = "user.update.email"
 	USER_UPDATE_PERMISSION = "user.update.permission"
 	USER_LIST              = "user.list"
+	USER_GET               = "user.get"
 
 	// manager
 	STATUS_ETCD                = "status.etcd"
