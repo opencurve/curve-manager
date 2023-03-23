@@ -198,6 +198,20 @@ type GetSysLogRequest struct {
 	Filter string `json:"filter"`
 }
 
+type GetSysAlertRequest struct {
+	Start  int64  `json:"start" default:"0"`
+	End    int64  `json:"end" default:"0"`
+	Page   uint32 `json:"page" binding:"required"`
+	Size   uint32 `json:"size" binding:"required"`
+	Filter string `json:"filter"`
+}
+
+type GetUnreadSysAlertNumRequest struct{}
+
+type UpdateReadSysAlertIdRequest struct {
+	Id int64 `json:"id" binding:"required"`
+}
+
 var requests = []Request{
 	{
 		core.HTTP_GET,
@@ -378,5 +392,23 @@ var requests = []Request{
 		core.GET_SYSTEM_LOG,
 		GetSysLogRequest{},
 		GetSysLog,
+	},
+	{
+		core.HTTP_POST,
+		core.GET_SYSTEM_ALERT,
+		GetSysAlertRequest{},
+		GetSysAlert,
+	},
+	{
+		core.HTTP_GET,
+		core.GET_UNREAD_SYSTEM_ALERT_NUM,
+		GetUnreadSysAlertNumRequest{},
+		GetUnreadSysAlertNum,
+	},
+	{
+		core.HTTP_POST,
+		core.UPDATE_READ_SYSTEM_ALERT_ID,
+		UpdateReadSysAlertIdRequest{},
+		UpdateReadSysAlertId,
 	},
 }

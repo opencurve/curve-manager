@@ -53,7 +53,7 @@ func createAdminUser() error {
 
 func GetUser(name string) (UserInfo, error) {
 	var user UserInfo
-	rows, err := gStorage.db.Query(GET_USER, name)
+	rows, err := gStorage.querySQL(GET_USER, name)
 	if err != nil {
 		return user, err
 	}
@@ -102,7 +102,7 @@ func ListUser(userName string) (*[]UserInfo, error) {
 		sql = GET_USER
 		params = append(params, userName)
 	}
-	rows, err := gStorage.db.Query(sql, params...)
+	rows, err := gStorage.querySQL(sql, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func ListUser(userName string) (*[]UserInfo, error) {
 }
 
 func GetUserEmail(name string) (string, error) {
-	rows, err := gStorage.db.Query(GET_USER_EMAIL, name)
+	rows, err := gStorage.querySQL(GET_USER_EMAIL, name)
 	if err != nil {
 		return "", err
 	}
@@ -137,7 +137,7 @@ func GetUserEmail(name string) (string, error) {
 }
 
 func GetUserPassword(name string) (string, error) {
-	rows, err := gStorage.db.Query(GET_USER_PASSWORD, name)
+	rows, err := gStorage.querySQL(GET_USER_PASSWORD, name)
 	if err != nil {
 		return "", err
 	}

@@ -96,24 +96,25 @@ var (
 	ADD_SYSTEM_LOG = `INSERT INTO system_log(timestamp, ip, user, module, method, error_code, error_msg, content)
 	 VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
 	GET_SYSTEM_LOG_NUM = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND
-	 timestamp||ip||user||module||method||error_code||error_msg||content LIKE ?`
+	 ip||user||module||method||error_code||error_msg||content LIKE ?`
 	GET_SYSTEM_LOG = `SELECT * FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND
-	 timestamp||ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
+	 ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
 	GET_SYSTEM_LOG_NUM_OF_USER = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND user = ? AND
-	 timestamp||ip||user||module||method||error_code||error_msg||content LIKE ?`
+	 ip||user||module||method||error_code||error_msg||content LIKE ?`
 	GET_SYSTEM_LOG_OF_USER = `SELECT * FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND user = ? AND
-	 timestamp||ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
+	 ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
 	DELETE_SYSTEM_LOG = `DELETE FROM system_log WHERE timestamp < ?`
 
 	// system alert
 	ADD_SYSTEM_ALERT     = `INSERT INTO system_alert(timestamp, level, module, duration, summary) VALUES(?, ?, ?, ?, ?)`
 	GET_SYSTEM_ALERT_NUM = `SELECT COUNT(*) FROM system_alert WHERE timestamp >= ? AND timestamp <= ? AND
-	 timestamp||level||module||duration||summary LIKE ?`
+	 level||module||duration||summary LIKE ?`
 	GET_SYSTEM_ALERT = `SELECT * FROM system_alert WHERE timestamp >= ? AND timestamp <= ? AND
-	 timestamp||level||module||duration||summary LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
+	 level||module||duration||summary LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
 	DELETE_SYSTEM_ALERT      = `DELETE FROM system_alert WHERE timestamp < ?`
 	GET_LAST_SYSTEM_ALERT_ID = `SELECT MAX(id) from system_alert`
 
-	GET_USER_SYSTEM_ALERT_ID    = `SELECT id FROM user_system_alert WHERE username = ?`
-	UPDATE_USER_SYSTEM_ALERT_ID = `UPDATE user_system_alert SET id = ? WHERE username = ?`
+	ADD_READ_SYSTEM_ALERT_ID    = `INSERT INTO user_system_alert(username, id) VALUES(?, ?)`
+	GET_READ_SYSTEM_ALERT_ID    = `SELECT id FROM user_system_alert WHERE username = ?`
+	UPDATE_READ_SYSTEM_ALERT_ID = `UPDATE user_system_alert SET id = ? WHERE username = ?`
 )

@@ -89,8 +89,10 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 	return userInfo, errno.OK
 }
 
-func Logout(r *pigeon.Request, name string) errno.Errno {
-	storage.Logout(name)
+func Logout(r *pigeon.Request) errno.Errno {
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	user := storage.GetLoginUserByToken(token)
+	storage.Logout(user)
 	return errno.OK
 }
 

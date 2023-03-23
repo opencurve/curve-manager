@@ -32,15 +32,16 @@ import (
 )
 
 var (
-	gStorage *Storage
+	gStorage *storage
 )
 
 const (
 	SQLITE_DB_FILE = "db.sqlite.filepath"
 )
 
-type Storage struct {
-	db *sql.DB
+type storage struct {
+	db      *sql.DB
+	dbMutex *sync.RWMutex
 	// token->sessionItem
 	session map[string]sessionItem
 	// user->token
@@ -61,7 +62,7 @@ func Init(cfg *pigeon.Configure) error {
 	if err != nil {
 		return err
 	}
-	gStorage = &Storage{db: db, session: make(map[string]sessionItem), loginedWriteUser: "",
+	gStorage = &storage{db: db, dbMutex: &sync.RWMutex{}, session: make(map[string]sessionItem), loginedWriteUser: "",
 		loginOnce: make(map[string]string), mutex: &sync.Mutex{}}
 
 	// init user table
@@ -90,11 +91,13 @@ func Init(cfg *pigeon.Configure) error {
 	return nil
 }
 
-func (s *Storage) Close() error {
+func (s *storage) Close() error {
 	return s.db.Close()
 }
 
-func (s *Storage) execSQL(query string, args ...interface{}) error {
+func (s *storage) execSQL(query string, args ...interface{}) error {
+	s.dbMutex.Lock()
+	defer s.dbMutex.Unlock()
 	stmt, err := s.db.Prepare(query)
 	if err != nil {
 		return err
@@ -102,4 +105,10 @@ func (s *Storage) execSQL(query string, args ...interface{}) error {
 
 	_, err = stmt.Exec(args...)
 	return err
+}
+
+func (s *storage) querySQL(query string, args ...interface{}) (*sql.Rows, error) {
+	s.dbMutex.RLock()
+	defer s.dbMutex.RUnlock()
+	return s.db.Query(query, args...)
 }

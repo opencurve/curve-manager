@@ -23,6 +23,7 @@
 package storage
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -46,7 +47,7 @@ type SystemAlert struct {
 }
 
 type SystemAlertInfo struct {
-	Total int           `json:"total"`
+	Total int64         `json:"total"`
 	Info  []SystemAlert `json:"info"`
 }
 
@@ -73,7 +74,7 @@ func GetSystemAlert(start, end int64, limit, offset uint32, filter string) (Syst
 	alerts := SystemAlertInfo{}
 	filter = fmt.Sprintf("%%%s%%", filter)
 	// get total
-	rows, err := gStorage.db.Query(GET_SYSTEM_ALERT_NUM, start, end, filter)
+	rows, err := gStorage.querySQL(GET_SYSTEM_ALERT_NUM, start, end, filter)
 	if err != nil {
 		return alerts, err
 	}
@@ -82,15 +83,15 @@ func GetSystemAlert(start, end int64, limit, offset uint32, filter string) (Syst
 		rows.Scan(&alerts.Total)
 	}
 
-	if alerts.Total > int(offset) {
+	if alerts.Total > int64(offset) {
 		rows.Close()
-		rows, err = gStorage.db.Query(GET_SYSTEM_ALERT, start, end, filter, limit, offset)
+		rows, err = gStorage.querySQL(GET_SYSTEM_ALERT, start, end, filter, limit, offset)
 		if err != nil {
 			return alerts, err
 		}
 		for rows.Next() {
 			var alert SystemAlert
-			err = rows.Scan(&alert.TimeMs, &alert.Level, &alert.Module, &alert.DurationSec, &alert.Summary)
+			err = rows.Scan(&alert.id, &alert.TimeMs, &alert.Level, &alert.Module, &alert.DurationSec, &alert.Summary)
 			if err != nil {
 				return alerts, err
 			}
@@ -104,14 +105,14 @@ func GetSystemAlert(start, end int64, limit, offset uint32, filter string) (Syst
 	return alerts, nil
 }
 
-func UpdateReadAlertId(id int64) error {
-	return gStorage.execSQL(UPDATE_USER_SYSTEM_ALERT_ID, id)
+func UpdateReadAlertId(id int64, name string) error {
+	return gStorage.execSQL(UPDATE_READ_SYSTEM_ALERT_ID, id, name)
 }
 
-func GetNotReadAlertNum(userName string) (int64, error) {
-	var maxId int64
-	var readId int64
-	rows, err := gStorage.db.Query(GET_LAST_SYSTEM_ALERT_ID)
+func GetLastAlertId() (int64, error) {
+	var maxId sql.NullInt64
+	var ret int64 = 0
+	rows, err := gStorage.querySQL(GET_LAST_SYSTEM_ALERT_ID)
 	if err != nil {
 		return 0, err
 	}
@@ -122,17 +123,28 @@ func GetNotReadAlertNum(userName string) (int64, error) {
 			return 0, err
 		}
 	}
+	if maxId.Valid {
+		ret = maxId.Int64
+	}
+	return ret, nil
+}
 
-	rows.Close()
-	rows, err = gStorage.db.Query(GET_USER_SYSTEM_ALERT_ID, userName)
+func GetReadAlertId(userName string) (int64, error) {
+	var readId int64 = -1
+	rows, err := gStorage.querySQL(GET_READ_SYSTEM_ALERT_ID, userName)
 	if err != nil {
 		return 0, err
 	}
+	defer rows.Close()
 	if rows.Next() {
 		err = rows.Scan(&readId)
 		if err != nil {
 			return 0, err
 		}
 	}
-	return maxId - readId, nil
+	return readId, nil
+}
+
+func AddReadAlertId(userName string) error {
+	return gStorage.execSQL(ADD_READ_SYSTEM_ALERT_ID, userName, 0)
 }

@@ -44,7 +44,7 @@ type SystemLog struct {
 }
 
 type SystemLogInfo struct {
-	Total int         `json:"total"`
+	Total int64         `json:"total"`
 	Info  []SystemLog `json:"info"`
 }
 
@@ -65,9 +65,9 @@ func GetSystemLog(start, end int64, limit, offset uint32, filter, userName strin
 	var rows *sql.Rows
 	var err error
 	if userName == USER_ADMIN_NAME {
-		rows, err = gStorage.db.Query(GET_SYSTEM_LOG_NUM, start, end, filter)
+		rows, err = gStorage.querySQL(GET_SYSTEM_LOG_NUM, start, end, filter)
 	} else {
-		rows, err = gStorage.db.Query(GET_SYSTEM_LOG_NUM_OF_USER, start, end, userName, filter)
+		rows, err = gStorage.querySQL(GET_SYSTEM_LOG_NUM_OF_USER, start, end, userName, filter)
 	}
 	if err != nil {
 		return logs, err
@@ -77,12 +77,12 @@ func GetSystemLog(start, end int64, limit, offset uint32, filter, userName strin
 		rows.Scan(&logs.Total)
 	}
 
-	if logs.Total > int(offset) {
+	if logs.Total > int64(offset) {
 		rows.Close()
 		if userName == USER_ADMIN_NAME {
-			rows, err = gStorage.db.Query(GET_SYSTEM_LOG, start, end, filter, limit, offset)
+			rows, err = gStorage.querySQL(GET_SYSTEM_LOG, start, end, filter, limit, offset)
 		} else {
-			rows, err = gStorage.db.Query(GET_SYSTEM_LOG_OF_USER, start, end, userName, filter, limit, offset)
+			rows, err = gStorage.querySQL(GET_SYSTEM_LOG_OF_USER, start, end, userName, filter, limit, offset)
 		}
 		if err != nil {
 			return logs, err

@@ -61,9 +61,7 @@ type LoginRequest struct {
 	PassWord string `json:"passWord" binding:"required"`
 }
 
-type LogoutRequest struct {
-	UserName string `json:"userName" binding:"required"`
-}
+type LogoutRequest struct {}
 
 type CreateUserRequest struct {
 	UserName   string `json:"userName" binding:"required"`

@@ -39,8 +39,7 @@ func Login(r *pigeon.Request, ctx *Context) bool {
 }
 
 func Logout(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*LogoutRequest)
-	err := agent.Logout(r, data.UserName)
+	err := agent.Logout(r)
 	return core.Exit(r, err)
 }
 

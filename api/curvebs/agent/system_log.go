@@ -96,6 +96,7 @@ func GetSysLog(r *pigeon.Request, start, end int64, page, size uint32, filter st
 		r.Logger().Error("GetSysLog failed",
 			pigeon.Field("start", start),
 			pigeon.Field("end", end),
+			pigeon.Field("user", userName),
 			pigeon.Field("filter", filter),
 			pigeon.Field("page", page),
 			pigeon.Field("size", size),

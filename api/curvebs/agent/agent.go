@@ -46,4 +46,6 @@ func Init(cfg *pigeon.Configure, logger *pigeon.Logger) {
 	go writeSystemLog(logger)
 	// clear expired logs
 	go clearExpiredSystemLog(expirationDays, logger)
+	// start system alerts
+	initAlerts(logger)
 }

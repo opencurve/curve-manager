@@ -92,7 +92,7 @@ func ListDisk(r *pigeon.Request, size, page uint32, hostname string) (interface{
 			pigeon.Field("hostname", hostname),
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return nil, errno.GET_INSTANCE_BY_HOSTNAME_FAILED
+		return disksInfo, errno.OK
 	}
 	// 1. get disk device list
 	disks, err := metricomm.ListDiskInfo(instance)
