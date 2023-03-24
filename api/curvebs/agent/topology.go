@@ -257,12 +257,12 @@ func getPoolItemNum(pools *[]PoolInfo) error {
 	return nil
 }
 
-func getPoolPerformance(pools *[]PoolInfoWithPerformance) error {
+func getPoolPerformance(pools *[]PoolInfoWithPerformance, start, end, interval uint64) error {
 	size := len(*pools)
 	ret := make(chan common.QueryResult, size)
 	for index, pool := range *pools {
 		go func(name string, index int) {
-			performance, err := bsmetric.GetPoolPerformance(name)
+			performance, err := bsmetric.GetPoolPerformance(name, start, end, interval)
 			ret <- common.QueryResult{
 				Key:    index,
 				Result: performance,
@@ -352,7 +352,7 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	return &result, errno.OK
 }
 
-func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno) {
+func GetLogicalPool(r *pigeon.Request, poolId uint32, start, end, interval uint64) (interface{}, errno.Errno) {
 	pool, err := bsrpc.GMdsClient.GetLogicalPool(poolId)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool bsrpc.GetLogicalPool failed",
@@ -394,7 +394,7 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32) (interface{}, errno.Errno)
 	poolInfo.Info = tmp[0]
 	poolInfo.Performance = []metricomm.Performance{}
 	result := []PoolInfoWithPerformance{poolInfo}
-	err = getPoolPerformance(&result)
+	err = getPoolPerformance(&result, start, end, interval)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool getPoolPerformance failed",
 			pigeon.Field("poolId", poolId),

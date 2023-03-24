@@ -25,7 +25,6 @@ package common
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/opencurve/curve-manager/internal/common"
 )
@@ -175,18 +174,16 @@ func GetHostMemoryInfo(instance string) (interface{}, error) {
 * return: reveive, transmit, error
 * map[string][]RangeMetricItem: key: network device, value: performance in different timestamp
  */
-func GetNetWorkTraffic(instance string) (interface{}, error) {
+func GetNetWorkTraffic(instance string, start, end, interval uint64) (interface{}, error) {
 	networkTraffic := NetworkTraffic{}
 
 	// receive, transmit
 	requestSize := 2
 	results := make(chan MetricResult, requestSize)
-	end := time.Now().Unix()
-	start := end - DEFAULT_RANGE
 	receiveName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
-		GetNodeNetWorkReveiveName(NODE_NETWORK_RECEIVE_BYTES_TOTAL, instance), start, end, DEFAULT_STEP)
+		GetNodeNetWorkReveiveName(NODE_NETWORK_RECEIVE_BYTES_TOTAL, instance, interval), start, end, interval)
 	transmitName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
-		GetNodeNetWorkReveiveName(NODE_NETWORK_TRANSMIT_BYTES_TOTAL, instance), start, end, DEFAULT_STEP)
+		GetNodeNetWorkReveiveName(NODE_NETWORK_TRANSMIT_BYTES_TOTAL, instance, interval), start, end, interval)
 
 	go QueryRangeMetric(receiveName, &results)
 	go QueryRangeMetric(transmitName, &results)
@@ -200,7 +197,7 @@ func GetNetWorkTraffic(instance string) (interface{}, error) {
 		switch res.Key.(string) {
 		case receiveName:
 			networkTraffic.Receive = ret
-			
+
 		case transmitName:
 			networkTraffic.Transmit = ret
 		}
@@ -212,10 +209,10 @@ func GetNetWorkTraffic(instance string) (interface{}, error) {
 	return networkTraffic, nil
 }
 
-func GetHostCPUUtilization(instance string) (interface{}, error) {
-	return GetUtilization(GetNodeCPUUtilizationName(instance))
+func GetHostCPUUtilization(instance string, start, end, interval uint64) (interface{}, error) {
+	return GetUtilization(GetNodeCPUUtilizationName(instance, interval), start, end, interval)
 }
 
-func GetHostMemUtilization(instance string) (interface{}, error) {
-	return GetUtilization(GetNodeMemUtilizationName(instance))
+func GetHostMemUtilization(instance string, start, end, interval uint64) (interface{}, error) {
+	return GetUtilization(GetNodeMemUtilizationName(instance), start, end, interval)
 }

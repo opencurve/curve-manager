@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	comm "github.com/opencurve/curve-manager/internal/common"
 )
@@ -54,23 +53,21 @@ const (
 )
 
 // @return map[string][]Performance, key: device, value: performance at different timestamp
-func GetDiskPerformance(instance string) (interface{}, error) {
+func GetDiskPerformance(instance string, start, end, interval uint64) (interface{}, error) {
 	performance := make(map[string][]Performance)
 	retMap := make(map[string]map[float64]*Performance)
 
 	// writeIOPS, writeBPS, readIOPS, readBPS
 	requestSize := 4
 	results := make(chan MetricResult, requestSize)
-	end := time.Now().Unix()
-	start := end - DEFAULT_RANGE
 	writeIOPSName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
-		GetNodeDiskPerformanceName(NODE_DISK_WRITE_COMPLETED_TOTAL, instance), start, end, DEFAULT_STEP)
+		GetNodeDiskPerformanceName(NODE_DISK_WRITE_COMPLETED_TOTAL, instance, interval), start, end, interval)
 	writeBPSName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
-		GetNodeDiskPerformanceName(NODE_DISK_WRITTEN_BYTES_TOTAL, instance), start, end, DEFAULT_STEP)
+		GetNodeDiskPerformanceName(NODE_DISK_WRITTEN_BYTES_TOTAL, instance, interval), start, end, interval)
 	readIOPSName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
-		GetNodeDiskPerformanceName(NODE_DISK_READ_COMPLETED_TOTAL, instance), start, end, DEFAULT_STEP)
+		GetNodeDiskPerformanceName(NODE_DISK_READ_COMPLETED_TOTAL, instance, interval), start, end, interval)
 	readBPSName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
-		GetNodeDiskPerformanceName(NODE_DISK_READ_BYTES_TOTAL, instance), start, end, DEFAULT_STEP)
+		GetNodeDiskPerformanceName(NODE_DISK_READ_BYTES_TOTAL, instance, interval), start, end, interval)
 
 	go QueryRangeMetric(writeIOPSName, &results)
 	go QueryRangeMetric(writeBPSName, &results)

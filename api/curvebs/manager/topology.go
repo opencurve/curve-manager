@@ -48,7 +48,8 @@ func GetClusterSpaceTrend(r *pigeon.Request, ctx *Context) bool {
 }
 
 func GetClusterPerformance(r *pigeon.Request, ctx *Context) bool {
-	performance, err := agent.GetClusterPerformance(r)
+	data := ctx.Data.(*GetClusterPerformanceRequest)
+	performance, err := agent.GetClusterPerformance(r, data.Start, data.End, data.Interval)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}
@@ -73,7 +74,7 @@ func ListLogicalPool(r *pigeon.Request, ctx *Context) bool {
 
 func GetLogicalPool(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*GetLogicalPoolRequest)
-	pools, err := agent.GetLogicalPool(r, data.Id)
+	pools, err := agent.GetLogicalPool(r, data.Id, data.Start, data.End, data.Interval)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

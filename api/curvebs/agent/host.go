@@ -78,6 +78,8 @@ type NetWorkTraffic struct {
 
 type callback func(instance string) (interface{}, error)
 
+type callbackWithTime func(instance string, start, end, inteval uint64) (interface{}, error)
+
 func getHostErrnoByName(name string) errno.Errno {
 	switch name {
 	case GET_HOST_INFO:
@@ -252,7 +254,7 @@ func ListHost(r *pigeon.Request, size, page uint32) (interface{}, errno.Errno) {
 	return listHostInfo, errno.OK
 }
 
-func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
+func GetHost(r *pigeon.Request, hostname string, start, end, interval uint64) (interface{}, errno.Errno) {
 	hostPerformance := HostInfoWithPerformance{}
 	instance, err := getInstanceByHostName(hostname)
 	if err != nil {
@@ -268,6 +270,8 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 		metricomm.GetHostCPUInfo,
 		metricomm.GetHostMemoryInfo,
 		metricomm.ListDiskInfo,
+	}
+	requestsWithTime := []callbackWithTime{
 		metricomm.GetHostCPUUtilization,
 		metricomm.GetHostMemUtilization,
 		metricomm.GetDiskPerformance,
@@ -280,12 +284,14 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 		GET_HOST_CPU_INFO,
 		GET_HOST_MEM_INFO,
 		LIST_DISK_INFO,
+	}
+	requestWithTimeName := []string{
 		GET_HOST_CPU_UTILIZATION,
 		GET_HOST_MEM_UTILIZATION,
 		GET_HOST_DISK_PERFORMANCE,
 		GET_HOST_NETWORK_TRAFFIC,
 	}
-	requestSize := len(requests)
+	requestSize := len(requests) + len(requestsWithTime)
 	ret := make(chan common.QueryResult, requestSize)
 	for index, fn := range requests {
 		go func(key string, fn callback) {
@@ -296,6 +302,16 @@ func GetHost(r *pigeon.Request, hostname string) (interface{}, errno.Errno) {
 				Result: info,
 			}
 		}(requestName[index], fn)
+	}
+	for index, fn := range requestsWithTime {
+		go func(key string, fn callbackWithTime, start, end, interval uint64) {
+			info, err := fn(instance, start, end, interval)
+			ret <- common.QueryResult{
+				Key:    key,
+				Err:    err,
+				Result: info,
+			}
+		}(requestWithTimeName[index], fn, start, end, interval)
 	}
 
 	count := 0

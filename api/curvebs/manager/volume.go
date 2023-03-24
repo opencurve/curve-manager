@@ -40,7 +40,7 @@ func ListVolume(r *pigeon.Request, ctx *Context) bool {
 
 func GetVolume(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*GetVolumeRequest)
-	volume, err := agent.GetVolume(r, data.VolumeName)
+	volume, err := agent.GetVolume(r, data.VolumeName, data.Start, data.End, data.Interval)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

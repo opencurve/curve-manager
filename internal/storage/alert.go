@@ -140,8 +140,15 @@ func GetAlert(clusterId int, start, end int64, limit, offset uint32, name, level
 	return alerts, nil
 }
 
-func UpdateReadAlertId(id int64, name string) error {
-	return gStorage.execSQL(UPDATE_READ_ALERT_ID, id, name)
+func UpdateReadAlertId(id int64, userName string) error {
+	readId, err := GetReadAlertId(userName)
+	if err != nil {
+		return err
+	}
+	if id <= readId {
+		return nil
+	}
+	return gStorage.execSQL(UPDATE_READ_ALERT_ID, id, userName)
 }
 
 func GetUnreadAlertNum(clusterId int, readId int64) (int64, error) {

@@ -201,12 +201,12 @@ func getVolumePoolInfo(volumes *[]VolumeInfo) error {
 	return nil
 }
 
-func getVolumePerformance(dir string, volumes *[]VolumeInfo) error {
+func getVolumePerformance(dir string, volumes *[]VolumeInfo, start, end, interval uint64) error {
 	size := len(*volumes)
 	ret := make(chan common.QueryResult, size)
 	for index, volume := range *volumes {
 		go func(vname string, addr *VolumeInfo) {
-			performances, err := bsmetric.GetVolumePerformance(vname)
+			performances, err := bsmetric.GetVolumePerformance(vname, start, end, interval)
 			ret <- common.QueryResult{
 				Key:    addr,
 				Result: performances,
@@ -372,7 +372,7 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 	return listVolumeInfo, errno.OK
 }
 
-func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) {
+func GetVolume(r *pigeon.Request, volumeName string, start, end, interval uint64) (interface{}, errno.Errno) {
 	authInfo, err := getAuthInfoOfRoot()
 	if err != "" {
 		r.Logger().Error("GetVolume getAuthInfoOfRoot failed",
@@ -417,7 +417,7 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 	}
 
 	// get performance of the volume
-	e = getVolumePerformance(path, &volumes)
+	e = getVolumePerformance(path, &volumes, start, end, interval)
 	if e != nil {
 		r.Logger().Error("GetVolume getVolumePerformance failed",
 			pigeon.Field("fileName", volumeName),

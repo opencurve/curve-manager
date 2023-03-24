@@ -93,8 +93,8 @@ func GetClusterSpaceTrend(r *pigeon.Request, start, end, interval uint64) (inter
 	return spaces, errno.OK
 }
 
-func GetClusterPerformance(r *pigeon.Request) (interface{}, errno.Errno) {
-	performance, err := bsmetric.GetClusterPerformance()
+func GetClusterPerformance(r *pigeon.Request, start, end, interval uint64) (interface{}, errno.Errno) {
+	performance, err := bsmetric.GetClusterPerformance(start, end, interval)
 	if err != nil {
 		r.Logger().Error("GetClusterPerformance failed",
 			pigeon.Field("error", err),

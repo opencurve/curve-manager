@@ -69,6 +69,9 @@ type ListLogicalPoolRequest struct{}
 
 type GetLogicalPoolRequest struct {
 	Id uint32 `json:"id" binding:"required"`
+	Start    uint64 `json:"start" binding:"required"`
+	End      uint64 `json:"end" binding:"required"`
+	Interval uint64 `json:"interval" binding:"required"`
 }
 
 type GetChunkServerStatusRequest struct{}
@@ -83,7 +86,11 @@ type GetClusterSpaceTrendRequest struct {
 	Interval uint64 `json:"interval" binding:"required"`
 }
 
-type GetClusterPerformanceRequest struct{}
+type GetClusterPerformanceRequest struct {
+	Start    uint64 `json:"start" binding:"required"`
+	End      uint64 `json:"end" binding:"required"`
+	Interval uint64 `json:"interval" binding:"required"`
+}
 
 type ListHostRequest struct {
 	Size uint32 `json:"size" binding:"required"`
@@ -100,6 +107,9 @@ type ListVolumeRequest struct {
 
 type GetVolumeRequest struct {
 	VolumeName string `json:"volumeName" binding:"required"`
+	Start      uint64 `json:"start" binding:"required"`
+	End        uint64 `json:"end" binding:"required"`
+	Interval   uint64 `json:"interval" binding:"required"`
 }
 
 type ListSnapshotRequest struct {
@@ -113,6 +123,9 @@ type ListSnapshotRequest struct {
 
 type GetHostRequest struct {
 	HostName string `json:"hostName" binding:"required"`
+	Start    uint64 `json:"start" binding:"required"`
+	End      uint64 `json:"end" binding:"required"`
+	Interval uint64 `json:"interval" binding:"required"`
 }
 
 type ListDiskRequest struct {
@@ -277,7 +290,7 @@ var requests = []Request{
 		GetClusterSpaceTrend,
 	},
 	{
-		core.HTTP_GET,
+		core.HTTP_POST,
 		core.PERFORMANCE_CLUSTER,
 		GetClusterPerformanceRequest{},
 		GetClusterPerformance,

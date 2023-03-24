@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/metrics/core"
@@ -57,12 +56,10 @@ const (
 	ETCD_SERVER_IS_LEADER_NAME = "etcd_server_is_leader"
 	ETCD_CLUSTER_VERSION       = "cluster_version"
 
-	DEFAULT_RANGE = 600
-	DEFAULT_STEP  = 15
-	WRITE_IOPS    = "write_iops"
-	WRITE_RATE    = "write_rate"
-	READ_IOPS     = "read_iops"
-	READ_REAT     = "read_rate"
+	WRITE_IOPS = "write_iops"
+	WRITE_RATE = "write_rate"
+	READ_IOPS  = "read_iops"
+	READ_REAT  = "read_rate"
 
 	WRITE_QPS = "write_qps"
 	WRITE_BPS = "write_bps"
@@ -160,11 +157,11 @@ type UserPerformance struct {
 	ReadBPS   string  `json:"readBPS" binding:"required"`
 }
 
-func GetNodeCPUUtilizationName(instance string) string {
+func GetNodeCPUUtilizationName(instance string, interval uint64) string {
 	return fmt.Sprintf("(sum+by(instance)+(irate(node_cpu_seconds_total{instance=%q,mode!=%q}[%ds]))",
-		instance, NODE_CPU_IDLE, DEFAULT_STEP) +
+		instance, NODE_CPU_IDLE, interval) +
 		fmt.Sprintf("/on(instance)+group_left+sum+by+(instance)((irate(node_cpu_seconds_total[%ds]))))*100",
-			DEFAULT_STEP)
+			interval)
 }
 
 func GetNodeMemUtilizationName(instance string) string {
@@ -172,13 +169,13 @@ func GetNodeMemUtilizationName(instance string) string {
 		instance)
 }
 
-func GetNodeDiskPerformanceName(typeName, instance string) string {
-	return fmt.Sprintf("irate(%s{instance=%q}[%ds])", typeName, instance, DEFAULT_STEP)
+func GetNodeDiskPerformanceName(typeName, instance string, interval uint64) string {
+	return fmt.Sprintf("irate(%s{instance=%q}[%ds])", typeName, instance, interval)
 }
 
-func GetNodeNetWorkReveiveName(typeName, instance string) string {
+func GetNodeNetWorkReveiveName(typeName, instance string, interval uint64) string {
 	return fmt.Sprintf("irate(%s{instance=%q,device!~%q}[%ds])",
-		typeName, instance, NODE_NETWORK_DEVICE_FILTER, DEFAULT_STEP)
+		typeName, instance, NODE_NETWORK_DEVICE_FILTER, interval)
 }
 
 func ParseBvarMetric(value string) (*map[string]string, error) {
@@ -414,10 +411,8 @@ func QueryRangeMetric(name string, results *chan MetricResult) {
 	}
 }
 
-func GetUtilization(name string) (map[string][]RangeMetricItem, error) {
-	end := time.Now().Unix()
-	start := end - DEFAULT_RANGE
-	metricName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds", name, start, end, DEFAULT_STEP)
+func GetUtilization(name string, start, end, interval uint64) (map[string][]RangeMetricItem, error) {
+	metricName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds", name, start, end, interval)
 	utilization := make(map[string][]RangeMetricItem)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
@@ -436,19 +431,17 @@ func GetUtilization(name string) (map[string][]RangeMetricItem, error) {
 	return utilization, nil
 }
 
-func GetPerformance(name string) ([]Performance, error) {
+func GetPerformance(name string, start, end, interval uint64) ([]Performance, error) {
 	performance := []Performance{}
 	retMap := make(map[float64]*Performance)
 
 	// writeIOPS, writeBPS, readIOPS, readBPS
 	requestSize := 4
 	results := make(chan MetricResult, requestSize)
-	end := time.Now().Unix()
-	start := end - DEFAULT_RANGE
-	writeIOPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_IOPS, start, end, DEFAULT_STEP)
-	writeBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_RATE, start, end, DEFAULT_STEP)
-	readIOPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_IOPS, start, end, DEFAULT_STEP)
-	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_REAT, start, end, DEFAULT_STEP)
+	writeIOPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_IOPS, start, end, interval)
+	writeBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_RATE, start, end, interval)
+	readIOPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_IOPS, start, end, interval)
+	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_REAT, start, end, interval)
 
 	go QueryRangeMetric(writeIOPSName, &results)
 	go QueryRangeMetric(writeBPSName, &results)
@@ -513,19 +506,17 @@ func GetPerformance(name string) ([]Performance, error) {
 	return performance, nil
 }
 
-func GetUserPerformance(name string) ([]UserPerformance, error) {
+func GetUserPerformance(name string, start, end, interval uint64) ([]UserPerformance, error) {
 	performance := []UserPerformance{}
 	retMap := make(map[float64]*UserPerformance)
 
 	// writeQPS, writeBPS, readQPS, readBPS
 	requestSize := 4
 	results := make(chan MetricResult, requestSize)
-	end := time.Now().Unix()
-	start := end - DEFAULT_RANGE
-	writeQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_QPS, start, end, DEFAULT_STEP)
-	writeBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_BPS, start, end, DEFAULT_STEP)
-	readQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_QPS, start, end, DEFAULT_STEP)
-	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_BPS, start, end, DEFAULT_STEP)
+	writeQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_QPS, start, end, interval)
+	writeBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, WRITE_BPS, start, end, interval)
+	readQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_QPS, start, end, interval)
+	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_BPS, start, end, interval)
 
 	go QueryRangeMetric(writeQPSName, &results)
 	go QueryRangeMetric(writeBPSName, &results)

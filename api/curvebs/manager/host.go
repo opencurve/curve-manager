@@ -40,7 +40,7 @@ func ListHost(r *pigeon.Request, ctx *Context) bool {
 
 func GetHost(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*GetHostRequest)
-	performance, err := agent.GetHost(r, data.HostName)
+	performance, err := agent.GetHost(r, data.HostName, data.Start, data.End, data.Interval)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

@@ -196,20 +196,20 @@ func GetPoolItemNum(name string) (*PoolItemNum, error) {
 	return &poolItemNum, nil
 }
 
-func GetPoolPerformance(name string) ([]metricomm.Performance, error) {
+func GetPoolPerformance(name string, start, end, interval uint64) ([]metricomm.Performance, error) {
 	poolName := metricomm.FormatToMetricName(name)
 	prefix := fmt.Sprintf("%s%s_", LOGICAL_POOL_METRIC_PREFIX, poolName)
-	return metricomm.GetPerformance(prefix)
+	return metricomm.GetPerformance(prefix, start, end, interval)
 }
 
-func GetClusterPerformance() ([]metricomm.Performance, error) {
-	return metricomm.GetPerformance(CLUSTER_METRIC_PREFIX)
+func GetClusterPerformance(start, end, interval uint64) ([]metricomm.Performance, error) {
+	return metricomm.GetPerformance(CLUSTER_METRIC_PREFIX, start, end, interval)
 }
 
-func GetVolumePerformance(volumeName string) ([]metricomm.UserPerformance, error) {
+func GetVolumePerformance(volumeName string, start, end, interval uint64) ([]metricomm.UserPerformance, error) {
 	name := metricomm.FormatToMetricName(volumeName)
 	prefix := fmt.Sprintf("%s%s_", FILE_PREFIX, name)
-	return metricomm.GetUserPerformance(prefix)
+	return metricomm.GetUserPerformance(prefix, start, end, interval)
 }
 
 func GetClusterSpace(start, end, interval uint64) ([]metricomm.SpaceTrend, error) {
