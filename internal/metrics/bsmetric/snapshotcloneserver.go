@@ -31,7 +31,7 @@ import (
 
 const (
 	SNAPSHOT_CLONE_STATUS           = "snapshotcloneserver_status"
-	SNAPSHOT_CLONE_CONF_LISTEN_ADDR = "snapshotcloneserver_config_server_address"
+	SNAPSHOT_CLONE_CONF_LISTEN_ADDR = "snapshot_clone_server_config_server_address"
 	SNAPSHOT_CLONE_LEADER           = "active"
 )
 
