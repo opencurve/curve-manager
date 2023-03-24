@@ -23,7 +23,6 @@
 package manager
 
 import (
-	"github.com/mcuadros/go-defaults"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -32,7 +31,6 @@ import (
 
 func ListVolume(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*ListVolumeRequest)
-	defaults.SetDefaults(data)
 	volumes, err := agent.ListVolume(r, data.Size, data.Page, data.Path, data.SortKey, data.SortDirection)
 	if err != errno.OK {
 		return core.Exit(r, err)
@@ -51,7 +49,6 @@ func GetVolume(r *pigeon.Request, ctx *Context) bool {
 
 func CleanRecycleBin(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*CleanRecycleBinRequest)
-	defaults.SetDefaults(data)
 	err := agent.CleanRecycleBin(r, data.Expiration)
 	return core.Exit(r, err)
 }

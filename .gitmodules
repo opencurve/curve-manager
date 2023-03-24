@@ -4,3 +4,6 @@
 [submodule "external/curve-go-rpc"]
 	path = external/curve-go-rpc
 	url = git@github.com:SeanHai/curve-go-rpc.git
+[submodule "curve-go-rpc"]
+	path = curve-go-rpc
+	url = git@github.com:SeanHai/curve-go-rpc.git

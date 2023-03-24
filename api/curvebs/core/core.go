@@ -26,6 +26,7 @@ import (
 	"strconv"
 
 	comm "github.com/opencurve/curve-manager/api/common"
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/pigeon"
 )
@@ -48,36 +49,42 @@ const (
 	USER_UPDATE_EMAIL      = "user.update.email"
 	USER_UPDATE_PERMISSION = "user.update.permission"
 	USER_LIST              = "user.list"
+	USER_GET               = "user.get"
 
 	// manager
-	STATUS_ETCD                = "status.etcd"
-	STATUS_MDS                 = "status.mds"
-	STATUS_SNAPSHOTCLONESERVER = "status.snapshotcloneserver"
-	STATUS_CHUNKSERVER         = "status.chunkserver"
-	STATUS_CLUSTER             = "status.cluster"
-	SPACE_CLUSTER              = "space.cluster"
-	PERFORMANCE_CLUSTER        = "performance.cluster"
-	TOPO_LIST                  = "topo.list"
-	TOPO_POOL_LIST             = "topo.pool.list"
-	TOPO_POOL_GET              = "topo.pool.get"
-	VOLUME_LIST                = "volume.list"
-	VOLUME_GET                 = "volume.get"
-	SNAPSHOT_LIST              = "snapshot.list"
-	HOST_LIST                  = "host.list"
-	HOST_GET                   = "host.get"
-	DISK_LIST                  = "disk.list"
-	CLEAN_RECYCLEBIN           = "recyclebin.clean"
-	CREATE_NAMESPACE           = "namespace.create"
-	CREATE_VOLUME              = "volume.create"
-	EXTEND_VOLUME              = "volume.extend"
-	VOLUME_THROTTLE            = "volume.throttle"
-	DELETE_VOLUME              = "volume.delete"
-	RECOVER_VOLUME             = "volume.recover"
-	CLONE_VOLUME               = "volume.clone"
-	CREATE_SNAPSHOT            = "snapshot.create"
-	CANCEL_SNAPSHOT            = "snapshot.cancel"
-	DELETE_SNAPSHOT            = "snapshot.delete"
-	FLATTEN                    = "volume.flatten"
+	STATUS_ETCD                 = "status.etcd"
+	STATUS_MDS                  = "status.mds"
+	STATUS_SNAPSHOTCLONESERVER  = "status.snapshotcloneserver"
+	STATUS_CHUNKSERVER          = "status.chunkserver"
+	STATUS_CLUSTER              = "status.cluster"
+	SPACE_CLUSTER               = "space.cluster"
+	SPACE_TREND_CLUSTER         = "space.trend.cluster"
+	PERFORMANCE_CLUSTER         = "performance.cluster"
+	TOPO_LIST                   = "topo.list"
+	TOPO_POOL_LIST              = "topo.pool.list"
+	TOPO_POOL_GET               = "topo.pool.get"
+	VOLUME_LIST                 = "volume.list"
+	VOLUME_GET                  = "volume.get"
+	SNAPSHOT_LIST               = "snapshot.list"
+	HOST_LIST                   = "host.list"
+	HOST_GET                    = "host.get"
+	DISK_LIST                   = "disk.list"
+	CLEAN_RECYCLEBIN            = "recyclebin.clean"
+	CREATE_NAMESPACE            = "namespace.create"
+	CREATE_VOLUME               = "volume.create"
+	EXTEND_VOLUME               = "volume.extend"
+	VOLUME_THROTTLE             = "volume.throttle"
+	DELETE_VOLUME               = "volume.delete"
+	RECOVER_VOLUME              = "volume.recover"
+	CLONE_VOLUME                = "volume.clone"
+	CREATE_SNAPSHOT             = "snapshot.create"
+	CANCEL_SNAPSHOT             = "snapshot.cancel"
+	DELETE_SNAPSHOT             = "snapshot.delete"
+	FLATTEN                     = "volume.flatten"
+	GET_SYSTEM_LOG              = "syslog.get"
+	GET_SYSTEM_ALERT            = "alert.get"
+	GET_UNREAD_SYSTEM_ALERT_NUM = "alert.unread.num.get"
+	UPDATE_READ_SYSTEM_ALERT_ID = "alert.read.id.update"
 )
 
 func Exit(r *pigeon.Request, code errno.Errno) bool {
@@ -88,7 +95,10 @@ func Exit(r *pigeon.Request, code errno.Errno) bool {
 	if code != errno.OK {
 		r.HeadersOut[comm.HEADER_ERROR_CODE] = strconv.Itoa(code.Code())
 	}
-
+	if NeedRecordLog(r) {
+		agent.WriteSystemLog(r.Context.RemoteIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
+			r.Args[METHOD], code.Description(), r.HeadersIn[comm.HEADER_LOG_CONTENT], code.Code())
+	}
 	return r.Exit(code.HTTPCode())
 }
 
@@ -103,5 +113,9 @@ func ExitSuccessWithData(r *pigeon.Request, data interface{}) bool {
 		"errorCode": "0",
 		"errorMsg":  "success",
 	})
+	if NeedRecordLog(r) {
+		agent.WriteSystemLog(r.Context.RemoteIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
+			r.Args[METHOD], "success", r.HeadersIn[comm.HEADER_LOG_CONTENT], 0)
+	}
 	return r.Exit(200)
 }

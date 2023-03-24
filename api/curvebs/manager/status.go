@@ -23,6 +23,7 @@
 package manager
 
 import (
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -54,7 +55,7 @@ func GetSnapShotCloneServerStatus(r *pigeon.Request, ctx *Context) bool {
 }
 
 func GetChunkServerStatus(r *pigeon.Request, ctx *Context) bool {
-	status, err := agent.GetChunkServerStatus(r)
+	status, err := agent.GetChunkServerStatus(r.Logger(), r.HeadersIn[comm.HEADER_REQUEST_ID])
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}
@@ -62,6 +63,6 @@ func GetChunkServerStatus(r *pigeon.Request, ctx *Context) bool {
 }
 
 func GetClusterStatus(r *pigeon.Request, ctx *Context) bool {
-	status := agent.GetClusterStatus(r)
+	status := agent.GetClusterStatus(r.Logger(), r.HeadersIn[comm.HEADER_REQUEST_ID])
 	return core.ExitSuccessWithData(r, status)
 }

@@ -61,9 +61,7 @@ type LoginRequest struct {
 	PassWord string `json:"passWord" binding:"required"`
 }
 
-type LogoutRequest struct {
-	UserName string `json:"userName" binding:"required"`
-}
+type LogoutRequest struct {}
 
 type CreateUserRequest struct {
 	UserName   string `json:"userName" binding:"required"`
@@ -101,6 +99,8 @@ type ListUserRequest struct {
 	Page     uint32 `json:"page" binding:"required"`
 	UserName string `json:"userName"`
 }
+
+type GetUserRequest struct{}
 
 var requests = []Request{
 	{
@@ -156,5 +156,11 @@ var requests = []Request{
 		core.USER_LIST,
 		ListUserRequest{},
 		ListUser,
+	},
+	{
+		core.HTTP_GET,
+		core.USER_GET,
+		GetUserRequest{},
+		GetUser,
 	},
 }

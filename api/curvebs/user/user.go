@@ -23,7 +23,6 @@
 package user
 
 import (
-	"github.com/mcuadros/go-defaults"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -40,14 +39,12 @@ func Login(r *pigeon.Request, ctx *Context) bool {
 }
 
 func Logout(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*LogoutRequest)
-	err := agent.Logout(r, data.UserName)
+	err := agent.Logout(r)
 	return core.Exit(r, err)
 }
 
 func CreateUser(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*CreateUserRequest)
-	defaults.SetDefaults(data)
 	err := agent.CreateUser(r, data.UserName, data.PassWord, data.Email, data.Permission)
 	return core.Exit(r, err)
 }
@@ -85,6 +82,14 @@ func UpdateUserPermission(r *pigeon.Request, ctx *Context) bool {
 func ListUser(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*ListUserRequest)
 	users, err := agent.ListUser(r, data.Size, data.Page, data.UserName)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, users)
+}
+
+func GetUser(r *pigeon.Request, ctx *Context) bool {
+	users, err := agent.GetUser(r)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}

@@ -30,6 +30,12 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+type Snapshot struct {
+	UUID       string `json:"uuid" binding:"required"`
+	User       string `json:"user" binding:"required"`
+	VolumeName string `json:"volumeName" binding:"required"`
+}
+
 func GetSnapshot(r *pigeon.Request, size, page uint32, uuid, user, fileName, status string) (interface{}, errno.Errno) {
 	snapshots, err := snapshotclone.GetSnapshot(size, page, uuid, user, fileName, status)
 	if err != nil {
@@ -61,21 +67,21 @@ func CreateSnapshot(r *pigeon.Request, volumeName, user, snapshotName string) er
 	return errno.OK
 }
 
-func CancelSnapshot(r *pigeon.Request, uuids []string) errno.Errno {
-	size := len(uuids)
+func CancelSnapshot(r *pigeon.Request, snapshots []Snapshot) errno.Errno {
+	size := len(snapshots)
 	if size == 0 {
 		return errno.OK
 	}
 	ret := make(chan common.QueryResult, size)
-	for _, uuid := range uuids {
-		go func(uuid string) {
-			err := snapshotclone.CancelSnapshot(uuid)
+	for _, snapshot := range snapshots {
+		go func(uuid, user, volumeName string) {
+			err := snapshotclone.CancelSnapshot(uuid, user, volumeName)
 			ret <- common.QueryResult{
 				Key:    uuid,
 				Err:    err,
 				Result: nil,
 			}
-		}(uuid)
+		}(snapshot.UUID, snapshot.User, snapshot.VolumeName)
 	}
 
 	count := 0
@@ -100,7 +106,7 @@ func CancelSnapshot(r *pigeon.Request, uuids []string) errno.Errno {
 }
 
 func DeleteSnapshot(r *pigeon.Request, fileName, user string, uuids []string, failed bool) errno.Errno {
-	toDelete := []string{}
+	toDelete := []snapshotclone.SnapshotInfo{}
 	if fileName == "" && user == "" && len(uuids) == 0 && !failed {
 		return errno.OK
 	}
@@ -124,7 +130,7 @@ func DeleteSnapshot(r *pigeon.Request, fileName, user string, uuids []string, fa
 				return errno.GET_SNAPSHOT_FAILED
 			}
 			if info.Total > 0 {
-				toDelete = append(toDelete, uuid)
+				toDelete = append(toDelete, info.Info...)
 			}
 		}
 	} else {
@@ -138,17 +144,15 @@ func DeleteSnapshot(r *pigeon.Request, fileName, user string, uuids []string, fa
 				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 			return errno.GET_SNAPSHOT_FAILED
 		}
-		for _, item := range snapshots {
-			toDelete = append(toDelete, item.UUID)
-		}
+		toDelete = append(toDelete, snapshots...)
 	}
-	for _, uuid := range toDelete {
-		err := snapshotclone.DeleteSnapshot(uuid, fileName, user)
+	for _, s := range toDelete {
+		err := snapshotclone.DeleteSnapshot(s.UUID, s.File, s.User)
 		if err != nil {
 			r.Logger().Error("DeleteSnapshot failed",
-				pigeon.Field("fileName", fileName),
-				pigeon.Field("user", user),
-				pigeon.Field("uuid", uuid),
+				pigeon.Field("fileName", s.File),
+				pigeon.Field("user", s.User),
+				pigeon.Field("uuid", s.UUID),
 				pigeon.Field("error", err),
 				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 			return errno.DELETE_SNAPSHOT_FAILED

@@ -61,41 +61,49 @@ var (
 
 	// method to permission
 	method2permission = map[string]int{
-		USER_CREATE:                READ_PERM + MANAGER_PERM,
-		USER_DELETE:                READ_PERM + MANAGER_PERM,
-		USER_LIST:                  READ_PERM + MANAGER_PERM,
-		USER_UPDATE_PERMISSION:     READ_PERM + MANAGER_PERM,
-		USER_UPDATE_PASSWORD:       READ_PERM,
-		USER_RESET_PASSWORD:        READ_PERM,
-		USER_UPDATE_EMAIL:          READ_PERM,
-		STATUS_ETCD:                READ_PERM,
-		STATUS_MDS:                 READ_PERM,
-		STATUS_SNAPSHOTCLONESERVER: READ_PERM,
-		STATUS_CHUNKSERVER:         READ_PERM,
-		STATUS_CLUSTER:             READ_PERM,
-		SPACE_CLUSTER:              READ_PERM,
-		PERFORMANCE_CLUSTER:        READ_PERM,
-		TOPO_LIST:                  READ_PERM,
-		TOPO_POOL_LIST:             READ_PERM,
-		TOPO_POOL_GET:              READ_PERM,
-		VOLUME_LIST:                READ_PERM,
-		VOLUME_GET:                 READ_PERM,
-		SNAPSHOT_LIST:              READ_PERM,
-		HOST_LIST:                  READ_PERM,
-		HOST_GET:                   READ_PERM,
-		DISK_LIST:                  READ_PERM,
-		CLEAN_RECYCLEBIN:           READ_PERM + WRITE_PERM,
-		CREATE_NAMESPACE:           READ_PERM + WRITE_PERM,
-		CREATE_VOLUME:              READ_PERM + WRITE_PERM,
-		EXTEND_VOLUME:              READ_PERM + WRITE_PERM,
-		VOLUME_THROTTLE:            READ_PERM + WRITE_PERM,
-		DELETE_VOLUME:              READ_PERM + WRITE_PERM,
-		RECOVER_VOLUME:             READ_PERM + WRITE_PERM,
-		CLONE_VOLUME:               READ_PERM + WRITE_PERM,
-		CREATE_SNAPSHOT:            READ_PERM + WRITE_PERM,
-		CANCEL_SNAPSHOT:            READ_PERM + WRITE_PERM,
-		FLATTEN:                    READ_PERM + WRITE_PERM,
-		DELETE_SNAPSHOT:            READ_PERM + WRITE_PERM,
+		USER_CREATE:                   READ_PERM + MANAGER_PERM,
+		USER_DELETE:                   READ_PERM + MANAGER_PERM,
+		USER_LIST:                     READ_PERM + MANAGER_PERM,
+		USER_UPDATE_PERMISSION:        READ_PERM + MANAGER_PERM,
+		USER_LOGIN:                    READ_PERM,
+		USER_LOGOUT:                   READ_PERM,
+		USER_GET:                      READ_PERM,
+		USER_UPDATE_PASSWORD:          READ_PERM,
+		USER_RESET_PASSWORD:           READ_PERM,
+		USER_UPDATE_EMAIL:             READ_PERM,
+		STATUS_ETCD:                   READ_PERM,
+		STATUS_MDS:                    READ_PERM,
+		STATUS_SNAPSHOTCLONESERVER:    READ_PERM,
+		STATUS_CHUNKSERVER:            READ_PERM,
+		STATUS_CLUSTER:                READ_PERM,
+		SPACE_CLUSTER:                 READ_PERM,
+		SPACE_TREND_CLUSTER:           READ_PERM,
+		PERFORMANCE_CLUSTER:           READ_PERM,
+		TOPO_LIST:                     READ_PERM,
+		TOPO_POOL_LIST:                READ_PERM,
+		TOPO_POOL_GET:                 READ_PERM,
+		VOLUME_LIST:                   READ_PERM,
+		VOLUME_GET:                    READ_PERM,
+		SNAPSHOT_LIST:                 READ_PERM,
+		HOST_LIST:                     READ_PERM,
+		HOST_GET:                      READ_PERM,
+		DISK_LIST:                     READ_PERM,
+		CLEAN_RECYCLEBIN:              READ_PERM + WRITE_PERM,
+		CREATE_NAMESPACE:              READ_PERM + WRITE_PERM,
+		CREATE_VOLUME:                 READ_PERM + WRITE_PERM,
+		EXTEND_VOLUME:                 READ_PERM + WRITE_PERM,
+		VOLUME_THROTTLE:               READ_PERM + WRITE_PERM,
+		DELETE_VOLUME:                 READ_PERM + WRITE_PERM,
+		RECOVER_VOLUME:                READ_PERM + WRITE_PERM,
+		CLONE_VOLUME:                  READ_PERM + WRITE_PERM,
+		CREATE_SNAPSHOT:               READ_PERM + WRITE_PERM,
+		CANCEL_SNAPSHOT:               READ_PERM + WRITE_PERM,
+		FLATTEN:                       READ_PERM + WRITE_PERM,
+		DELETE_SNAPSHOT:               READ_PERM + WRITE_PERM,
+		GET_SYSTEM_LOG:                READ_PERM,
+		GET_SYSTEM_ALERT:              READ_PERM,
+		GET_UNREAD_SYSTEM_ALERT_NUM:   READ_PERM,
+		UPDATE_READ_SYSTEM_ALERT_ID: READ_PERM,
 	}
 )
 
@@ -111,8 +119,18 @@ func InitAccess(cfg *pigeon.Configure) {
 	}
 }
 
-func isLoginRequest(r *pigeon.Request) bool {
+func IsLoginRequest(r *pigeon.Request) bool {
 	return r.Args[METHOD] == USER_LOGIN
+}
+
+func IsResetPasswordRequest(r *pigeon.Request) bool {
+	return r.Args[METHOD] == USER_RESET_PASSWORD
+}
+
+func NeedRecordLog(r *pigeon.Request) bool {
+	method := r.Args[METHOD]
+	return method == USER_LOGIN || method == USER_LOGOUT || method == USER_RESET_PASSWORD ||
+		(method2permission[method]&(WRITE_PERM+MANAGER_PERM) > 0 && method != GET_SYSTEM_LOG)
 }
 
 func checkPermission(r *pigeon.Request, perm int) bool {
@@ -161,47 +179,53 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 	}
 	v := reflect.ValueOf(data)
 	for i := 0; i < v.Elem().NumField(); i++ {
-		stringItems = append(stringItems, fmt.Sprintf("%+v", v.Elem().Field(i)))
+		value := fmt.Sprintf("%+v", v.Elem().Field(i))
+		if value != "" {
+			stringItems = append(stringItems, value)
+		}
 	}
 	sort.Strings(stringItems)
 	signStr := strings.Join(stringItems, ":")
 	sign := common.GetMd5Sum32Little(signStr)
-	r.Logger().Error("checkSignature",
-		pigeon.Field("signStr", signStr),
-		pigeon.Field("sign", sign),
-		pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-	return inSign == sign
-}
-
-func checkToken(r *pigeon.Request) bool {
-	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
-	ok, perm := storage.CheckSession(token, apiExpireSeconds)
-	if !ok {
-		r.Logger().Error("checkToken CheckSession failed",
-			pigeon.Field("token", token),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return false
-	}
-	if !checkPermission(r, perm) {
-		r.Logger().Error("checkToken checkPermission failed",
-			pigeon.Field("method", r.Args[METHOD]),
-			pigeon.Field("user perm", perm),
+	if inSign != sign {
+		r.Logger().Error("checkSignature failed",
+			pigeon.Field("signStr", signStr),
+			pigeon.Field("sign", sign),
+			pigeon.Field("inSign", inSign),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return false
 	}
 	return true
 }
 
+func checkToken(r *pigeon.Request) (bool, int) {
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	return storage.CheckSession(token, loginExpireSeconds)
+}
+
 func AccessAllowed(r *pigeon.Request, data interface{}) errno.Errno {
-	if !enableCheck {
-		return errno.OK
-	}
-	if !isLoginRequest(r) {
-		if !checkToken(r) {
+	if !IsLoginRequest(r) && !IsResetPasswordRequest(r) {
+		// check user token valied
+		ok, perm := checkToken(r)
+		if !ok {
+			r.Logger().Error("checkToken failed",
+				pigeon.Field("token", r.HeadersIn[comm.HEADER_AUTH_TOKEN]),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 			return errno.USER_IS_UNAUTHORIZED
 		}
-		if !checkTimeOut(r) || !checkSignature(r, data) {
-			return errno.REQUEST_IS_DENIED_FOR_SIGNATURE
+		// check request method is allowed to this user
+		if !checkPermission(r, perm) {
+			r.Logger().Error("checkToken checkPermission failed",
+				pigeon.Field("method", r.Args[METHOD]),
+				pigeon.Field("user perm", perm),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return errno.OPERATION_IS_NOT_PERMIT
+		}
+		if enableCheck {
+			// check request ttl and sigenatrue
+			if !checkTimeOut(r) || !checkSignature(r, data) {
+				return errno.REQUEST_IS_DENIED_FOR_SIGNATURE
+			}
 		}
 	}
 	return errno.OK

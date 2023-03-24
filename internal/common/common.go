@@ -33,6 +33,7 @@ import (
 const (
 	GiB                       = 1024 * 1024 * 1024
 	TIME_FORMAT               = "2006-01-02 15:04:05"
+	TIME_MS_FORMAT            = "2006-01-02 15:04:05.000"
 	CURVEBS_ADDRESS_DELIMITER = ","
 	RAFT_REPLICAS_NUMBER      = 3
 	RAFT_MARGIN               = 1000

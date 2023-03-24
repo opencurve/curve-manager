@@ -54,6 +54,7 @@ var (
 	GET_USER_FAILED                 = Errno{403001, "user not exist"}
 	USER_PASSWORD_NOT_MATCH         = Errno{403002, "user password not match"}
 	WRITE_USER_LOGIN_FAILED         = Errno{403003, "only permit one write user login"}
+	OPERATION_IS_NOT_PERMIT         = Errno{403004, "operation is not permitted"}
 
 	// 405
 	UNSUPPORT_HTTP_METHOD = Errno{405001, "unsupport http method"}
@@ -89,33 +90,40 @@ var (
 	GET_HOST_NETWORK_TRAFFIC_FAILED  = Errno{503113, "get host network traffic failed"}
 
 	// curve/metric
-	GET_POOL_ITEM_NUMBER_FAILED   = Errno{503201, "get pool item number failed"}
-	GET_POOL_PERFORMANCE_FAILED   = Errno{503202, "get pool performance failed"}
-	GET_ROOT_AUTH_FAILED          = Errno{503203, "get root auth failed"}
-	GET_VOLUME_PERFORMANCE_FAILED = Errno{503204, "get volume performance failed"}
+	GET_POOL_ITEM_NUMBER_FAILED    = Errno{503201, "get pool item number failed"}
+	GET_POOL_PERFORMANCE_FAILED    = Errno{503202, "get pool performance failed"}
+	GET_ROOT_AUTH_FAILED           = Errno{503203, "get root auth failed"}
+	GET_VOLUME_PERFORMANCE_FAILED  = Errno{503204, "get volume performance failed"}
+	GET_CLUSTER_PERFORMANCE_FAILED = Errno{503205, "get cluster performance failed"}
+	GET_CLUSTER_SPACE_FAILED       = Errno{503206, "get cluster space failed"}
 
-	// rpc
 	GET_CHUNKSERVER_IN_CLUSTER_FAILED = Errno{503301, "get chunkserver in cluster failed"}
 	LIST_POOL_FAILED                  = Errno{503302, "list pool failed"}
 	GET_POOL_FAILED                   = Errno{503303, "get pool failed"}
 	GET_POOL_SPACE_FAILED             = Errno{503304, "get pool space failed"}
-	GET_CLUSTER_PERFORMANCE_FAILED    = Errno{503305, "get cluster performance failed"}
-	LIST_POOL_ZONE_FAILED             = Errno{503306, "list pool zone failed"}
-	LIST_VOLUME_FAILED                = Errno{503307, "list volume failed"}
-	GET_VOLUME_INFO_FAILED            = Errno{503308, "get volume failed"}
-	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{503309, "get volume alloc size failed"}
-	GET_VOLUME_SIZE_FAILED            = Errno{503310, "get volume size failed"}
-	DELETE_VOLUME_FAILED              = Errno{503311, "delete volume failed"}
-	CREATE_VOLUME_FAILED              = Errno{503312, "create volume failed"}
-	EXTEND_VOLUME_FAILED              = Errno{503313, "extend volume failed"}
-	VOLUME_THROTTLE_FAILED            = Errno{503314, "update volume throttle params failed"}
-	RECOVER_VOLUME_FAILED             = Errno{503315, "recover volume failed"}
-	CLONE_VOLUME_FAILED               = Errno{503316, "create clone volume failed"}
-	CREATE_SNAPSHOT_FAILED            = Errno{503317, "create snapshot failed"}
-	LIST_SNAPSHOT_FAILED              = Errno{503318, "list snapshot failed"}
+	LIST_POOL_ZONE_FAILED             = Errno{503305, "list pool zone failed"}
+	LIST_VOLUME_FAILED                = Errno{503306, "list volume failed"}
+	GET_VOLUME_INFO_FAILED            = Errno{503307, "get volume failed"}
+	GET_VOLUME_ALLOC_SIZE_FAILED      = Errno{503308, "get volume alloc size failed"}
+	GET_VOLUME_SIZE_FAILED            = Errno{503309, "get volume size failed"}
+	DELETE_VOLUME_FAILED              = Errno{503310, "delete volume failed"}
+	CREATE_VOLUME_FAILED              = Errno{503311, "create volume failed"}
+	EXTEND_VOLUME_FAILED              = Errno{503312, "extend volume failed"}
+	VOLUME_THROTTLE_FAILED            = Errno{503313, "update volume throttle params failed"}
+	RECOVER_VOLUME_FAILED             = Errno{503314, "recover volume failed"}
+	CLONE_VOLUME_FAILED               = Errno{503315, "create clone volume failed"}
+	CREATE_SNAPSHOT_FAILED            = Errno{503316, "create snapshot failed"}
+	LIST_SNAPSHOT_FAILED              = Errno{503317, "list snapshot failed"}
 	CANCEL_SNAPSHOT_FAILED            = Errno{503318, "cancel snapshot failed"}
 	GET_CLONE_TASKS_FAILED            = Errno{503319, "get clone tasks failed"}
 	FLATTEN_FAILED                    = Errno{503320, "flatten failed"}
 	GET_SNAPSHOT_FAILED               = Errno{503321, "get snapshot failed"}
 	DELETE_SNAPSHOT_FAILED            = Errno{503322, "delete snapshot failed"}
+	FIND_VOLUME_MOUNTPOINT_FAILED     = Errno{503323, "find volume mountpoint failed"}
+	GET_SYSTEM_LOG_FAILED             = Errno{503324, "get system operation log failed"}
+	GET_SYSTEM_ALERT_FAILED           = Errno{503325, "get system alert failed"}
+	GET_LAST_ALERT_ID_FAILED          = Errno{503326, "get lasr alert id failed"}
+	GET_READ_ALERT_ID_FAILED          = Errno{503327, "get read alert id failed"}
+	ADD_READ_ALERT_ID_FAILED          = Errno{503328, "add read alert id failed"}
+	UPDATE_UNREAD_ALERT_ID_FAILED     = Errno{503329, "update unread alert id failed"}
 )

@@ -16,7 +16,7 @@
 
 /*
 * Project: Curve-Manager
-* Created Date: 2023-02-11
+* Created Date: 2023-03-22
 * Author: wanghai (SeanHai)
  */
 
@@ -29,29 +29,25 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
-func ListSnapshot(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*ListSnapshotRequest)
-	snapshots, err := agent.GetSnapshot(r, data.Size, data.Page, data.UUID, data.User, data.FileName, data.Status)
+func GetSysAlert(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetSysAlertRequest)
+	logs, err := agent.GetSysAlert(r, data.Start, data.End, data.Page, data.Size, data.Filter)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}
-	return core.ExitSuccessWithData(r, snapshots)
+	return core.ExitSuccessWithData(r, logs)
 }
 
-func CreateSnapshot(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*CreateSnapshotRequest)
-	err := agent.CreateSnapshot(r, data.VolumeName, data.User, data.SnapshotName)
-	return core.Exit(r, err)
+func GetUnreadSysAlertNum(r *pigeon.Request, ctx *Context) bool {
+	number, err := agent.GetUnreadSysAlertNum(r)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, number)
 }
 
-func CancelSnapshot(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*CancelSnapshotRequest)
-	err := agent.CancelSnapshot(r, data.Snapshots)
-	return core.Exit(r, err)
-}
-
-func DeleteSnapshot(r *pigeon.Request, ctx *Context) bool {
-	data := ctx.Data.(*DeleteSnapshotRequest)
-	err := agent.DeleteSnapshot(r, data.FileName, data.User, data.UUIDs, data.Failed)
+func UpdateReadSysAlertId(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*UpdateReadSysAlertIdRequest)
+	err := agent.UpdateReadSysAlertId(r, data.Id)
 	return core.Exit(r, err)
 }

@@ -77,6 +77,12 @@ type Space struct {
 	Used  uint64
 }
 
+type SpaceTrend struct {
+	Timestamp float64 `json:"timestamp"`
+	Total     uint64  `json:"total"`
+	Used      uint64  `json:"alloc"`
+}
+
 type FileSystemInfo struct {
 	Device     string
 	FsType     string
@@ -171,7 +177,7 @@ func GetNodeDiskPerformanceName(typeName, instance string) string {
 }
 
 func GetNodeNetWorkReveiveName(typeName, instance string) string {
-	return fmt.Sprintf("irate(%s{instance=%q,device!~%q}[%ds])/128",
+	return fmt.Sprintf("irate(%s{instance=%q,device!~%q}[%ds])",
 		typeName, instance, NODE_NETWORK_DEVICE_FILTER, DEFAULT_STEP)
 }
 

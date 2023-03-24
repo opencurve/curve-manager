@@ -23,6 +23,7 @@
 package manager
 
 import (
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/pigeon"
 )
@@ -75,6 +76,12 @@ type GetChunkServerStatusRequest struct{}
 type GetClusterStatusRequest struct{}
 
 type GetClusterSpaceRequest struct{}
+
+type GetClusterSpaceTrendRequest struct {
+	Start    uint64 `json:"start" binding:"required"`
+	End      uint64 `json:"end" binding:"required"`
+	Interval uint64 `json:"interval" binding:"required"`
+}
 
 type GetClusterPerformanceRequest struct{}
 
@@ -167,16 +174,8 @@ type CreateSnapshotRequest struct {
 	SnapshotName string `json:"snapshotName" binding:"required"`
 }
 
-// type snapshot struct {
-
-// }
-
-// type CancelSnapshotRequest struct {
-// 	Snapshots []snapshot `json:"snapshots" binding:"required"`
-// }
-
 type CancelSnapshotRequest struct {
-	UUIDs []string `json:"uuids" binding:"required"`
+	Snapshots []agent.Snapshot `json:"snapshots" binding:"required"`
 }
 
 type DeleteSnapshotRequest struct {
@@ -189,6 +188,28 @@ type DeleteSnapshotRequest struct {
 type FlattenRequest struct {
 	VolumeName string `json:"volumeName" binding:"required"`
 	User       string `json:"user" binding:"required"`
+}
+
+type GetSysLogRequest struct {
+	Start  int64  `json:"start" default:"0"`
+	End    int64  `json:"end" default:"0"`
+	Page   uint32 `json:"page" binding:"required"`
+	Size   uint32 `json:"size" binding:"required"`
+	Filter string `json:"filter"`
+}
+
+type GetSysAlertRequest struct {
+	Start  int64  `json:"start" default:"0"`
+	End    int64  `json:"end" default:"0"`
+	Page   uint32 `json:"page" binding:"required"`
+	Size   uint32 `json:"size" binding:"required"`
+	Filter string `json:"filter"`
+}
+
+type GetUnreadSysAlertNumRequest struct{}
+
+type UpdateReadSysAlertIdRequest struct {
+	Id int64 `json:"id" binding:"required"`
 }
 
 var requests = []Request{
@@ -227,6 +248,12 @@ var requests = []Request{
 		core.SPACE_CLUSTER,
 		GetClusterSpaceRequest{},
 		GetClusterSpace,
+	},
+	{
+		core.HTTP_POST,
+		core.SPACE_TREND_CLUSTER,
+		GetClusterSpaceTrendRequest{},
+		GetClusterSpaceTrend,
 	},
 	{
 		core.HTTP_GET,
@@ -359,5 +386,29 @@ var requests = []Request{
 		core.FLATTEN,
 		FlattenRequest{},
 		Flatten,
+	},
+	{
+		core.HTTP_POST,
+		core.GET_SYSTEM_LOG,
+		GetSysLogRequest{},
+		GetSysLog,
+	},
+	{
+		core.HTTP_POST,
+		core.GET_SYSTEM_ALERT,
+		GetSysAlertRequest{},
+		GetSysAlert,
+	},
+	{
+		core.HTTP_GET,
+		core.GET_UNREAD_SYSTEM_ALERT_NUM,
+		GetUnreadSysAlertNumRequest{},
+		GetUnreadSysAlertNum,
+	},
+	{
+		core.HTTP_POST,
+		core.UPDATE_READ_SYSTEM_ALERT_ID,
+		UpdateReadSysAlertIdRequest{},
+		UpdateReadSysAlertId,
 	},
 }

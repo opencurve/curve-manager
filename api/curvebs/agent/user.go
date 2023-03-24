@@ -26,12 +26,17 @@ import (
 	"sort"
 
 	comm "github.com/opencurve/curve-manager/api/common"
-	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/email"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
+)
+
+var (
+	READ_PERM    = 4
+	WRITE_PERM   = 2
+	MANAGER_PERM = 1
 )
 
 type UserInfo struct {
@@ -69,7 +74,7 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 		return nil, errno.USER_PASSWORD_NOT_MATCH
 	}
 	// check multiple write user login
-	if userInfo.Permission&core.WRITE_PERM == core.WRITE_PERM &&
+	if userInfo.Permission&WRITE_PERM == WRITE_PERM &&
 		!r.GetConfig().GetBool(ENABLE_MULTIPLE_WRITER_USER_LOGIN) {
 		user := storage.GetLoginWriteUser()
 		if user != "" && userInfo.UserName != user {
@@ -84,13 +89,15 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 	return userInfo, errno.OK
 }
 
-func Logout(r *pigeon.Request, name string) errno.Errno {
-	storage.Logout(name)
+func Logout(r *pigeon.Request) errno.Errno {
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	user := storage.GetLoginUserByToken(token)
+	storage.Logout(user)
 	return errno.OK
 }
 
 func CreateUser(r *pigeon.Request, name, passwd, email string, permission int) errno.Errno {
-	err := storage.SetUser(name, passwd, email, permission)
+	err := storage.CreateUser(name, passwd, email, permission)
 	if err != nil {
 		r.Logger().Error("Create user failed",
 			pigeon.Field("userName", name),
@@ -241,6 +248,21 @@ func ListUser(r *pigeon.Request, size, page uint32, userName string) (interface{
 		item.Email = user.Email
 		item.Permission = user.Permission
 		info.Info = append(info.Info, item)
+	}
+	return info, errno.OK
+}
+
+func GetUser(r *pigeon.Request) (interface{}, errno.Errno) {
+	token := r.HeadersIn[comm.HEADER_AUTH_TOKEN]
+	userName := storage.GetLoginUserByToken(token)
+	info, err := storage.GetUser(userName)
+	if err != nil {
+		r.Logger().Error("GetUser failed",
+			pigeon.Field("token", token),
+			pigeon.Field("userName", userName),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return nil, errno.GET_USER_FAILED
 	}
 	return info, errno.OK
 }

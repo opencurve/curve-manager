@@ -31,7 +31,9 @@ import (
 
 func NewServer() *pigeon.HTTPServer {
 	server := pigeon.NewHTTPServer("curvebs")
-	server.Initer(core.Init)
+	server.Initer(func(cfg *pigeon.Configure) error {
+		return core.Init(cfg, server.Logger())
+	})
 	server.Route("/curvebs",
 		core.Rewrite,
 		manager.Entrypoint,

@@ -34,6 +34,13 @@ import (
 	"github.com/opencurve/pigeon"
 )
 
+const (
+	SERVICE_ETCD                  = "etcd"
+	SERVICE_MDS                   = "mds"
+	SERVICE_CHUNKSERVER           = "chunkserver"
+	SERVICE_SNAPSHOT_CLONE_SERVER = "snapshotcloneserver"
+)
+
 type VersionNum struct {
 	Version string `json:"version"`
 	Number  int    `json:"number"`
@@ -45,10 +52,15 @@ type ChunkServerStatus struct {
 	Versions  []VersionNum `json:"versions"`
 }
 
+type serviceStatus struct {
+	healthy bool
+	detail  string
+}
+
 func GetEtcdStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	status, err := bsmetric.GetEtcdStatus()
 	if err != "" {
-		r.Logger().Error("GetEtcdStatus failed",
+		r.Logger().Warn("GetEtcdStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 	}
@@ -58,7 +70,7 @@ func GetEtcdStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 func GetMdsStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	status, err := bsmetric.GetMdsStatus()
 	if err != "" {
-		r.Logger().Error("GetMdsStatus failed",
+		r.Logger().Warn("GetMdsStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 	}
@@ -68,21 +80,21 @@ func GetMdsStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 func GetSnapShotCloneServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	status, err := bsmetric.GetSnapShotCloneServerStatus()
 	if err != "" {
-		r.Logger().Error("GetSnapShotCloneServerStatus failed",
+		r.Logger().Warn("GetSnapShotCloneServerStatus failed",
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 	}
 	return status, errno.OK
 }
 
-func GetChunkServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
+func GetChunkServerStatus(l *pigeon.Logger, rId string) (interface{}, errno.Errno) {
 	var result ChunkServerStatus
 	// get chunkserver form mds
 	chunkservers, err := bsrpc.GMdsClient.GetChunkServerInCluster()
 	if err != nil {
-		r.Logger().Error("GetChunkServerStatus bsrpc.GetChunkServerInCluster failed",
+		l.Error("GetChunkServerStatus bsrpc.GetChunkServerInCluster failed",
 			pigeon.Field("error", err),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			pigeon.Field("requestId", rId))
 		return nil, errno.GET_CHUNKSERVER_IN_CLUSTER_FAILED
 	}
 
@@ -100,54 +112,68 @@ func GetChunkServerStatus(r *pigeon.Request) (interface{}, errno.Errno) {
 	// get version form metric
 	versions, err := bsmetric.GetChunkServerVersion(&endponits)
 	if err != nil {
-		r.Logger().Error("GetChunkServerStatus bsmetric.GetChunkServerVersion failed",
+		l.Warn("GetChunkServerStatus bsmetric.GetChunkServerVersion failed",
 			pigeon.Field("error", err),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-	}
-	for k, v := range versions {
-		result.Versions = append(result.Versions, VersionNum{
-			Version: k,
-			Number:  v,
-		})
+			pigeon.Field("requestId", rId))
+	} else {
+		for k, v := range versions {
+			result.Versions = append(result.Versions, VersionNum{
+				Version: k,
+				Number:  v,
+			})
+		}
 	}
 	return &result, errno.OK
 }
 
 func checkServiceHealthy(name string) common.QueryResult {
-	var ret common.QueryResult
+	ret := common.QueryResult{}
 	var status []bsmetric.ServiceStatus
 	var err string
 	ret.Key = name
 	switch name {
-	case ETCD_SERVICE:
+	case SERVICE_ETCD:
 		status, err = bsmetric.GetEtcdStatus()
-	case MDS_SERVICE:
+	case SERVICE_MDS:
 		status, err = bsmetric.GetMdsStatus()
-	case SNAPSHOT_CLONE_SERVER_SERVICE:
+	case SERVICE_SNAPSHOT_CLONE_SERVER:
 		status, err = bsmetric.GetSnapShotCloneServerStatus()
 	default:
-		ret.Result = false
+		ret.Result = serviceStatus{
+			healthy: false,
+		}
 		ret.Err = fmt.Errorf("Invalid service name")
 		return ret
 	}
 
 	if err != "" {
 		ret.Err = fmt.Errorf(err)
-		ret.Result = false
-		return ret
 	}
 
+	healthy := true
+	detail := ""
 	leaderNum := 0
-	hasOffline := false
+	offline := 0
 	for _, s := range status {
 		if s.Leader {
-			leaderNum += 1
+			leaderNum++
 		}
 		if !s.Online {
-			hasOffline = true
+			offline++
 		}
 	}
 
-	ret.Result = leaderNum == 1 && !hasOffline
+	if leaderNum != 1 {
+		healthy = false
+		detail = fmt.Sprintf("%s leader number = %d", name, leaderNum)
+	}
+	if offline > 0 {
+		healthy = false
+		detail = fmt.Sprintf("%s %s offline number = %d", detail, name, offline)
+	}
+	ret.Result = serviceStatus{
+		healthy: healthy,
+		detail:  detail,
+	}
 	return ret
 }

@@ -59,8 +59,8 @@ func Init(cfg *pigeon.Configure) error {
 	GMetricClient = &metricClient{}
 	// init http client
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout:   1 * time.Second,
+		KeepAlive: 10 * time.Second,
 		DualStack: true,
 	}
 	httpClient := &http.Client{

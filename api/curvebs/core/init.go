@@ -23,6 +23,7 @@
 package core
 
 import (
+	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/internal/email"
 	metrics "github.com/opencurve/curve-manager/internal/metrics/core"
 	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
@@ -52,9 +53,11 @@ func initClients(cfg *pigeon.Configure) error {
 	return nil
 }
 
-func Init(cfg *pigeon.Configure) error {
+func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 	// init access
 	InitAccess(cfg)
+	// init agent
+	agent.Init(cfg, logger)
 	// init storage
 	err := storage.Init(cfg)
 	if err != nil {

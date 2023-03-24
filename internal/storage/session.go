@@ -37,30 +37,30 @@ type sessionItem struct {
 
 func AddSession(userInfo *UserInfo) {
 	now := time.Now().Unix()
-	sigStr := fmt.Sprintf("username=%s&password=%s&timestamp=%d", userInfo.UserName, userInfo.PassWord, now)
-	sig := common.GetMd5Sum32Little(sigStr)
-	gStorage.sessionMutex.Lock()
-	defer gStorage.sessionMutex.Unlock()
+	tokenStr := fmt.Sprintf("username=%s&password=%s&timestamp=%d", userInfo.UserName, userInfo.PassWord, now)
+	token := common.GetMd5Sum32Little(tokenStr)
+	gStorage.mutex.Lock()
+	defer gStorage.mutex.Unlock()
 	// check if have logined, if so will disconnect old one
-	if oldSig, ok := gStorage.loginOnce[userInfo.UserName]; ok {
-		delete(gStorage.session, oldSig)
+	if oldToken, ok := gStorage.loginOnce[userInfo.UserName]; ok {
+		delete(gStorage.session, oldToken)
 	}
-	gStorage.session[sig] = sessionItem{
+	gStorage.session[token] = sessionItem{
 		userName:   userInfo.UserName,
 		permission: userInfo.Permission,
 		timestamp:  now,
 	}
-	gStorage.loginOnce[userInfo.UserName] = sig
+	gStorage.loginOnce[userInfo.UserName] = token
 	if userInfo.Permission&WRITE_PERM == WRITE_PERM {
 		gStorage.loginedWriteUser = userInfo.UserName
 	}
-	userInfo.Token = sig
+	userInfo.Token = token
 }
 
 func CheckSession(s string, expireSec int) (bool, int) {
 	now := time.Now().Unix()
-	gStorage.sessionMutex.Lock()
-	defer gStorage.sessionMutex.Unlock()
+	gStorage.mutex.Lock()
+	defer gStorage.mutex.Unlock()
 	if item, ok := gStorage.session[s]; ok {
 		if item.timestamp+int64(expireSec) < now {
 			delete(gStorage.session, s)
@@ -78,18 +78,27 @@ func CheckSession(s string, expireSec int) (bool, int) {
 }
 
 func GetLoginWriteUser() string {
-	gStorage.sessionMutex.Lock()
-	defer gStorage.sessionMutex.Unlock()
+	gStorage.mutex.Lock()
+	defer gStorage.mutex.Unlock()
 	return gStorage.loginedWriteUser
 }
 
 func Logout(name string) {
-	gStorage.sessionMutex.Lock()
-	defer gStorage.sessionMutex.Unlock()
-	sig, _ := gStorage.loginOnce[name]
-	delete(gStorage.session, sig)
+	gStorage.mutex.Lock()
+	defer gStorage.mutex.Unlock()
+	token, _ := gStorage.loginOnce[name]
+	delete(gStorage.session, token)
 	delete(gStorage.loginOnce, name)
 	if name == gStorage.loginedWriteUser {
 		gStorage.loginedWriteUser = ""
 	}
+}
+
+func GetLoginUserByToken(token string) string {
+	gStorage.mutex.Lock()
+	defer gStorage.mutex.Unlock()
+	if item, ok := gStorage.session[token]; ok {
+		return item.userName
+	}
+	return ""
 }

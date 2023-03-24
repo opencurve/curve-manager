@@ -85,7 +85,11 @@ type ListVolumeInfo struct {
 }
 
 func getUpPath(dir string) string {
-	return dir[:strings.LastIndex(dir, "/")]
+	index := strings.LastIndex(dir, "/")
+	if index == -1 || index == 0 {
+		return "/"
+	}
+	return dir[:index]
 }
 
 func getString2Signature(date int64, owner string) string {
@@ -254,6 +258,33 @@ func getVolumeSpaceSize(dir string, size int, volumes *[]VolumeInfo) error {
 	return nil
 }
 
+func findVolumeMountPoints(dir string, volumes *[]VolumeInfo) error {
+	size := len(*volumes)
+	ret := make(chan common.QueryResult, size)
+	for index, volume := range *volumes {
+		go func(vname string, addr *VolumeInfo) {
+			infos, err := bsrpc.GMdsClient.FindFileMountPoint(vname)
+			ret <- common.QueryResult{
+				Key:    addr,
+				Result: infos,
+				Err:    err,
+			}
+		}(path.Join(dir, volume.Info.FileName), &(*volumes)[index])
+	}
+	count := 0
+	for res := range ret {
+		if res.Err != nil && res.Err.Error() != FILE_NOT_EXIST {
+			return res.Err
+		}
+		res.Key.(*VolumeInfo).Info.MountPoints = res.Result.([]string)
+		count += 1
+		if count >= size {
+			break
+		}
+	}
+	return nil
+}
+
 func ListVolume(r *pigeon.Request, size, page uint32, path, key string, direction int) (interface{}, errno.Errno) {
 	listVolumeInfo := ListVolumeInfo{
 		Info: []curvebs.FileInfo{},
@@ -310,12 +341,20 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 			dirSize++
 		}
 	}
+	e = findVolumeMountPoints(path, &tmpVolumes)
+	if e != nil {
+		r.Logger().Error("ListVolume findVolumeMountPoints failed",
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return nil, errno.FIND_VOLUME_MOUNTPOINT_FAILED
+	}
+
 	e = getVolumeSpaceSize(path, dirSize, &tmpVolumes)
 	if e != nil {
 		r.Logger().Error("ListVolume getVolumeSpaceSize failed",
 			pigeon.Field("error", e),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return listVolumeInfo, errno.GET_VOLUME_SIZE_FAILED
+		return nil, errno.GET_VOLUME_SIZE_FAILED
 	}
 
 	e = getVolumeAllocSize(path, &tmpVolumes)
@@ -323,7 +362,7 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 		r.Logger().Error("ListVolume getVolumeAllocSize failed",
 			pigeon.Field("error", e),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return listVolumeInfo, errno.GET_VOLUME_ALLOC_SIZE_FAILED
+		return nil, errno.GET_VOLUME_ALLOC_SIZE_FAILED
 	}
 
 	for _, v := range tmpVolumes {
@@ -343,9 +382,9 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 	fileInfo, e := bsrpc.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
 		r.Logger().Error("GetVolume failed",
-				pigeon.Field("fileName", volumeName),
-				pigeon.Field("error", e),
-				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			pigeon.Field("fileName", volumeName),
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		if e.Error() == FILE_NOT_EXIST {
 			return nil, errno.OK
 		}
@@ -358,6 +397,15 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 
 	path := getUpPath(volumeName)
 	volumes := []VolumeInfo{volume}
+	e = findVolumeMountPoints(path, &volumes)
+	if e != nil {
+		r.Logger().Error("GetVolume findVolumeMountPoints failed",
+			pigeon.Field("fileName", volumeName),
+			pigeon.Field("error", e),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return nil, errno.FIND_VOLUME_MOUNTPOINT_FAILED
+	}
+
 	e = getVolumeAllocSize(path, &volumes)
 	if e != nil {
 		r.Logger().Error("GetVolume getVolumeAllocSize failed",
@@ -378,7 +426,7 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 	}
 	// ensure performance data is time sequence
 	sort.Slice(volumes[0].Performance, func(i, j int) bool {
-		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[i].Timestamp
+		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[j].Timestamp
 	})
 	return volumes[0], errno.OK
 }

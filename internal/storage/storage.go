@@ -32,21 +32,23 @@ import (
 )
 
 var (
-	gStorage *Storage
+	gStorage *storage
 )
 
 const (
 	SQLITE_DB_FILE = "db.sqlite.filepath"
 )
 
-type Storage struct {
+type storage struct {
 	db      *sql.DB
-	mutex   *sync.Mutex
+	dbMutex *sync.RWMutex
+	// token->sessionItem
 	session map[string]sessionItem
+	// user->token
+	loginOnce map[string]string
+	mutex     *sync.Mutex
 	// only one person with write permission is allowed to login
 	loginedWriteUser string
-	loginOnce        map[string]string
-	sessionMutex     *sync.Mutex
 }
 
 func Init(cfg *pigeon.Configure) error {
@@ -60,29 +62,42 @@ func Init(cfg *pigeon.Configure) error {
 	if err != nil {
 		return err
 	}
-	gStorage = &Storage{db: db, mutex: &sync.Mutex{}, session: make(map[string]sessionItem),
-		loginedWriteUser: "", loginOnce: make(map[string]string), sessionMutex: &sync.Mutex{}}
+	gStorage = &storage{db: db, dbMutex: &sync.RWMutex{}, session: make(map[string]sessionItem), loginedWriteUser: "",
+		loginOnce: make(map[string]string), mutex: &sync.Mutex{}}
 
 	// init user table
 	if err = gStorage.execSQL(CREATE_USER_TABLE); err != nil {
 		return err
 	}
-
 	// create admin user
 	if err = createAdminUser(); err != nil {
 		return err
 	}
 
+	// create system operation log table
+	if err = gStorage.execSQL(CREATE_SYSTEM_LOG_TABLE); err != nil {
+		return err
+	}
+
+	// create system alert table
+	if err = gStorage.execSQL(CREATE_SYSTEM_ALERT_TABLE); err != nil {
+		return err
+	}
+
+	// create user system alert table
+	if err = gStorage.execSQL(CREATE_USER_SYSTEM_LOG_TABLE); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *Storage) Close() error {
+func (s *storage) Close() error {
 	return s.db.Close()
 }
 
-func (s *Storage) execSQL(query string, args ...interface{}) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *storage) execSQL(query string, args ...interface{}) error {
+	s.dbMutex.Lock()
+	defer s.dbMutex.Unlock()
 	stmt, err := s.db.Prepare(query)
 	if err != nil {
 		return err
@@ -90,4 +105,10 @@ func (s *Storage) execSQL(query string, args ...interface{}) error {
 
 	_, err = stmt.Exec(args...)
 	return err
+}
+
+func (s *storage) querySQL(query string, args ...interface{}) (*sql.Rows, error) {
+	s.dbMutex.RLock()
+	defer s.dbMutex.RUnlock()
+	return s.db.Query(query, args...)
 }

@@ -23,6 +23,7 @@
 package manager
 
 import (
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/curve-manager/internal/errno"
@@ -30,7 +31,16 @@ import (
 )
 
 func GetClusterSpace(r *pigeon.Request, ctx *Context) bool {
-	space, err := agent.GetClusterSpace(r)
+	space, err := agent.GetClusterSpace(r.Logger(), r.HeadersIn[comm.HEADER_REQUEST_ID])
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, space)
+}
+
+func GetClusterSpaceTrend(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*GetClusterSpaceTrendRequest)
+	space, err := agent.GetClusterSpaceTrend(r, data.Start, data.End, data.Interval)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}
