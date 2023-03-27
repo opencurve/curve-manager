@@ -88,7 +88,7 @@ func ListDisk(r *pigeon.Request, size, page uint32, hostname string) (interface{
 	retMap := make(map[string]map[string]*DiskInfo)
 	instance, err := getInstanceByHostName(hostname)
 	if err != nil {
-		r.Logger().Error("ListDisk getInstanceByHostName failed",
+		r.Logger().Warn("ListDisk getInstanceByHostName failed",
 			pigeon.Field("hostname", hostname),
 			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))

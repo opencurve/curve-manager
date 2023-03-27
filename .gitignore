@@ -1,4 +1,4 @@
 *.log
-bin/
+bin/*
 .vscode
-external/
+external/*
