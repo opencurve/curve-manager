@@ -25,6 +25,7 @@ package snapshotclone
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/opencurve/curve-manager/internal/common"
@@ -140,7 +141,10 @@ func GetSnapshot(size, page uint32, uuid, user, fileName, status string) (ListSn
 	if snapshotInfo.Code != ERROR_CODE_SUCCESS {
 		return listSnapshotInfo, fmt.Errorf(snapshotInfo.Message)
 	}
-
+	// sort by ctime
+	sort.Slice(snapshotInfo.Snapshots, func(i, j int) bool {
+		return snapshotInfo.Snapshots[i].Ctime > snapshotInfo.Snapshots[j].Ctime
+	})
 	transferSnapshotInfo(&snapshotInfo, &listSnapshotInfo)
 	return listSnapshotInfo, nil
 }
