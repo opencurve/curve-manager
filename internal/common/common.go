@@ -99,3 +99,9 @@ func GetIPFromEndpoint(endpoint string) (string, error) {
 	}
 	return strs[0], nil
 }
+
+func Mill2TimeStr(mill int64) string {
+	sec := mill / 1000
+	t := time.Unix(sec, mill%1000*int64(time.Millisecond))
+	return t.Format(TIME_MS_FORMAT)
+}

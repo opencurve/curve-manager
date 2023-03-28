@@ -121,7 +121,8 @@ func DeleteUser(r *pigeon.Request, name string) errno.Errno {
 	return errno.OK
 }
 
-func ChangePassWord(r *pigeon.Request, name, oldPassword, newPassword string) errno.Errno {
+func ChangePassWord(r *pigeon.Request, oldPassword, newPassword string) errno.Errno {
+	name := storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
 	passwd, err := storage.GetUserPassword(name)
 	if err != nil {
 		r.Logger().Error("GetUserPassword failed",
@@ -178,7 +179,7 @@ func ResetPassWord(r *pigeon.Request, name string) errno.Errno {
 
 	err = email.SendNewPassWord(name, emailAddr, passwd)
 	if err != nil {
-		r.Logger().Error("Email sendNewPassWord failed",
+		r.Logger().Warn("Email sendNewPassWord failed",
 			pigeon.Field("userName", name),
 			pigeon.Field("emailAddr", emailAddr),
 			pigeon.Field("newPassword", passwd),
@@ -189,7 +190,8 @@ func ResetPassWord(r *pigeon.Request, name string) errno.Errno {
 	return errno.OK
 }
 
-func UpdateUserEmail(r *pigeon.Request, name, email string) errno.Errno {
+func UpdateUserEmail(r *pigeon.Request, email string) errno.Errno {
+	name := storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
 	err := storage.UpdateUserEmail(name, email)
 	if err != nil {
 		r.Logger().Error("UpdateUserEmail failed",

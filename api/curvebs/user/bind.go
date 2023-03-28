@@ -75,7 +75,6 @@ type DeleteUserRequest struct {
 }
 
 type ChangePassWordRequest struct {
-	UserName    string `json:"userName" binding:"required"`
 	OldPassWord string `json:"oldPassword" binding:"required"`
 	NewPassWord string `json:"newPassword" binding:"required"`
 }
@@ -85,7 +84,6 @@ type ResetPassWordRequest struct {
 }
 
 type UpdateUserEmailRequest struct {
-	UserName string `json:"userName" binding:"required"`
 	Email    string `json:"email" binding:"required"`
 }
 

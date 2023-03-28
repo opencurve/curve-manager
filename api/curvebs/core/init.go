@@ -56,10 +56,13 @@ func initClients(cfg *pigeon.Configure) error {
 func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 	// init access
 	InitAccess(cfg)
-	// init agent
-	agent.Init(cfg, logger)
 	// init storage
 	err := storage.Init(cfg)
+	if err != nil {
+		return err
+	}
+	// init agent
+	err = agent.Init(cfg, logger)
 	if err != nil {
 		return err
 	}

@@ -33,19 +33,19 @@ const (
 )
 
 var (
-	systemLogChann chan storage.SystemLog
+	systemLogChann chan storage.Log
 )
 
-func Init(cfg *pigeon.Configure, logger *pigeon.Logger) {
+func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 	expirationDays := cfg.GetConfig().GetInt(SYSTEM_LOG_EXPIRATION_DAYS)
 	if expirationDays <= 0 {
 		expirationDays = DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS
 	}
 	// write system operation log
-	systemLogChann = make(chan storage.SystemLog, 128)
+	systemLogChann = make(chan storage.Log, 128)
 	go writeSystemLog(logger)
 	// clear expired logs
 	go clearExpiredSystemLog(expirationDays, logger)
 	// start system alerts
-	initAlerts(logger)
+	return initAlerts(logger)
 }

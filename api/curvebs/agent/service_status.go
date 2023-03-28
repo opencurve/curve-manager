@@ -47,9 +47,10 @@ type VersionNum struct {
 }
 
 type ChunkServerStatus struct {
-	TotalNum  int          `json:"totalNum"`
-	OnlineNum int          `json:"onlineNum"`
-	Versions  []VersionNum `json:"versions"`
+	TotalNum   int          `json:"totalNum"`
+	OnlineNum  int          `json:"onlineNum"`
+	Versions   []VersionNum `json:"versions"`
+	NotOnlines []string     `json:"-"`
 }
 
 type serviceStatus struct {
@@ -101,9 +102,12 @@ func GetChunkServerStatus(l *pigeon.Logger, rId string) (interface{}, errno.Errn
 	online := 0
 	var endponits []string
 	for _, cs := range chunkservers {
+		endpoint := fmt.Sprintf("%s:%d", cs.HostIp, cs.Port)
 		if cs.OnlineStatus == curvebs.ONLINE_STATUS {
 			online += 1
-			endponits = append(endponits, fmt.Sprintf("%s:%d", cs.HostIp, cs.Port))
+			endponits = append(endponits, endpoint)
+		} else {
+			result.NotOnlines = append(result.NotOnlines, endpoint)
 		}
 	}
 	result.TotalNum = len(chunkservers)
@@ -153,23 +157,27 @@ func checkServiceHealthy(name string) common.QueryResult {
 	healthy := true
 	detail := ""
 	leaderNum := 0
+	leaderVec := []string{}
 	offline := 0
+	offlineVec := []string{}
 	for _, s := range status {
 		if s.Leader {
 			leaderNum++
+			leaderVec = append(leaderVec, s.Address)
 		}
 		if !s.Online {
 			offline++
+			offlineVec = append(offlineVec, s.Address)
 		}
 	}
 
 	if leaderNum != 1 {
 		healthy = false
-		detail = fmt.Sprintf("%s leader number = %d", name, leaderNum)
+		detail = fmt.Sprintf("%s leader number = %d, leaders: %v", name, leaderNum, leaderVec)
 	}
 	if offline > 0 {
 		healthy = false
-		detail = fmt.Sprintf("%s %s offline number = %d", detail, name, offline)
+		detail = fmt.Sprintf("%s %s offline number = %d, offlines: %v", detail, name, offline, offlineVec)
 	}
 	ret.Result = serviceStatus{
 		healthy: healthy,

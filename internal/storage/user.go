@@ -118,6 +118,25 @@ func ListUser(userName string) (*[]UserInfo, error) {
 	return &users, nil
 }
 
+func ListUserWithEmail() ([]string, error) {
+	emial := ""
+	users := []string{}
+	rows, err := gStorage.querySQL(LIST_USER_WITH_EMAIL, emial)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var user string
+		err = rows.Scan(&user)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
 func GetUserEmail(name string) (string, error) {
 	rows, err := gStorage.querySQL(GET_USER_EMAIL, name)
 	if err != nil {

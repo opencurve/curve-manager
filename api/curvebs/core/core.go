@@ -85,6 +85,10 @@ const (
 	GET_SYSTEM_ALERT            = "alert.get"
 	GET_UNREAD_SYSTEM_ALERT_NUM = "alert.unread.num.get"
 	UPDATE_READ_SYSTEM_ALERT_ID = "alert.read.id.update"
+	GET_ALERT_CONF              = "alert.conf.get"
+	UPDATE_ALERT_CONF           = "alert.conf.update"
+	GET_ALERT_CANDIDATE         = "alert.candidate.get"
+	UPDATE_ALERT_USER           = "alert.user.update"
 )
 
 func Exit(r *pigeon.Request, code errno.Errno) bool {

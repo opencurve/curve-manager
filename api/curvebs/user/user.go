@@ -57,7 +57,7 @@ func DeleteUser(r *pigeon.Request, ctx *Context) bool {
 
 func ChangePassWord(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*ChangePassWordRequest)
-	err := agent.ChangePassWord(r, data.UserName, data.OldPassWord, data.NewPassWord)
+	err := agent.ChangePassWord(r, data.OldPassWord, data.NewPassWord)
 	return core.Exit(r, err)
 }
 
@@ -69,7 +69,7 @@ func ResetPassWord(r *pigeon.Request, ctx *Context) bool {
 
 func UpdateUserEmail(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*UpdateUserEmailRequest)
-	err := agent.UpdateUserEmail(r, data.UserName, data.Email)
+	err := agent.UpdateUserEmail(r, data.Email)
 	return core.Exit(r, err)
 }
 

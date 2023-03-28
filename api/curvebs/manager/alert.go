@@ -31,7 +31,7 @@ import (
 
 func GetSysAlert(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*GetSysAlertRequest)
-	logs, err := agent.GetSysAlert(r, data.Start, data.End, data.Page, data.Size, data.Filter)
+	logs, err := agent.GetSysAlert(r, data.Start, data.End, data.Page, data.Size, data.Name, data.Level, data.Content)
 	if err != errno.OK {
 		return core.Exit(r, err)
 	}
@@ -49,5 +49,33 @@ func GetUnreadSysAlertNum(r *pigeon.Request, ctx *Context) bool {
 func UpdateReadSysAlertId(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*UpdateReadSysAlertIdRequest)
 	err := agent.UpdateReadSysAlertId(r, data.Id)
+	return core.Exit(r, err)
+}
+
+func GetAlertConf(r *pigeon.Request, ctx *Context) bool {
+	confs, err := agent.GetAlertConf(r)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, confs)
+}
+
+func UpdateAlertConf(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*UpdateAlertConfRequest)
+	err := agent.UpdateAlertConf(r, *data.Enable, data.Interval, data.Times, data.Rule, data.Name)
+	return core.Exit(r, err)
+}
+
+func GetAlertCandidate(r *pigeon.Request, ctx *Context) bool {
+	users, err := agent.GetAlertCandidate(r)
+	if err != errno.OK {
+		return core.Exit(r, err)
+	}
+	return core.ExitSuccessWithData(r, users)
+}
+
+func UpdateAlertUser(r *pigeon.Request, ctx *Context) bool {
+	data := ctx.Data.(*UpdateAlertUserRequest)
+	err := agent.UpdateAlertUser(r, data.Alert, data.User, data.Operation)
 	return core.Exit(r, err)
 }

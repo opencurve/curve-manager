@@ -30,7 +30,7 @@ import (
 	"github.com/opencurve/curve-manager/internal/common"
 )
 
-type SystemLog struct {
+type Log struct {
 	id        int64
 	TimeMs    int64  `json:"-"`
 	Time      string `json:"time"`
@@ -43,12 +43,12 @@ type SystemLog struct {
 	Content   string `json:"content"`
 }
 
-type SystemLogInfo struct {
+type LogInfo struct {
 	Total int64         `json:"total"`
-	Info  []SystemLog `json:"info"`
+	Info  []Log `json:"info"`
 }
 
-func AddSystemLog(log *SystemLog) error {
+func AddSystemLog(log *Log) error {
 	return gStorage.execSQL(ADD_SYSTEM_LOG, log.TimeMs, log.IP, log.User, log.Module, log.Method, log.ErrorCode,
 		log.ErrorMsg, log.Content)
 }
@@ -57,8 +57,8 @@ func DeleteSystemLog(expirationMs int64) error {
 	return gStorage.execSQL(DELETE_SYSTEM_LOG, expirationMs)
 }
 
-func GetSystemLog(start, end int64, limit, offset uint32, filter, userName string) (SystemLogInfo, error) {
-	logs := SystemLogInfo{}
+func GetSystemLog(start, end int64, limit, offset uint32, filter, userName string) (LogInfo, error) {
+	logs := LogInfo{}
 	filter = fmt.Sprintf("%%%s%%", filter)
 	// get total
 	// admin can get all system operation log, others can only get themself's
@@ -88,7 +88,7 @@ func GetSystemLog(start, end int64, limit, offset uint32, filter, userName strin
 			return logs, err
 		}
 		for rows.Next() {
-			var log SystemLog
+			var log Log
 			err = rows.Scan(&log.id, &log.TimeMs, &log.IP, &log.User, &log.Module, &log.Method, &log.ErrorCode,
 				&log.ErrorMsg, &log.Content)
 			if err != nil {

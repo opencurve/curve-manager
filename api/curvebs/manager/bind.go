@@ -200,17 +200,37 @@ type GetSysLogRequest struct {
 }
 
 type GetSysAlertRequest struct {
-	Start  int64  `json:"start" default:"0"`
-	End    int64  `json:"end" default:"0"`
-	Page   uint32 `json:"page" binding:"required"`
-	Size   uint32 `json:"size" binding:"required"`
-	Filter string `json:"filter"`
+	Start   int64  `json:"start" default:"0"`
+	End     int64  `json:"end" default:"0"`
+	Page    uint32 `json:"page" binding:"required"`
+	Size    uint32 `json:"size" binding:"required"`
+	Name    string `json:"name"`
+	Level   string `json:"level"`
+	Content string `json:"content"`
 }
 
 type GetUnreadSysAlertNumRequest struct{}
 
 type UpdateReadSysAlertIdRequest struct {
 	Id int64 `json:"id" binding:"required"`
+}
+
+type GetAlertConfRequest struct{}
+
+type UpdateAlertConfRequest struct {
+	Name     string `json:"name" binding:"required"`
+	Interval uint32 `json:"interval" binding:"required"`
+	Times    uint32 `json:"times" binding:"required"`
+	Enable   *bool  `json:"enable" binding:"required"`
+	Rule     string `json:"rule" binding:"required"`
+}
+
+type GetAlertCandidateRequest struct{}
+
+type UpdateAlertUserRequest struct {
+	Alert     string `json:"alert" binding:"required"`
+	User      string `json:"user" binding:"required"`
+	Operation int    `json:"operation" binding:"required"`
 }
 
 var requests = []Request{
@@ -411,5 +431,29 @@ var requests = []Request{
 		core.UPDATE_READ_SYSTEM_ALERT_ID,
 		UpdateReadSysAlertIdRequest{},
 		UpdateReadSysAlertId,
+	},
+	{
+		core.HTTP_GET,
+		core.GET_ALERT_CONF,
+		GetAlertConfRequest{},
+		GetAlertConf,
+	},
+	{
+		core.HTTP_POST,
+		core.UPDATE_ALERT_CONF,
+		UpdateAlertConfRequest{},
+		UpdateAlertConf,
+	},
+	{
+		core.HTTP_GET,
+		core.GET_ALERT_CANDIDATE,
+		GetAlertCandidateRequest{},
+		GetAlertCandidate,
+	},
+	{
+		core.HTTP_POST,
+		core.UPDATE_ALERT_USER,
+		UpdateAlertUserRequest{},
+		UpdateAlertUser,
 	},
 }

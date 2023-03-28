@@ -37,6 +37,7 @@ const (
 	EMAIL_SERVER_163             = "smtp.163.com"
 	EMAIL_SERVER_163_ENDPOINT    = "smtp.163.com:25"
 	EMAIL_SUBJECT_RESET_PASSWORD = "Curve-Manager Reset Password"
+	EMAIL_SUBJECT_ALERT          = "Curve-Manager Alert"
 )
 
 var (
@@ -63,4 +64,24 @@ func SendNewPassWord(name, to, passwd string) error {
 		Text:    []byte(content),
 	}
 	return e.Send(EMAIL_SERVER_163_ENDPOINT, smtp.PlainAuth("", email_addr, email_auth, EMAIL_SERVER_163))
+}
+
+func SendAlert2Users(content string, tos []string) error {
+	if email_addr == "" || email_auth == "" {
+		return fmt.Errorf("the manage email info not set")
+	}
+	var errors error
+	for _, to := range tos {
+		e := email.Email{
+			From:    email_addr,
+			To:      []string{to},
+			Subject: EMAIL_SUBJECT_ALERT,
+			Text:    []byte(content),
+		}
+		err := e.Send(EMAIL_SERVER_163_ENDPOINT, smtp.PlainAuth("", email_addr, email_auth, EMAIL_SERVER_163))
+		if err != nil {
+			errors = fmt.Errorf("dest: %s, error: %s, %s", to, err.Error(), errors.Error())
+		}
+	}
+	return errors
 }

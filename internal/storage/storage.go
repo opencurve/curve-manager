@@ -79,13 +79,23 @@ func Init(cfg *pigeon.Configure) error {
 		return err
 	}
 
+	// create system alert conf table
+	if err = gStorage.execSQL(CREATE_ALERT_CONF_TABLE); err != nil {
+		return err
+	}
+
+	// create alert user table
+	if err = gStorage.execSQL(CREATE_ALERT_USER_TABLE); err != nil {
+		return err
+	}
+
 	// create system alert table
-	if err = gStorage.execSQL(CREATE_SYSTEM_ALERT_TABLE); err != nil {
+	if err = gStorage.execSQL(CREATE_ALERT_TABLE); err != nil {
 		return err
 	}
 
 	// create user system alert table
-	if err = gStorage.execSQL(CREATE_USER_SYSTEM_LOG_TABLE); err != nil {
+	if err = gStorage.execSQL(CREATE_READ_ALERT_TABLE); err != nil {
 		return err
 	}
 	return nil

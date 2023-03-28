@@ -126,4 +126,10 @@ var (
 	GET_READ_ALERT_ID_FAILED          = Errno{503327, "get read alert id failed"}
 	ADD_READ_ALERT_ID_FAILED          = Errno{503328, "add read alert id failed"}
 	UPDATE_UNREAD_ALERT_ID_FAILED     = Errno{503329, "update unread alert id failed"}
+	GET_ALERT_CONF_FAILED             = Errno{503330, "get alert conf failed"}
+	UPDATE_ALERT_CONF_FAILED          = Errno{503331, "update alert conf failed"}
+	GET_ALERT_USER_FAILED             = Errno{503332, "get alert user failed"}
+	ADD_ALERT_USER_FAILED             = Errno{503333, "add alert user failed"}
+	DELETE_ALERT_USER_FAILED          = Errno{503334, "delete alert user failed"}
+	LIST_USER_WITH_EMAIL_FAILED       = Errno{503335, "list user with email failed"}
 )

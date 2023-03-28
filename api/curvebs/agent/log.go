@@ -73,7 +73,7 @@ func writeSystemLog(logger *pigeon.Logger) {
 
 func WriteSystemLog(ip, user, module, method, error_msg, content string, error_code int) {
 	timeMs := time.Now().UnixMilli()
-	logItem := storage.SystemLog{
+	logItem := storage.Log{
 		TimeMs:    timeMs,
 		IP:        ip,
 		User:      user,

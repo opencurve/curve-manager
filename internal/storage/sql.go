@@ -61,20 +61,41 @@ var (
 			content TEXT
 		)
 	`
-	// system alert table
-	CREATE_SYSTEM_ALERT_TABLE = `
-		CREATE TABLE IF NOT EXISTS system_alert (
+	// alert conf table
+	CREATE_ALERT_CONF_TABLE = `
+		CREATE TABLE IF NOT EXISTS alert_conf (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE,
+			level INTEGER,
+			interval INTEGER,
+			times INTERGER,
+			enable INTEGER CHECK (enable IN (0, 1)),
+			rule TEXT,
+			desc TEXT
+		)
+	`
+	// alert user table
+	CREATE_ALERT_USER_TABLE = `
+		CREATE TABLE IF NOT EXISTS alert_user (
+			alert TEXT,
+			user TEXT,
+			UNIQUE (alert, user) ON CONFLICT IGNORE
+		)
+	`
+	// alert table
+	CREATE_ALERT_TABLE = `
+		CREATE TABLE IF NOT EXISTS alert (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			timestamp INTEGER,
 			level INTEGER,
-			module TEXT,
+			name TEXT,
 			duration INTEGER,
 			summary TEXT
 		)
 	`
-	// user read system alert table
-	CREATE_USER_SYSTEM_LOG_TABLE = `
-		CREATE TABLE IF NOT EXISTS user_system_alert (
+	// read alert table
+	CREATE_READ_ALERT_TABLE = `
+		CREATE TABLE IF NOT EXISTS read_alert (
 			username TEXT PRIMARY KEY,
 			id INTEGER
 		)
@@ -83,38 +104,48 @@ var (
 	// user
 	CREATE_ADMIN           = `INSERT OR IGNORE INTO user(username, password, email, permission) VALUES(?, ?, ?, ?)`
 	CREATE_USER            = `INSERT INTO user(username, password, email, permission) VALUES(?, ?, ?, ?)`
-	DELETE_USER            = `DELETE FROM user WHERE username = ?`
-	GET_USER               = `SELECT * FROM user WHERE username = ?`
-	GET_USER_EMAIL         = `SELECT email FROM user WHERE username = ?`
-	GET_USER_PASSWORD      = `SELECT password FROM user WHERE username = ?`
-	LIST_USER              = `SELECT * FROM user WHERE username != ?`
-	UPDATE_USER_PASSWORD   = `UPDATE user SET password = ? WHERE username = ?`
-	UPDATE_USER_EMAIL      = `UPDATE user SET email = ? WHERE username = ?`
-	UPDATE_USER_PERMISSION = `UPDATE user SET permission = ? WHERE username = ?`
+	DELETE_USER            = `DELETE FROM user WHERE username=?`
+	GET_USER               = `SELECT * FROM user WHERE username=?`
+	GET_USER_EMAIL         = `SELECT email FROM user WHERE username=?`
+	GET_USER_PASSWORD      = `SELECT password FROM user WHERE username=?`
+	LIST_USER              = `SELECT * FROM user WHERE username!=?`
+	LIST_USER_WITH_EMAIL   = `SELECT username FROM user WHERE email!=?`
+	UPDATE_USER_PASSWORD   = `UPDATE user SET password=? WHERE username=?`
+	UPDATE_USER_EMAIL      = `UPDATE user SET email=? WHERE username=?`
+	UPDATE_USER_PERMISSION = `UPDATE user SET permission=? WHERE username=?`
 
 	// system log
 	ADD_SYSTEM_LOG = `INSERT INTO system_log(timestamp, ip, user, module, method, error_code, error_msg, content)
 	 VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
-	GET_SYSTEM_LOG_NUM = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND
+	GET_SYSTEM_LOG_NUM = `SELECT COUNT(*) FROM system_log WHERE timestamp>=? AND timestamp<=? AND
 	 ip||user||module||method||error_code||error_msg||content LIKE ?`
-	GET_SYSTEM_LOG = `SELECT * FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND
+	GET_SYSTEM_LOG = `SELECT * FROM system_log WHERE timestamp>=? AND timestamp<=? AND
 	 ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
-	GET_SYSTEM_LOG_NUM_OF_USER = `SELECT COUNT(*) FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND user = ? AND
+	GET_SYSTEM_LOG_NUM_OF_USER = `SELECT COUNT(*) FROM system_log WHERE timestamp>=? AND timestamp<=? AND user=? AND
 	 ip||user||module||method||error_code||error_msg||content LIKE ?`
-	GET_SYSTEM_LOG_OF_USER = `SELECT * FROM system_log WHERE timestamp >= ? AND timestamp <= ? AND user = ? AND
+	GET_SYSTEM_LOG_OF_USER = `SELECT * FROM system_log WHERE timestamp >= ? AND timestamp<=? AND user=? AND
 	 ip||user||module||method||error_code||error_msg||content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
-	DELETE_SYSTEM_LOG = `DELETE FROM system_log WHERE timestamp < ?`
+	DELETE_SYSTEM_LOG = `DELETE FROM system_log WHERE timestamp<?`
+
+	// alert conf
+	ADD_ALERT_CONF    = `INSERT INTO alert_conf(name, level, interval, times, enable, rule, desc) VALUES(?, ?, ?, ?, ?, ?, ?)`
+	UPDATE_ALERT_CONF = `UPDATE alert_conf SET interval=?, times=?, enable=?, rule=? WHERE name=?`
+	GET_ALERT_CONF    = `SELECT * FROM alert_conf ORDER BY id ASC`
+
+	// alert conf
+	ADD_ALERT_USER    = `INSERT INTO alert_user(alert, user) VALUES(?, ?)`
+	DELETE_ALERT_USER = `DELETE FROM alert_user WHERE alert=? AND user=?`
+	GET_ALERT_USER    = `SELECT user FROM alert_user WHERE alert=?`
 
 	// system alert
-	ADD_SYSTEM_ALERT     = `INSERT INTO system_alert(timestamp, level, module, duration, summary) VALUES(?, ?, ?, ?, ?)`
-	GET_SYSTEM_ALERT_NUM = `SELECT COUNT(*) FROM system_alert WHERE timestamp >= ? AND timestamp <= ? AND
-	 level||module||duration||summary LIKE ?`
-	GET_SYSTEM_ALERT = `SELECT * FROM system_alert WHERE timestamp >= ? AND timestamp <= ? AND
-	 level||module||duration||summary LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`
-	DELETE_SYSTEM_ALERT      = `DELETE FROM system_alert WHERE timestamp < ?`
-	GET_LAST_SYSTEM_ALERT_ID = `SELECT MAX(id) from system_alert`
+	ADD_SYSTEM_ALERT         = `INSERT INTO alert(timestamp, level, name, duration, summary) VALUES(?, ?, ?, ?, ?)`
+	GET_SYSTEM_ALERT_NUM     = `SELECT COUNT(*) FROM alert WHERE timestamp>=? AND timestamp<=?`
+	GET_SYSTEM_ALERT         = `SELECT * FROM alert WHERE timestamp>=? AND timestamp<=?`
+	DELETE_SYSTEM_ALERT      = `DELETE FROM alert WHERE timestamp<?`
+	GET_LAST_SYSTEM_ALERT_ID = `SELECT MAX(id) from alert`
 
-	ADD_READ_SYSTEM_ALERT_ID    = `INSERT INTO user_system_alert(username, id) VALUES(?, ?)`
-	GET_READ_SYSTEM_ALERT_ID    = `SELECT id FROM user_system_alert WHERE username = ?`
-	UPDATE_READ_SYSTEM_ALERT_ID = `UPDATE user_system_alert SET id = ? WHERE username = ?`
+	// read alert
+	ADD_READ_ALERT_ID    = `INSERT INTO read_alert(username, id) VALUES(?, ?)`
+	GET_READ_ALERT_ID    = `SELECT id FROM read_alert WHERE username=?`
+	UPDATE_READ_ALERT_ID = `UPDATE read_alert SET id=? WHERE username=?`
 )
