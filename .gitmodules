@@ -7,3 +7,6 @@
 [submodule "curve-go-rpc"]
 	path = curve-go-rpc
 	url = git@github.com:SeanHai/curve-go-rpc.git
+[submodule "external/website"]
+	path = external/website
+	url = ssh://git@g.hz.netease.com:22222/curve-frontend/curve-frontend-console.git

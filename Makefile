@@ -1,4 +1,6 @@
-.PHONY: init build debug test clean
+.PHONY: init build debug test clean image
+
+tag?= "curve-manager:unknown"
 
 # go env
 GOPROXY     := "https://goproxy.cn,direct"
@@ -61,4 +63,8 @@ test:
 	$(TEST_ENV) $(GO) test $(TEST_FLAGS) ./...
 
 clean:
-	rm -f bin/*
+	rm -rf bin/* docker/pigeon docker/website
+
+image:
+	bash image.sh $(tag)
+	
