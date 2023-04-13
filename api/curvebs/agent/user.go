@@ -69,7 +69,6 @@ func Login(r *pigeon.Request, name, passwd string) (interface{}, errno.Errno) {
 			pigeon.Field("userName", name),
 			pigeon.Field("inPassWord", passwd),
 			pigeon.Field("storedPassword", userInfo.PassWord),
-			pigeon.Field("error", err),
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.USER_PASSWORD_NOT_MATCH
 	}

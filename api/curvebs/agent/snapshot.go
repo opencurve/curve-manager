@@ -131,6 +131,14 @@ func DeleteSnapshot(r *pigeon.Request, fileName, user string, uuids []string, fa
 			}
 			if info.Total > 0 {
 				toDelete = append(toDelete, info.Info...)
+			} else {
+				r.Logger().Error("GetSnapshot by uuid failed",
+					pigeon.Field("uuid", uuid),
+					pigeon.Field("user", user),
+					pigeon.Field("fileName", fileName),
+					pigeon.Field("status", status),
+					pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+				return errno.GET_SNAPSHOT_FAILED
 			}
 		}
 	} else {

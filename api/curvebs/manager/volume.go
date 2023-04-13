@@ -79,7 +79,7 @@ func VolumeThrottle(r *pigeon.Request, ctx *Context) bool {
 
 func DeleteVolume(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*DeleteVolumeRequest)
-	err := agent.DeleteVolume(r, data.VolumeNames)
+	err := agent.DeleteVolume(r, data.VolumeNames, *data.Force)
 	return core.Exit(r, err)
 }
 

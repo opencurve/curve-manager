@@ -23,8 +23,6 @@
 package core
 
 import (
-	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,48 +59,48 @@ var (
 
 	// method to permission
 	method2permission = map[string]int{
-		USER_CREATE:                   READ_PERM + MANAGER_PERM,
-		USER_DELETE:                   READ_PERM + MANAGER_PERM,
-		USER_LIST:                     READ_PERM + MANAGER_PERM,
-		USER_UPDATE_PERMISSION:        READ_PERM + MANAGER_PERM,
-		USER_LOGIN:                    READ_PERM,
-		USER_LOGOUT:                   READ_PERM,
-		USER_GET:                      READ_PERM,
-		USER_UPDATE_PASSWORD:          READ_PERM,
-		USER_RESET_PASSWORD:           READ_PERM,
-		USER_UPDATE_EMAIL:             READ_PERM,
-		STATUS_ETCD:                   READ_PERM,
-		STATUS_MDS:                    READ_PERM,
-		STATUS_SNAPSHOTCLONESERVER:    READ_PERM,
-		STATUS_CHUNKSERVER:            READ_PERM,
-		STATUS_CLUSTER:                READ_PERM,
-		SPACE_CLUSTER:                 READ_PERM,
-		SPACE_TREND_CLUSTER:           READ_PERM,
-		PERFORMANCE_CLUSTER:           READ_PERM,
-		TOPO_LIST:                     READ_PERM,
-		TOPO_POOL_LIST:                READ_PERM,
-		TOPO_POOL_GET:                 READ_PERM,
-		VOLUME_LIST:                   READ_PERM,
-		VOLUME_GET:                    READ_PERM,
-		SNAPSHOT_LIST:                 READ_PERM,
-		HOST_LIST:                     READ_PERM,
-		HOST_GET:                      READ_PERM,
-		DISK_LIST:                     READ_PERM,
-		CLEAN_RECYCLEBIN:              READ_PERM + WRITE_PERM,
-		CREATE_NAMESPACE:              READ_PERM + WRITE_PERM,
-		CREATE_VOLUME:                 READ_PERM + WRITE_PERM,
-		EXTEND_VOLUME:                 READ_PERM + WRITE_PERM,
-		VOLUME_THROTTLE:               READ_PERM + WRITE_PERM,
-		DELETE_VOLUME:                 READ_PERM + WRITE_PERM,
-		RECOVER_VOLUME:                READ_PERM + WRITE_PERM,
-		CLONE_VOLUME:                  READ_PERM + WRITE_PERM,
-		CREATE_SNAPSHOT:               READ_PERM + WRITE_PERM,
-		CANCEL_SNAPSHOT:               READ_PERM + WRITE_PERM,
-		FLATTEN:                       READ_PERM + WRITE_PERM,
-		DELETE_SNAPSHOT:               READ_PERM + WRITE_PERM,
-		GET_SYSTEM_LOG:                READ_PERM,
-		GET_SYSTEM_ALERT:              READ_PERM,
-		GET_UNREAD_SYSTEM_ALERT_NUM:   READ_PERM,
+		USER_CREATE:                 READ_PERM + MANAGER_PERM,
+		USER_DELETE:                 READ_PERM + MANAGER_PERM,
+		USER_LIST:                   READ_PERM + MANAGER_PERM,
+		USER_UPDATE_PERMISSION:      READ_PERM + MANAGER_PERM,
+		USER_LOGIN:                  READ_PERM,
+		USER_LOGOUT:                 READ_PERM,
+		USER_GET:                    READ_PERM,
+		USER_UPDATE_PASSWORD:        READ_PERM,
+		USER_RESET_PASSWORD:         READ_PERM,
+		USER_UPDATE_EMAIL:           READ_PERM,
+		STATUS_ETCD:                 READ_PERM,
+		STATUS_MDS:                  READ_PERM,
+		STATUS_SNAPSHOTCLONESERVER:  READ_PERM,
+		STATUS_CHUNKSERVER:          READ_PERM,
+		STATUS_CLUSTER:              READ_PERM,
+		SPACE_CLUSTER:               READ_PERM,
+		SPACE_TREND_CLUSTER:         READ_PERM,
+		PERFORMANCE_CLUSTER:         READ_PERM,
+		TOPO_LIST:                   READ_PERM,
+		TOPO_POOL_LIST:              READ_PERM,
+		TOPO_POOL_GET:               READ_PERM,
+		VOLUME_LIST:                 READ_PERM,
+		VOLUME_GET:                  READ_PERM,
+		SNAPSHOT_LIST:               READ_PERM,
+		HOST_LIST:                   READ_PERM,
+		HOST_GET:                    READ_PERM,
+		DISK_LIST:                   READ_PERM,
+		CLEAN_RECYCLEBIN:            READ_PERM + WRITE_PERM,
+		CREATE_NAMESPACE:            READ_PERM + WRITE_PERM,
+		CREATE_VOLUME:               READ_PERM + WRITE_PERM,
+		EXTEND_VOLUME:               READ_PERM + WRITE_PERM,
+		VOLUME_THROTTLE:             READ_PERM + WRITE_PERM,
+		DELETE_VOLUME:               READ_PERM + WRITE_PERM,
+		RECOVER_VOLUME:              READ_PERM + WRITE_PERM,
+		CLONE_VOLUME:                READ_PERM + WRITE_PERM,
+		CREATE_SNAPSHOT:             READ_PERM + WRITE_PERM,
+		CANCEL_SNAPSHOT:             READ_PERM + WRITE_PERM,
+		FLATTEN:                     READ_PERM + WRITE_PERM,
+		DELETE_SNAPSHOT:             READ_PERM + WRITE_PERM,
+		GET_SYSTEM_LOG:              READ_PERM,
+		GET_SYSTEM_ALERT:            READ_PERM,
+		GET_UNREAD_SYSTEM_ALERT_NUM: READ_PERM,
 		UPDATE_READ_SYSTEM_ALERT_ID: READ_PERM,
 	}
 )
@@ -164,7 +162,7 @@ func checkTimeOut(r *pigeon.Request) bool {
 
 /*
 * algorithm：
-* 1. String-Items: HTTP-Method; URI; Args; QueryValue1; QueryValue2; ... QueryValuen; Timestamp; Token
+* 1. String-Items: HTTP-Method; URI; Args; Timestamp; Token
 * 2. Sorted-Items: sort String-Items based alphabetically
 * 3. Sign-String: join Sorted-Items with ":"
 * 4. Sign: MD532Little(Sign-String)
@@ -177,13 +175,13 @@ func checkSignature(r *pigeon.Request, data interface{}) bool {
 	for _, v := range r.Args {
 		stringItems = append(stringItems, v)
 	}
-	v := reflect.ValueOf(data)
-	for i := 0; i < v.Elem().NumField(); i++ {
-		value := fmt.Sprintf("%+v", v.Elem().Field(i))
-		if value != "" {
-			stringItems = append(stringItems, value)
-		}
-	}
+	// v := reflect.ValueOf(data)
+	// for i := 0; i < v.Elem().NumField(); i++ {
+	// 	value := fmt.Sprintf("%+v", v.Elem().Field(i))
+	// 	if value != "" {
+	// 		stringItems = append(stringItems, value)
+	// 	}
+	// }
 	sort.Strings(stringItems)
 	signStr := strings.Join(stringItems, ":")
 	sign := common.GetMd5Sum32Little(signStr)

@@ -155,6 +155,7 @@ type VolumeThrottleRequest struct {
 
 type DeleteVolumeRequest struct {
 	VolumeNames map[string]string `json:"volumeNames" binding:"required"`
+	Force       *bool             `json:"force" default:"false"`
 }
 
 type RecoverVolumeRequest struct {

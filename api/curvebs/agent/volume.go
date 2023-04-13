@@ -382,7 +382,7 @@ func GetVolume(r *pigeon.Request, volumeName string) (interface{}, errno.Errno) 
 	}
 	fileInfo, e := bsrpc.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
-		if e.Error() == FILE_NOT_EXIST || e.Error() == PARAM_ERROR{
+		if e.Error() == FILE_NOT_EXIST || e.Error() == PARAM_ERROR {
 			return nil, errno.OK
 		}
 		r.Logger().Error("GetVolume failed",
@@ -588,7 +588,7 @@ func VolumeThrottle(r *pigeon.Request, name, throttleType string, limit, burst, 
 	return errno.OK
 }
 
-func deleteVolume(r *pigeon.Request, volumes *map[string]string, auth *AuthInfo) bool {
+func deleteVolume(r *pigeon.Request, volumes *map[string]string, force bool, auth *AuthInfo) bool {
 	success := true
 	for name, ftype := range *volumes {
 		if ftype == curvebs.INODE_DIRECTORY {
@@ -603,12 +603,13 @@ func deleteVolume(r *pigeon.Request, volumes *map[string]string, auth *AuthInfo)
 			for _, file := range fileInfos {
 				v[path.Join(name, file.FileName)] = file.FileType
 			}
-			deleteVolume(r, &v, auth)
+			deleteVolume(r, &v, force, auth)
 		}
-		e := bsrpc.GMdsClient.DeleteFile(name, auth.userName, auth.signatrue, 0, auth.date, false)
+		e := bsrpc.GMdsClient.DeleteFile(name, auth.userName, auth.signatrue, 0, auth.date, force)
 		if e != nil {
 			r.Logger().Error("DeleteVolume failed",
 				pigeon.Field("name", name),
+				pigeon.Field("force", force),
 				pigeon.Field("error", e),
 				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 			success = false
@@ -617,7 +618,7 @@ func deleteVolume(r *pigeon.Request, volumes *map[string]string, auth *AuthInfo)
 	return success
 }
 
-func DeleteVolume(r *pigeon.Request, volumes map[string]string) errno.Errno {
+func DeleteVolume(r *pigeon.Request, volumes map[string]string, force bool) errno.Errno {
 	if len(volumes) == 0 {
 		return errno.OK
 	}
@@ -629,7 +630,7 @@ func DeleteVolume(r *pigeon.Request, volumes map[string]string) errno.Errno {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.GET_ROOT_AUTH_FAILED
 	}
-	if !deleteVolume(r, &volumes, authInfo) {
+	if !deleteVolume(r, &volumes, force, authInfo) {
 		return errno.DELETE_VOLUME_FAILED
 	}
 	return errno.OK
