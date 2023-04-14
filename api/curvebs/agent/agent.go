@@ -30,6 +30,9 @@ import (
 const (
 	SYSTEM_LOG_EXPIRATION_DAYS         = "system.log.expiration.days"
 	DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS = 30
+
+	SYSTEM_ALERT_EXPIRATION_DAYS         = "system.alert.expiration.days"
+	DEFAULT_SYSTEM_ALERT_EXPIRATION_DAYS = 30
 )
 
 var (
@@ -37,15 +40,21 @@ var (
 )
 
 func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
-	expirationDays := cfg.GetConfig().GetInt(SYSTEM_LOG_EXPIRATION_DAYS)
-	if expirationDays <= 0 {
-		expirationDays = DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS
+	logExpirationDays := cfg.GetConfig().GetInt(SYSTEM_LOG_EXPIRATION_DAYS)
+	if logExpirationDays <= 0 {
+		logExpirationDays = DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS
 	}
+
+	alertExpirationDays := cfg.GetConfig().GetInt(SYSTEM_ALERT_EXPIRATION_DAYS)
+	if alertExpirationDays <= 0 {
+		alertExpirationDays = DEFAULT_SYSTEM_ALERT_EXPIRATION_DAYS
+	}
+
 	// write system operation log
 	systemLogChann = make(chan storage.Log, 128)
 	go writeSystemLog(logger)
 	// clear expired logs
-	go clearExpiredSystemLog(expirationDays, logger)
+	go clearExpiredSystemLog(logExpirationDays, logger)
 	// start system alerts
-	return initAlerts(logger)
+	return initAlerts(alertExpirationDays, logger)
 }

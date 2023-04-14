@@ -37,6 +37,8 @@ import (
 const (
 	ALERT_REQUEST_ID = "alert"
 
+	CLEAR_ALERT_INTERVAL = 1 * time.Hour
+
 	ALERT_CLUSTER               = "cluster"
 	ALERT_SPACE                 = "space"
 	ALERT_ETCD                  = "etcd"
@@ -228,7 +230,7 @@ type chunkserverServiceAlert struct {
 	ctx alertContext
 }
 
-func initAlerts(logger *pigeon.Logger) error {
+func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 	var initConfs []storage.AlertConf
 	alertInfo, err := storage.GetAlertConf()
 	if err != nil {
@@ -305,10 +307,32 @@ func initAlerts(logger *pigeon.Logger) error {
 		}
 	}
 	go updateAlertConf(logger)
+	go clearExpiredAlert(expirationDays, logger)
 	return nil
 }
 
+func clearExpiredAlert(expirationDays int, logger *pigeon.Logger) {
+	logger.Info("start clear expired alert info",
+		pigeon.Field("interval second", CLEAR_ALERT_INTERVAL.Seconds()),
+		pigeon.Field("expired days", expirationDays))
+	timer := time.NewTimer(CLEAR_ALERT_INTERVAL)
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			err := storage.DeleteAlert(time.Now().AddDate(0, 0, -expirationDays).UnixMilli())
+			if err != nil {
+				logger.Error("clear expired alert failed",
+					pigeon.Field("error", err))
+			}
+			timer.Reset(CLEAR_ALERT_INTERVAL)
+		}
+	}
+}
+
 func updateAlertConf(logger *pigeon.Logger) {
+	logger.Info("start update alert conf",
+		pigeon.Field("udapte interval seconds", UPDATE_ALERT_CONF_INTERVAL_SEC))
 	timer := time.NewTimer(time.Duration(UPDATE_ALERT_CONF_INTERVAL_SEC) * time.Second)
 	defer timer.Stop()
 	for {
@@ -369,6 +393,8 @@ func handleAlert(level int, name string, duration uint32, summary string) error 
 }
 
 func (alert *clusterAlert) check(logger *pigeon.Logger) {
+	logger.Info("start cluster alert checker",
+		pigeon.Field("interval seconds", alert.ctx.getInterval()))
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
@@ -400,6 +426,8 @@ func (alert *clusterAlert) check(logger *pigeon.Logger) {
 }
 
 func (alert *spaceAlert) check(logger *pigeon.Logger) {
+	logger.Info("start space alert checker",
+		pigeon.Field("interval seconds", alert.ctx.getInterval()))
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
@@ -436,6 +464,8 @@ func (alert *spaceAlert) check(logger *pigeon.Logger) {
 }
 
 func (alert *etcdServiceAlert) check(logger *pigeon.Logger) {
+	logger.Info("start etcd alert checker",
+		pigeon.Field("interval seconds", alert.ctx.getInterval()))
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
@@ -463,6 +493,8 @@ func (alert *etcdServiceAlert) check(logger *pigeon.Logger) {
 }
 
 func (alert *mdsServiceAlert) check(logger *pigeon.Logger) {
+	logger.Info("start mds alert checker",
+		pigeon.Field("interval seconds", alert.ctx.getInterval()))
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
@@ -490,6 +522,8 @@ func (alert *mdsServiceAlert) check(logger *pigeon.Logger) {
 }
 
 func (alert *snapshotCloneServiceAlert) check(logger *pigeon.Logger) {
+	logger.Info("start snapshotcloneserver alert checker",
+		pigeon.Field("interval seconds", alert.ctx.getInterval()))
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
@@ -517,6 +551,8 @@ func (alert *snapshotCloneServiceAlert) check(logger *pigeon.Logger) {
 }
 
 func (alert *chunkserverServiceAlert) check(logger *pigeon.Logger) {
+	logger.Info("start chunkserver alert checker",
+		pigeon.Field("interval seconds", alert.ctx.getInterval()))
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {

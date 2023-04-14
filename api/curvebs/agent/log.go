@@ -37,6 +37,9 @@ const (
 )
 
 func clearExpiredSystemLog(expirationDays int, logger *pigeon.Logger) {
+	logger.Info("start clear expired system log",
+		pigeon.Field("interval seconds", CLEAR_SYSTEM_LOG_INTERVAL.Seconds()),
+		pigeon.Field("expired days", expirationDays))
 	timer := time.NewTimer(CLEAR_SYSTEM_LOG_INTERVAL)
 	defer timer.Stop()
 	for {
@@ -53,6 +56,8 @@ func clearExpiredSystemLog(expirationDays int, logger *pigeon.Logger) {
 }
 
 func writeSystemLog(logger *pigeon.Logger) {
+	logger.Info("start write system log",
+		pigeon.Field("interval seconds", WRITE_SYSTEM_LOG_INTERVAL.Seconds()))
 	timer := time.NewTimer(WRITE_SYSTEM_LOG_INTERVAL)
 	defer timer.Stop()
 	for {

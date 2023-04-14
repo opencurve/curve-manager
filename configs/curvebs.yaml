@@ -16,6 +16,7 @@ servers:
       access.login.expire_seconds: 1800
       enable.multiple.write.user.login: false
       system.log.expiration.days: 30
+      system.alert.expiration.days: 30
       etcd.address: 127.0.0.1:2379,127.0.0.2:2379,127.0.0.3:2379
       mds.address: 127.0.0.1:6666,127.0.0.2:6666,127.0.0.3:6666
       mds.dummy.address: 127.0.0.1:6667,127.0.0.2:6667,127.0.0.3:6667

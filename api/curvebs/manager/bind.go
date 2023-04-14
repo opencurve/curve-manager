@@ -95,7 +95,7 @@ type ListVolumeRequest struct {
 	Page          uint32 `json:"page" binding:"required"`
 	Path          string `json:"path" default:"/"`
 	SortKey       string `json:"sortKey" default:"id"`
-	SortDirection int    `json:"sortDirection" default:"1"`
+	SortDirection int    `json:"sortDirection" default:"-1"`
 }
 
 type GetVolumeRequest struct {
