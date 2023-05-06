@@ -22,12 +22,10 @@
 package curvebs
 
 import (
-	"fmt"
 	"strings"
 
 	bsrpc "github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	"github.com/opencurve/curve-manager/internal/common"
-	"github.com/opencurve/pigeon"
 )
 
 var (
@@ -41,15 +39,11 @@ const (
 	DEFAULT_RPC_RETRY_TIMES = 3
 )
 
-func Init(cfg *pigeon.Configure) error {
-	addrs := cfg.GetConfig().GetString(CURVEBS_MDS_ADDRESS)
-	if len(addrs) == 0 {
-		return fmt.Errorf("no cluster mds address found")
-	}
+func Init(cfg map[string]interface{}) {
+	addrs := cfg[CURVEBS_MDS_ADDRESS].(string)
 	GMdsClient = bsrpc.NewMdsClient(bsrpc.MdsClientOption{
 		TimeoutMs:  DEFAULT_RPC_TIMEOUT_MS,
 		RetryTimes: DEFAULT_RPC_RETRY_TIMES,
 		Addrs:      strings.Split(addrs, common.CURVEBS_ADDRESS_DELIMITER),
 	})
-	return nil
 }

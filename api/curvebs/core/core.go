@@ -99,6 +99,7 @@ const (
 	DEPLOY_DISK_FORMAT        = "deploy.disk.format"
 	DEPLOY_CONFIG_SHOW        = "deploy.config.show"
 	DEPLOY_CONFIG_COMMIT      = "deploy.config.commit"
+	DEPLOY_CLUSTER_LIST       = "deploy.cluster.list"
 	DEPLOY_CLUSTER_ADD        = "deploy.cluster.add"
 	DEPLOY_CLUSTER_DEPLOY     = "deploy.cluster.deploy"
 )

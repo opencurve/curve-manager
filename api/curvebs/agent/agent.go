@@ -23,6 +23,9 @@
 package agent
 
 import (
+	metrics "github.com/opencurve/curve-manager/internal/metrics/core"
+	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
+	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
 )
@@ -59,4 +62,21 @@ func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 	go clearExpiredSystemLog(logExpirationDays, logger)
 	// start system alerts
 	return initAlerts(alertExpirationDays, logger)
+}
+
+func InitClients() error {
+	clientsAddr, err := GetCurrentClusterServicesAddr()
+	if err != nil {
+		return err
+	}
+
+	// init mds rpc client
+	bsrpc.Init(clientsAddr)
+
+	// init metric client
+	metrics.Init(clientsAddr)
+
+	// init snapshot clone client
+	snapshotclone.Init(clientsAddr)
+	return nil
 }

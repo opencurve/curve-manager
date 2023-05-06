@@ -24,16 +24,11 @@ package core
 
 import (
 	"fmt"
-	"net"
-	"net/http"
 	"net/url"
-	"runtime"
 	"strings"
-	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/opencurve/curve-manager/internal/common"
-	"github.com/opencurve/pigeon"
 )
 
 const (
@@ -55,52 +50,15 @@ var (
 	GMetricClient *metricClient
 )
 
-func Init(cfg *pigeon.Configure) error {
+func Init(cfg map[string]interface{}) {
 	GMetricClient = &metricClient{}
-	// init http client
-	dialer := &net.Dialer{
-		Timeout:   1 * time.Second,
-		KeepAlive: 10 * time.Second,
-		DualStack: true,
-	}
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialer.DialContext,
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxConnsPerHost:       100,
-			MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
-		},
-	}
+	GMetricClient.client = resty.NewWithClient(common.GetHttpClient())
 
-	GMetricClient.client = resty.NewWithClient(httpClient)
-	addr := cfg.GetConfig().GetString(CURVEBS_MONITOR_ADDRESS)
-	if len(addr) == 0 {
-		return fmt.Errorf("no cluster monitor address found")
-	}
-	GMetricClient.PromeAddr = addr
-
-	addr = cfg.GetConfig().GetString(CURVEBS_ETCD_ADDRESS)
-	if len(addr) == 0 {
-		return fmt.Errorf("no cluster etcd address found")
-	}
-	GMetricClient.EtcdAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
-
-	addr = cfg.GetConfig().GetString(CURVEBS_MDS_DUMMY_ADDRESS)
-	if len(addr) == 0 {
-		return fmt.Errorf("no cluster mds dummy address found")
-	}
-	GMetricClient.MdsDummyAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
-
-	addr = cfg.GetConfig().GetString(CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS)
-	if len(addr) != 0 {
-		GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
-	}
-	return nil
+	GMetricClient.PromeAddr = cfg[CURVEBS_MONITOR_ADDRESS].(string)
+	GMetricClient.EtcdAddr = strings.Split(cfg[CURVEBS_ETCD_ADDRESS].(string), common.CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.MdsDummyAddr = strings.Split(cfg[CURVEBS_MDS_DUMMY_ADDRESS].(string), common.CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(cfg[CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS].(string),
+		common.CURVEBS_ADDRESS_DELIMITER)
 }
 
 func (cli *metricClient) GetMetricFromService(host, path string) (interface{}, error) {

@@ -37,6 +37,7 @@ const (
 	ADM_DISK_FORMAT        = "disk.format"
 	ADM_CONFIG_SHOW        = "config.show"
 	ADM_CONFIG_COMMIT      = "config.commit"
+	ADM_CLUSTER_LIST       = "cluster.list"
 	ADM_CLUSTER_ADD        = "cluster.add"
 	ADM_CLUSTER_DEPLOY     = "cluster.deploy"
 	ADM_UNSUPPORT          = "unsupport"
@@ -64,6 +65,8 @@ func getAdmMethod(method string) string {
 		return ADM_CLUSTER_ADD
 	case core.DEPLOY_CLUSTER_DEPLOY:
 		return ADM_CLUSTER_DEPLOY
+	case core.DEPLOY_CLUSTER_LIST:
+		return ADM_CLUSTER_LIST
 	default:
 		return ADM_UNSUPPORT
 	}

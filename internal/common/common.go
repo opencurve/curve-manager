@@ -26,6 +26,9 @@ import (
 	"crypto/md5"
 	"fmt"
 	"math/rand"
+	"net"
+	"net/http"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -104,4 +107,27 @@ func Mill2TimeStr(mill int64) string {
 	sec := mill / 1000
 	t := time.Unix(sec, mill%1000*int64(time.Millisecond))
 	return t.Format(TIME_MS_FORMAT)
+}
+
+func GetHttpClient() *http.Client {
+	// init http client
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialer.DialContext,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxConnsPerHost:       100,
+			MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
+		},
+	}
+	return httpClient
 }
