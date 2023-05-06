@@ -16,34 +16,27 @@
 
 /*
 * Project: Curve-Manager
-* Created Date: 2023-02-11
+* Created Date: 2023-04-14
 * Author: wanghai (SeanHai)
  */
 
-package curvebs
+package agent
 
 import (
-	"github.com/opencurve/curve-manager/api/curvebs/core"
-	"github.com/opencurve/curve-manager/api/curvebs/deploy"
-	"github.com/opencurve/curve-manager/api/curvebs/manager"
-	"github.com/opencurve/curve-manager/api/curvebs/user"
+	"fmt"
+
 	"github.com/opencurve/pigeon"
 )
 
-func NewServer() *pigeon.HTTPServer {
-	server := pigeon.NewHTTPServer("curvebs")
-	server.Initer(func(cfg *pigeon.Configure) error {
-		return core.Init(cfg, server.Logger())
-	})
-	server.Route("/curvebs",
-		core.Rewrite,
-		manager.Entrypoint,
-		user.Entrypoint,
-		deploy.Entrypoint)
-	server.DefaultRoute(core.Default)
-	return server
-}
+const (
+	CURVEADM_SERVICE_ADDRESS = "curveadm.service.address"
+)
 
-func main() {
-	pigeon.Serve(NewServer())
+var (
+	curveadm_service_addr = ""
+)
+
+func ProxyPass(r *pigeon.Request, body interface{}, method string) bool {
+	args := fmt.Sprintf("method=%s", method)
+	return r.ProxyPass(curveadm_service_addr, r.WithURI("/"), r.WithArgs(args), r.WithScheme("http"), r.WithBody(body))
 }

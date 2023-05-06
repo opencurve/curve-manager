@@ -4,3 +4,4 @@ bin/*
 external/*
 docker/pigeon
 docker/website
+docker/pigeon.yaml

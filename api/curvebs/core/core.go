@@ -89,6 +89,18 @@ const (
 	UPDATE_ALERT_CONF           = "alert.conf.update"
 	GET_ALERT_CANDIDATE         = "alert.candidate.get"
 	UPDATE_ALERT_USER           = "alert.user.update"
+
+	// deploy
+	DEPLOY_HOST_LIST          = "deploy.host.list"
+	DEPLOY_HOST_COMMIT        = "deploy.host.commit"
+	DEPLOY_DISK_LIST          = "deploy.disk.list"
+	DEPLOY_DISK_COMMIT        = "deploy.disk.commit"
+	DEPLOY_DISK_FORMAT_STATUS = "deploy.disk.format.status"
+	DEPLOY_DISK_FORMAT        = "deploy.disk.format"
+	DEPLOY_CONFIG_SHOW        = "deploy.config.show"
+	DEPLOY_CONFIG_COMMIT      = "deploy.config.commit"
+	DEPLOY_CLUSTER_ADD        = "deploy.cluster.add"
+	DEPLOY_CLUSTER_DEPLOY     = "deploy.cluster.deploy"
 )
 
 func Exit(r *pigeon.Request, code errno.Errno) bool {

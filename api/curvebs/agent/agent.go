@@ -50,6 +50,8 @@ func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 		alertExpirationDays = DEFAULT_SYSTEM_ALERT_EXPIRATION_DAYS
 	}
 
+	curveadm_service_addr = cfg.GetConfig().GetString(CURVEADM_SERVICE_ADDRESS)
+
 	// write system operation log
 	systemLogChann = make(chan storage.Log, 128)
 	go writeSystemLog(logger)

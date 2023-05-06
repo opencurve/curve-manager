@@ -31,7 +31,7 @@ import (
 )
 
 type Alert struct {
-	id          int64
+	Id          int64  `json:"id"`
 	TimeMs      int64  `json:"-"`
 	Time        string `json:"time"`
 	Level       int    `json:"-"`
@@ -128,7 +128,7 @@ func GetAlert(start, end int64, limit, offset uint32, name, level, filter string
 		}
 		for rows.Next() {
 			var alert Alert
-			err = rows.Scan(&alert.id, &alert.TimeMs, &alert.Level, &alert.Name, &alert.DurationSec, &alert.Summary)
+			err = rows.Scan(&alert.Id, &alert.TimeMs, &alert.Level, &alert.Name, &alert.DurationSec, &alert.Summary)
 			if err != nil {
 				return alerts, err
 			}

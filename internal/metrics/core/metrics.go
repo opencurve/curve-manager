@@ -100,7 +100,6 @@ func Init(cfg *pigeon.Configure) error {
 	if len(addr) != 0 {
 		GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(addr, common.CURVEBS_ADDRESS_DELIMITER)
 	}
-
 	return nil
 }
 
