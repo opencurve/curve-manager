@@ -122,7 +122,7 @@ var (
 	FIND_VOLUME_MOUNTPOINT_FAILED     = Errno{503323, "find volume mountpoint failed"}
 	GET_SYSTEM_LOG_FAILED             = Errno{503324, "get system operation log failed"}
 	GET_SYSTEM_ALERT_FAILED           = Errno{503325, "get system alert failed"}
-	GET_LAST_ALERT_ID_FAILED          = Errno{503326, "get lasr alert id failed"}
+	GET_UNREAD_ALERT_NUM_FAILED       = Errno{503326, "get unread alert num failed"}
 	GET_READ_ALERT_ID_FAILED          = Errno{503327, "get read alert id failed"}
 	ADD_READ_ALERT_ID_FAILED          = Errno{503328, "add read alert id failed"}
 	UPDATE_UNREAD_ALERT_ID_FAILED     = Errno{503329, "update unread alert id failed"}

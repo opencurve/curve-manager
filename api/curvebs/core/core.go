@@ -100,6 +100,7 @@ const (
 	DEPLOY_CONFIG_SHOW        = "deploy.config.show"
 	DEPLOY_CONFIG_COMMIT      = "deploy.config.commit"
 	DEPLOY_CLUSTER_LIST       = "deploy.cluster.list"
+	DEPLOY_CLUSTER_CHECKOUT   = "deploy.cluster.checkout"
 	DEPLOY_CLUSTER_ADD        = "deploy.cluster.add"
 	DEPLOY_CLUSTER_DEPLOY     = "deploy.cluster.deploy"
 )
@@ -113,7 +114,7 @@ func Exit(r *pigeon.Request, code errno.Errno) bool {
 		r.HeadersOut[comm.HEADER_ERROR_CODE] = strconv.Itoa(code.Code())
 	}
 	if NeedRecordLog(r) {
-		agent.WriteSystemLog(r.Context.RemoteIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
+		agent.WriteSystemLog(r.Context.ClientIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
 			r.Args[METHOD], code.Description(), r.HeadersIn[comm.HEADER_LOG_CONTENT], code.Code())
 	}
 	return r.Exit(code.HTTPCode())
@@ -131,7 +132,7 @@ func ExitSuccessWithData(r *pigeon.Request, data interface{}) bool {
 		"errorMsg":  "success",
 	})
 	if NeedRecordLog(r) {
-		agent.WriteSystemLog(r.Context.RemoteIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
+		agent.WriteSystemLog(r.Context.ClientIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
 			r.Args[METHOD], "success", r.HeadersIn[comm.HEADER_LOG_CONTENT], 0)
 	}
 	return r.Exit(200)

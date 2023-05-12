@@ -43,7 +43,7 @@ func getLevelStr(l int) string {
 }
 
 type AlertConf struct {
-	id         int64
+	ClusterId  int
 	Name       string
 	Level      int
 	LevelStr   string
@@ -56,23 +56,24 @@ type AlertConf struct {
 }
 
 func AddAlertConf(conf *AlertConf) error {
-	return gStorage.execSQL(ADD_ALERT_CONF, conf.Name, conf.Level, conf.Interval, conf.Times, conf.Enable, conf.Rule, conf.Desc)
+	return gStorage.execSQL(ADD_ALERT_CONF, conf.ClusterId, conf.Name, conf.Level, conf.Interval, conf.Times,
+		conf.Enable, conf.Rule, conf.Desc)
 }
 
 func UpdateAlertConf(conf *AlertConf) error {
-	return gStorage.execSQL(UPDATE_ALERT_CONF, conf.Interval, conf.Times, conf.Enable, conf.Rule, conf.Name)
+	return gStorage.execSQL(UPDATE_ALERT_CONF, conf.Interval, conf.Times, conf.Enable, conf.Rule, conf.ClusterId, conf.Name)
 }
 
-func GetAlertConf() ([]AlertConf, error) {
+func GetAlertConf(clusterId int) ([]AlertConf, error) {
 	info := []AlertConf{}
-	rows, err := gStorage.querySQL(GET_ALERT_CONF)
+	rows, err := gStorage.querySQL(GET_ALERT_CONF, clusterId)
 	if err != nil {
 		return info, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		item := AlertConf{}
-		err := rows.Scan(&item.id, &item.Name, &item.Level, &item.Interval, &item.Times, &item.Enable, &item.Rule, &item.Desc)
+		err := rows.Scan(&item.ClusterId, &item.Name, &item.Level, &item.Interval, &item.Times, &item.Enable, &item.Rule, &item.Desc)
 		if err != nil {
 			return nil, err
 		}

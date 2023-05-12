@@ -24,9 +24,9 @@ package storage
 
 import "fmt"
 
-func AddAlertUser(alertName string, users []string) error {
+func AddAlertUser(clusterId int, alertName string, users []string) error {
 	for _, user := range users {
-		err := gStorage.execSQL(ADD_ALERT_USER, alertName, user)
+		err := gStorage.execSQL(ADD_ALERT_USER, clusterId, alertName, user)
 		if err != nil {
 			return fmt.Errorf("user: %s, error: %s", user, err)
 		}
@@ -34,9 +34,9 @@ func AddAlertUser(alertName string, users []string) error {
 	return nil
 }
 
-func DeleteAlertUser(alertName string, users []string) error {
+func DeleteAlertUser(clusterId int, alertName string, users []string) error {
 	for _, user := range users {
-		err := gStorage.execSQL(DELETE_ALERT_USER, alertName, user)
+		err := gStorage.execSQL(DELETE_ALERT_USER, clusterId, alertName, user)
 		if err != nil {
 			return fmt.Errorf("user: %s, error: %s", user, err)
 		}
@@ -44,9 +44,9 @@ func DeleteAlertUser(alertName string, users []string) error {
 	return nil
 }
 
-func GetAlertUser(alertName string) ([]string, error) {
+func GetAlertUser(clusterId int, alertName string) ([]string, error) {
 	users := []string{}
-	rows, err := gStorage.querySQL(GET_ALERT_USER, alertName)
+	rows, err := gStorage.querySQL(GET_ALERT_USER, clusterId, alertName)
 	if err != nil {
 		return nil, err
 	}

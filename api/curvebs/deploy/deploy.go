@@ -23,6 +23,7 @@
 package deploy
 
 import (
+	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/api/curvebs/agent"
 	"github.com/opencurve/curve-manager/api/curvebs/core"
 	"github.com/opencurve/pigeon"
@@ -38,6 +39,7 @@ const (
 	ADM_CONFIG_SHOW        = "config.show"
 	ADM_CONFIG_COMMIT      = "config.commit"
 	ADM_CLUSTER_LIST       = "cluster.list"
+	ADM_CLUSTER_CHECKOUT   = "cluster.checkout"
 	ADM_CLUSTER_ADD        = "cluster.add"
 	ADM_CLUSTER_DEPLOY     = "cluster.deploy"
 	ADM_UNSUPPORT          = "unsupport"
@@ -67,11 +69,18 @@ func getAdmMethod(method string) string {
 		return ADM_CLUSTER_DEPLOY
 	case core.DEPLOY_CLUSTER_LIST:
 		return ADM_CLUSTER_LIST
+	case core.DEPLOY_CLUSTER_CHECKOUT:
+		return ADM_CLUSTER_CHECKOUT
 	default:
 		return ADM_UNSUPPORT
 	}
 }
 
 func DealDeploy(r *pigeon.Request, ctx *Context) bool {
-	return agent.ProxyPass(r, ctx.Data, getAdmMethod(r.Args[core.METHOD]))
+	ret := agent.ProxyPass(r, ctx.Data, getAdmMethod(r.Args[core.METHOD]))
+	if core.NeedRecordLog(r) {
+		agent.WriteSystemLog(r.Context.ClientIP(), r.HeadersIn[comm.HEADER_LOG_USER], core.BELONG[r.Args[core.METHOD]],
+			r.Args[core.METHOD], "proxy", r.HeadersIn[comm.HEADER_LOG_CONTENT], r.Status)
+	}
+	return ret
 }

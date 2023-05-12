@@ -39,16 +39,20 @@ const (
 )
 
 var (
-	systemLogChann chan storage.Log
+	logExpirationDays   int
+	alertExpirationDays int
+	systemLogChann      chan storage.Log
+	clusterAddrs        clusterServicesAddr
+	currentClusterId    int
 )
 
 func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
-	logExpirationDays := cfg.GetConfig().GetInt(SYSTEM_LOG_EXPIRATION_DAYS)
+	logExpirationDays = cfg.GetConfig().GetInt(SYSTEM_LOG_EXPIRATION_DAYS)
 	if logExpirationDays <= 0 {
 		logExpirationDays = DEFAULT_SYSTEM_LOG_EXPIRATION_DAYS
 	}
 
-	alertExpirationDays := cfg.GetConfig().GetInt(SYSTEM_ALERT_EXPIRATION_DAYS)
+	alertExpirationDays = cfg.GetConfig().GetInt(SYSTEM_ALERT_EXPIRATION_DAYS)
 	if alertExpirationDays <= 0 {
 		alertExpirationDays = DEFAULT_SYSTEM_ALERT_EXPIRATION_DAYS
 	}
@@ -60,23 +64,33 @@ func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 	go writeSystemLog(logger)
 	// clear expired logs
 	go clearExpiredSystemLog(logExpirationDays, logger)
-	// start system alerts
-	return initAlerts(alertExpirationDays, logger)
+	return nil
 }
 
-func InitClients() error {
-	clientsAddr, err := GetCurrentClusterServicesAddr()
+func InitClients(logger *pigeon.Logger) error {
+	var err error
+	clusterAddrs, err = GetCurrentClusterServicesAddr()
 	if err != nil {
 		return err
 	}
 
 	// init mds rpc client
-	bsrpc.Init(clientsAddr)
+	bsrpc.Init(clusterAddrs.Addrs)
 
 	// init metric client
-	metrics.Init(clientsAddr)
+	metrics.Init(clusterAddrs.Addrs)
 
 	// init snapshot clone client
-	snapshotclone.Init(clientsAddr)
+	snapshotclone.Init(clusterAddrs.Addrs)
+
+	if currentClusterId <= 0 && clusterAddrs.ClusterId > 0 {
+		currentClusterId = clusterAddrs.ClusterId
+		return initAlerts(alertExpirationDays, logger)
+	} 
+	if currentClusterId > 0 {
+		stopAlertTasks()
+		currentClusterId = clusterAddrs.ClusterId
+		return initAlerts(alertExpirationDays, logger)
+	}
 	return nil
 }

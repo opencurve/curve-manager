@@ -37,28 +37,42 @@ const (
 
 	CLUSTER_SERVICES_ADDRESS = "cluster.service.addr"
 
-	METHOD_CLUSTER_DEPLOY = "deploy.cluster.deploy"
+	METHOD_DEPLOY_CLUSTER   = "cluster.deploy"
+	METHOD_CHECKOUT_CLUSTER = "cluster.checkout"
 )
 
 var (
 	curveadm_service_addr = ""
 )
 
-type AdmHttpResponse struct {
-	ErrorCode string      `json:"errorCode"`
-	ErrorMsg  string      `json:"errorMsg"`
-	Data      interface{} `json:"data"`
+type clusterServicesAddr struct {
+	ClusterId int               `json:"clusterId"`
+	Addrs     map[string]string `json:"addrs"`
+}
+
+type admHttpResponse struct {
+	ErrorCode string              `json:"errorCode"`
+	ErrorMsg  string              `json:"errorMsg"`
+	Data      clusterServicesAddr `json:"data"`
+}
+
+func needReloadConf(method string) bool {
+	if method == METHOD_DEPLOY_CLUSTER || method == METHOD_CHECKOUT_CLUSTER {
+		return true
+	}
+	return false
 }
 
 func ProxyPass(r *pigeon.Request, body interface{}, method string) bool {
 	args := fmt.Sprintf("method=%s", method)
-	if method == METHOD_CLUSTER_DEPLOY {
-		defer InitClients()
+	if needReloadConf(method) {
+		defer InitClients(r.Logger())
 	}
 	return r.ProxyPass(curveadm_service_addr, r.WithURI("/"), r.WithArgs(args), r.WithScheme("http"), r.WithBody(body))
 }
 
-func GetCurrentClusterServicesAddr() (map[string]interface{}, error) {
+func GetCurrentClusterServicesAddr() (clusterServicesAddr, error) {
+	ret := clusterServicesAddr{}
 	httpClient := common.GetHttpClient()
 	url := (&url.URL{
 		Scheme:   "http",
@@ -73,13 +87,13 @@ func GetCurrentClusterServicesAddr() (map[string]interface{}, error) {
 		SetHeader("User-Agent", "Curve-Manager").
 		Execute("GET", url)
 	if err != nil {
-		return nil, fmt.Errorf("getClusterServicesAddr failed: %v", err)
+		return ret, fmt.Errorf("getClusterServicesAddr failed: %v", err)
 	}
 
-	respStruct := AdmHttpResponse{}
+	respStruct := admHttpResponse{}
 	err = json.Unmarshal([]byte(resp.String()), &respStruct)
 	if err != nil {
-		return nil, fmt.Errorf("Unmarshal getClusterServicesAddr response failed, resp = %s, err = %v", resp.String(), err)
+		return ret, fmt.Errorf("Unmarshal getClusterServicesAddr response failed, resp = %s, err = %v", resp.String(), err)
 	}
-	return respStruct.Data.(map[string]interface{}), nil
+	return respStruct.Data, nil
 }

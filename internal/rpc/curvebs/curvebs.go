@@ -39,8 +39,8 @@ const (
 	DEFAULT_RPC_RETRY_TIMES = 3
 )
 
-func Init(cfg map[string]interface{}) {
-	addrs := cfg[CURVEBS_MDS_ADDRESS].(string)
+func Init(cfg map[string]string) {
+	addrs := cfg[CURVEBS_MDS_ADDRESS]
 	GMdsClient = bsrpc.NewMdsClient(bsrpc.MdsClientOption{
 		TimeoutMs:  DEFAULT_RPC_TIMEOUT_MS,
 		RetryTimes: DEFAULT_RPC_RETRY_TIMES,

@@ -85,6 +85,10 @@ type CommitConfigRequest struct {
 
 type ListClusterRequest struct{}
 
+type CheckoutClusterRequest struct {
+	Name string `json:"name" binding:"required"`
+}
+
 type AddClusterRequest struct {
 	Name string `json:"name" binding:"required"`
 	Desc string `json:"desc"`
@@ -146,6 +150,12 @@ var requests = []Request{
 		core.HTTP_GET,
 		core.DEPLOY_CLUSTER_LIST,
 		ListClusterRequest{},
+		DealDeploy,
+	},
+	{
+		core.HTTP_POST,
+		core.DEPLOY_CLUSTER_CHECKOUT,
+		CheckoutClusterRequest{},
 		DealDeploy,
 	},
 	{

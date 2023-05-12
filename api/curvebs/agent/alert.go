@@ -78,6 +78,15 @@ type AlertConf struct {
 var (
 	alertClients map[string]Alert = make(map[string]Alert)
 
+	updateAlertConfStopCtx = stopContext{
+		run:  false,
+		stop: make(chan bool, 1),
+	}
+	clearExpiredAlertStopCtx = stopContext{
+		run:  false,
+		stop: make(chan bool, 1),
+	}
+
 	defaultAlertConf = []storage.AlertConf{
 		{
 			Name:       ALERT_CLUSTER,
@@ -204,40 +213,94 @@ func (ctx *alertContext) setRule(rule string) {
 
 type Alert interface {
 	check(logger *pigeon.Logger)
+	stop()
+}
+
+type stopContext struct {
+	run  bool
+	stop chan (bool)
 }
 
 type clusterAlert struct {
-	ctx alertContext
+	stopCtx stopContext
+	ctx     alertContext
 }
 
 type spaceAlert struct {
-	ctx alertContext
+	stopCtx stopContext
+	ctx     alertContext
 }
 
 type etcdServiceAlert struct {
-	ctx alertContext
+	stopCtx stopContext
+	ctx     alertContext
 }
 
 type mdsServiceAlert struct {
-	ctx alertContext
+	stopCtx stopContext
+	ctx     alertContext
 }
 
 type snapshotCloneServiceAlert struct {
-	ctx alertContext
+	stopCtx stopContext
+	ctx     alertContext
 }
 
 type chunkserverServiceAlert struct {
-	ctx alertContext
+	stopCtx stopContext
+	ctx     alertContext
+}
+
+func (alert *clusterAlert) stop() {
+	if alert.stopCtx.run {
+		alert.stopCtx.stop <- true
+	}
+}
+
+func (alert *spaceAlert) stop() {
+	if alert.stopCtx.run {
+		alert.stopCtx.stop <- true
+	}
+}
+
+func (alert *etcdServiceAlert) stop() {
+	if alert.stopCtx.run {
+		alert.stopCtx.stop <- true
+	}
+}
+
+func (alert *mdsServiceAlert) stop() {
+	if alert.stopCtx.run {
+		alert.stopCtx.stop <- true
+	}
+}
+
+func (alert *snapshotCloneServiceAlert) stop() {
+	if alert.stopCtx.run {
+		alert.stopCtx.stop <- true
+	}
+}
+
+func (alert *chunkserverServiceAlert) stop() {
+	if alert.stopCtx.run {
+		alert.stopCtx.stop <- true
+	}
 }
 
 func initAlerts(expirationDays int, logger *pigeon.Logger) error {
+	if currentClusterId <= 0 {
+		return nil
+	}
+
 	var initConfs []storage.AlertConf
-	alertInfo, err := storage.GetAlertConf()
+	alertInfo, err := storage.GetAlertConf(currentClusterId)
 	if err != nil {
 		return err
 	}
 	if len(alertInfo) == 0 {
-		for _, conf := range defaultAlertConf {
+		for index, conf := range defaultAlertConf {
+			conf.ClusterId = currentClusterId
+			defaultAlertConf[index].ClusterId = currentClusterId
 			err := storage.AddAlertConf(&conf)
 			if err != nil {
 				return err
@@ -257,6 +320,10 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 					mutex: sync.Mutex{},
 					times: 0,
 				},
+				stopCtx: stopContext{
+					run:  false,
+					stop: make(chan bool, 1),
+				},
 			}
 			go alertClients[ALERT_CLUSTER].check(logger)
 		case ALERT_SPACE:
@@ -265,6 +332,10 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 					opt:   conf,
 					mutex: sync.Mutex{},
 					times: 0,
+				},
+				stopCtx: stopContext{
+					run:  false,
+					stop: make(chan bool, 1),
 				},
 			}
 			go alertClients[ALERT_SPACE].check(logger)
@@ -275,6 +346,10 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 					mutex: sync.Mutex{},
 					times: 0,
 				},
+				stopCtx: stopContext{
+					run:  false,
+					stop: make(chan bool, 1),
+				},
 			}
 			go alertClients[ALERT_ETCD].check(logger)
 		case ALERT_MDS:
@@ -283,6 +358,10 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 					opt:   conf,
 					mutex: sync.Mutex{},
 					times: 0,
+				},
+				stopCtx: stopContext{
+					run:  false,
+					stop: make(chan bool, 1),
 				},
 			}
 			go alertClients[ALERT_MDS].check(logger)
@@ -293,6 +372,10 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 					mutex: sync.Mutex{},
 					times: 0,
 				},
+				stopCtx: stopContext{
+					run:  false,
+					stop: make(chan bool, 1),
+				},
 			}
 			go alertClients[ALERT_CHUNKSERVER].check(logger)
 		case ALERT_SNAPSHOT_CLONE_SERVER:
@@ -301,6 +384,10 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 					opt:   conf,
 					mutex: sync.Mutex{},
 					times: 0,
+				},
+				stopCtx: stopContext{
+					run:  false,
+					stop: make(chan bool, 1),
 				},
 			}
 			go alertClients[ALERT_SNAPSHOT_CLONE_SERVER].check(logger)
@@ -311,16 +398,34 @@ func initAlerts(expirationDays int, logger *pigeon.Logger) error {
 	return nil
 }
 
+func stopAlertTasks() {
+	for _, v := range alertClients {
+		v.stop()
+	}
+	if updateAlertConfStopCtx.run {
+		updateAlertConfStopCtx.stop <- true
+	}
+	if clearExpiredAlertStopCtx.run {
+		clearExpiredAlertStopCtx.stop <- true
+	}
+}
+
 func clearExpiredAlert(expirationDays int, logger *pigeon.Logger) {
 	logger.Info("start clear expired alert info",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval second", CLEAR_ALERT_INTERVAL.Seconds()),
 		pigeon.Field("expired days", expirationDays))
+	clearExpiredAlertStopCtx.run = true
 	timer := time.NewTimer(CLEAR_ALERT_INTERVAL)
 	defer timer.Stop()
 	for {
 		select {
+		case <-clearExpiredAlertStopCtx.stop:
+			clearExpiredAlertStopCtx.run = false
+			logger.Info("stop clearExpiredAlert thread")
+			return
 		case <-timer.C:
-			err := storage.DeleteAlert(time.Now().AddDate(0, 0, -expirationDays).UnixMilli())
+			err := storage.DeleteAlert(currentClusterId, time.Now().AddDate(0, 0, -expirationDays).UnixMilli())
 			if err != nil {
 				logger.Error("clear expired alert failed",
 					pigeon.Field("error", err))
@@ -332,13 +437,19 @@ func clearExpiredAlert(expirationDays int, logger *pigeon.Logger) {
 
 func updateAlertConf(logger *pigeon.Logger) {
 	logger.Info("start update alert conf",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("udapte interval seconds", UPDATE_ALERT_CONF_INTERVAL_SEC))
+	updateAlertConfStopCtx.run = true
 	timer := time.NewTimer(time.Duration(UPDATE_ALERT_CONF_INTERVAL_SEC) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-updateAlertConfStopCtx.stop:
+			updateAlertConfStopCtx.run = false
+			logger.Info("stop updateAlertConf thread")
+			return
 		case <-timer.C:
-			alertInfo, err := storage.GetAlertConf()
+			alertInfo, err := storage.GetAlertConf(currentClusterId)
 			if err != nil {
 				logger.Error("UpdateAlertConf get alert conf failed",
 					pigeon.Field("error", err),
@@ -378,6 +489,7 @@ func updateConf(ctx *alertContext, conf *storage.AlertConf) {
 func handleAlert(level int, name string, duration uint32, summary string) error {
 	now := time.Now().UnixMilli()
 	alert := &storage.Alert{
+		ClusterId:   currentClusterId,
 		TimeMs:      now,
 		Level:       level,
 		Name:        name,
@@ -388,17 +500,23 @@ func handleAlert(level int, name string, duration uint32, summary string) error 
 	if err != nil {
 		return err
 	}
-	err = storage.SendAlert(alert)
+	err = storage.SendAlert(currentClusterId, alert)
 	return err
 }
 
 func (alert *clusterAlert) check(logger *pigeon.Logger) {
 	logger.Info("start cluster alert checker",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval seconds", alert.ctx.getInterval()))
+	alert.stopCtx.run = true
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-alert.stopCtx.stop:
+			alert.stopCtx.run = false
+			logger.Info("stop cluster alert thread")
+			return
 		case <-timer.C:
 			if alert.ctx.getEnable() {
 				status := GetClusterStatus(logger, ALERT_REQUEST_ID)
@@ -427,11 +545,17 @@ func (alert *clusterAlert) check(logger *pigeon.Logger) {
 
 func (alert *spaceAlert) check(logger *pigeon.Logger) {
 	logger.Info("start space alert checker",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval seconds", alert.ctx.getInterval()))
+	alert.stopCtx.run = true
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-alert.stopCtx.stop:
+			alert.stopCtx.run = false
+			logger.Info("stop space alert thread")
+			return
 		case <-timer.C:
 			if alert.ctx.getEnable() {
 				space, err := GetClusterSpace(logger, ALERT_REQUEST_ID)
@@ -465,11 +589,17 @@ func (alert *spaceAlert) check(logger *pigeon.Logger) {
 
 func (alert *etcdServiceAlert) check(logger *pigeon.Logger) {
 	logger.Info("start etcd alert checker",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval seconds", alert.ctx.getInterval()))
+	alert.stopCtx.run = true
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-alert.stopCtx.stop:
+			alert.stopCtx.run = false
+			logger.Info("stop etcd alert thread")
+			return
 		case <-timer.C:
 			if alert.ctx.getEnable() {
 				result := checkServiceHealthy(alert.ctx.opt.Name)
@@ -494,11 +624,17 @@ func (alert *etcdServiceAlert) check(logger *pigeon.Logger) {
 
 func (alert *mdsServiceAlert) check(logger *pigeon.Logger) {
 	logger.Info("start mds alert checker",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval seconds", alert.ctx.getInterval()))
+	alert.stopCtx.run = true
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-alert.stopCtx.stop:
+			alert.stopCtx.run = false
+			logger.Info("stop mds alert thread")
+			return
 		case <-timer.C:
 			if alert.ctx.getEnable() {
 				result := checkServiceHealthy(alert.ctx.opt.Name)
@@ -523,11 +659,17 @@ func (alert *mdsServiceAlert) check(logger *pigeon.Logger) {
 
 func (alert *snapshotCloneServiceAlert) check(logger *pigeon.Logger) {
 	logger.Info("start snapshotcloneserver alert checker",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval seconds", alert.ctx.getInterval()))
+	alert.stopCtx.run = true
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-alert.stopCtx.stop:
+			alert.stopCtx.run = false
+			logger.Info("stop snapshotclone alert thread")
+			return
 		case <-timer.C:
 			if alert.ctx.getEnable() {
 				result := checkServiceHealthy(alert.ctx.opt.Name)
@@ -552,11 +694,17 @@ func (alert *snapshotCloneServiceAlert) check(logger *pigeon.Logger) {
 
 func (alert *chunkserverServiceAlert) check(logger *pigeon.Logger) {
 	logger.Info("start chunkserver alert checker",
+		pigeon.Field("clusterId", currentClusterId),
 		pigeon.Field("interval seconds", alert.ctx.getInterval()))
+	alert.stopCtx.run = true
 	timer := time.NewTimer(time.Duration(alert.ctx.getInterval()) * time.Second)
 	defer timer.Stop()
 	for {
 		select {
+		case <-alert.stopCtx.stop:
+			alert.stopCtx.run = false
+			logger.Info("stop chunkserver alert thread")
+			return
 		case <-timer.C:
 			if alert.ctx.getEnable() {
 				csStatus, err := GetChunkServerStatus(logger, ALERT_REQUEST_ID)
@@ -591,13 +739,6 @@ func GetUnreadSysAlertNum(r *pigeon.Request) (int64, errno.Errno) {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return 0, errno.GET_USER_FAILED
 	}
-	maxId, err := storage.GetLastAlertId()
-	if err != nil {
-		r.Logger().Error("GetLastAlertId failed",
-			pigeon.Field("error", err),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return 0, errno.GET_LAST_ALERT_ID_FAILED
-	}
 	readId, err := storage.GetReadAlertId(user)
 	if err != nil {
 		r.Logger().Error("GetReadAlertId failed",
@@ -617,7 +758,14 @@ func GetUnreadSysAlertNum(r *pigeon.Request) (int64, errno.Errno) {
 			return 0, errno.ADD_READ_ALERT_ID_FAILED
 		}
 	}
-	return maxId - readId, errno.OK
+	num, err := storage.GetUnreadAlertNum(currentClusterId, readId)
+	if err != nil {
+		r.Logger().Error("GetUnreadAlertNum failed",
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return 0, errno.GET_UNREAD_ALERT_NUM_FAILED
+	}
+	return num, errno.OK
 }
 
 func UpdateReadSysAlertId(r *pigeon.Request, id int64) errno.Errno {
@@ -639,7 +787,7 @@ func GetSysAlert(r *pigeon.Request, start, end int64, page, size uint32, name, l
 	if start == 0 && end == 0 {
 		end = time.Now().UnixMilli()
 	}
-	info, err := storage.GetAlert(start, end, size, (page-1)*size, name, level, content)
+	info, err := storage.GetAlert(currentClusterId, start, end, size, (page-1)*size, name, level, content)
 	if err != nil {
 		r.Logger().Error("GetAlert failed",
 			pigeon.Field("start", start),
@@ -658,7 +806,7 @@ func GetSysAlert(r *pigeon.Request, start, end int64, page, size uint32, name, l
 
 func GetAlertConf(r *pigeon.Request) (interface{}, errno.Errno) {
 	listConfs := []AlertConf{}
-	confs, err := storage.GetAlertConf()
+	confs, err := storage.GetAlertConf(currentClusterId)
 	if err != nil {
 		r.Logger().Error("GetAlertConf failed",
 			pigeon.Field("error", err),
@@ -666,7 +814,7 @@ func GetAlertConf(r *pigeon.Request) (interface{}, errno.Errno) {
 		return nil, errno.GET_ALERT_CONF_FAILED
 	}
 	for _, conf := range confs {
-		users, err := storage.GetAlertUser(conf.Name)
+		users, err := storage.GetAlertUser(conf.ClusterId, conf.Name)
 		if err != nil {
 			r.Logger().Error("GetAlertUser failed",
 				pigeon.Field("alertName", conf.Name),
@@ -694,11 +842,12 @@ func UpdateAlertConf(r *pigeon.Request, enable bool, interval, times uint32, rul
 		flag = 0
 	}
 	err := storage.UpdateAlertConf(&storage.AlertConf{
-		Interval: interval,
-		Enable:   flag,
-		Times:    times,
-		Rule:     rule,
-		Name:     name,
+		ClusterId: currentClusterId,
+		Interval:  interval,
+		Enable:    flag,
+		Times:     times,
+		Rule:      rule,
+		Name:      name,
 	})
 	if err != nil {
 		r.Logger().Error("UpdateAlertConf failed",
@@ -727,7 +876,7 @@ func GetAlertCandidate(r *pigeon.Request) (interface{}, errno.Errno) {
 
 func UpdateAlertUser(r *pigeon.Request, alert, user string, op int) errno.Errno {
 	if op == 1 {
-		err := storage.AddAlertUser(alert, []string{user})
+		err := storage.AddAlertUser(currentClusterId, alert, []string{user})
 		if err != nil {
 			r.Logger().Error("AddAlertUser failed",
 				pigeon.Field("alert", alert),
@@ -737,7 +886,7 @@ func UpdateAlertUser(r *pigeon.Request, alert, user string, op int) errno.Errno 
 			return errno.ADD_ALERT_USER_FAILED
 		}
 	} else if op == -1 {
-		err := storage.DeleteAlertUser(alert, []string{user})
+		err := storage.DeleteAlertUser(currentClusterId, alert, []string{user})
 		if err != nil {
 			r.Logger().Error("DeleteAlertUser failed",
 				pigeon.Field("alert", alert),

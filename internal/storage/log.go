@@ -33,8 +33,8 @@ import (
 type Log struct {
 	id        int64
 	TimeMs    int64  `json:"-"`
-	Time      string `json:"time"`
 	IP        string `json:"ip"`
+	Time      string `json:"time"`
 	User      string `json:"user"`
 	Module    string `json:"module"`
 	Method    string `json:"method"`
@@ -44,7 +44,7 @@ type Log struct {
 }
 
 type LogInfo struct {
-	Total int64         `json:"total"`
+	Total int64 `json:"total"`
 	Info  []Log `json:"info"`
 }
 

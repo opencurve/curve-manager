@@ -44,10 +44,10 @@ const (
 	CURVEBS_SNAPSHOT_CLONE_PROXY_ADDRESS = "snapshot.clone.proxy.address"
 )
 
-func Init(cfg map[string]interface{}) {
+func Init(cfg map[string]string) {
 	GSnapshotCloneClient = &snapshotCloneClient{}
 	GSnapshotCloneClient.client = resty.NewWithClient(common.GetHttpClient())
-	GSnapshotCloneClient.SnapShotCloneProxyAddr = strings.Split(cfg[CURVEBS_SNAPSHOT_CLONE_PROXY_ADDRESS].(string),
+	GSnapshotCloneClient.SnapShotCloneProxyAddr = strings.Split(cfg[CURVEBS_SNAPSHOT_CLONE_PROXY_ADDRESS],
 		common.CURVEBS_ADDRESS_DELIMITER)
 }
 

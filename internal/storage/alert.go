@@ -23,7 +23,6 @@
 package storage
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/opencurve/curve-manager/internal/common"
@@ -32,6 +31,7 @@ import (
 
 type Alert struct {
 	Id          int64  `json:"id"`
+	ClusterId   int    `json:"-"`
 	TimeMs      int64  `json:"-"`
 	Time        string `json:"time"`
 	Level       int    `json:"-"`
@@ -47,15 +47,15 @@ type AlertInfo struct {
 }
 
 func AddAlert(alert *Alert) error {
-	return gStorage.execSQL(ADD_SYSTEM_ALERT, alert.TimeMs, alert.Level, alert.Name, alert.DurationSec, alert.Summary)
+	return gStorage.execSQL(ADD_SYSTEM_ALERT, alert.ClusterId, alert.TimeMs, alert.Level, alert.Name, alert.DurationSec, alert.Summary)
 }
 
-func DeleteAlert(expirationMs int64) error {
-	return gStorage.execSQL(DELETE_SYSTEM_ALERT, expirationMs)
+func DeleteAlert(clusterId int, expirationMs int64) error {
+	return gStorage.execSQL(DELETE_SYSTEM_ALERT, clusterId, expirationMs)
 }
 
-func SendAlert(alert *Alert) error {
-	users, err := GetAlertUser(alert.Name)
+func SendAlert(clusterId int, alert *Alert) error {
+	users, err := GetAlertUser(clusterId, alert.Name)
 	if err != nil {
 		return err
 	}
@@ -70,8 +70,8 @@ func SendAlert(alert *Alert) error {
 		}
 	}
 	if len(emails) != 0 {
-		content := fmt.Sprintf("Alert Info:\nName: %s\nLevel: %s\nDuration Second: %d\nSummary: %s\nTime: %s\n",
-			alert.Name, getLevelStr(alert.Level), alert.DurationSec, alert.Summary, common.Mill2TimeStr(alert.TimeMs))
+		content := fmt.Sprintf("Alert Info:\nCluster ID: %d\nName: %s\nLevel: %s\nDuration Second: %d\nSummary: %s\nTime: %s\n",
+			alert.ClusterId, alert.Name, getLevelStr(alert.Level), alert.DurationSec, alert.Summary, common.Mill2TimeStr(alert.TimeMs))
 		err = email.SendAlert2Users(content, emails)
 		if err != nil {
 			errors = fmt.Errorf("send email error: %s, %s", err.Error(), errors.Error())
@@ -80,13 +80,13 @@ func SendAlert(alert *Alert) error {
 	return errors
 }
 
-func GetAlert(start, end int64, limit, offset uint32, name, level, filter string) (AlertInfo, error) {
+func GetAlert(clusterId int, start, end int64, limit, offset uint32, name, level, filter string) (AlertInfo, error) {
 	alerts := AlertInfo{}
 	filter = fmt.Sprintf("%%%s%%", filter)
 	numSql := GET_SYSTEM_ALERT_NUM
 	contSql := GET_SYSTEM_ALERT
 	l := 0
-	params := []interface{}{start, end}
+	params := []interface{}{start, end, clusterId}
 	if name != "" {
 		numSql += " AND name = ?"
 		contSql += " AND name = ?"
@@ -128,7 +128,7 @@ func GetAlert(start, end int64, limit, offset uint32, name, level, filter string
 		}
 		for rows.Next() {
 			var alert Alert
-			err = rows.Scan(&alert.Id, &alert.TimeMs, &alert.Level, &alert.Name, &alert.DurationSec, &alert.Summary)
+			err = rows.Scan(&alert.Id, &alert.ClusterId, &alert.TimeMs, &alert.Level, &alert.Name, &alert.DurationSec, &alert.Summary)
 			if err != nil {
 				return alerts, err
 			}
@@ -144,22 +144,18 @@ func UpdateReadAlertId(id int64, name string) error {
 	return gStorage.execSQL(UPDATE_READ_ALERT_ID, id, name)
 }
 
-func GetLastAlertId() (int64, error) {
-	var maxId sql.NullInt64
+func GetUnreadAlertNum(clusterId int, readId int64) (int64, error) {
 	var ret int64 = 0
-	rows, err := gStorage.querySQL(GET_LAST_SYSTEM_ALERT_ID)
+	rows, err := gStorage.querySQL(GET_UNREAD_SYSTEM_ALERT_NUM, readId, clusterId)
 	if err != nil {
 		return 0, err
 	}
 	defer rows.Close()
 	if rows.Next() {
-		err = rows.Scan(&maxId)
+		err = rows.Scan(&ret)
 		if err != nil {
 			return 0, err
 		}
-	}
-	if maxId.Valid {
-		ret = maxId.Int64
 	}
 	return ret, nil
 }

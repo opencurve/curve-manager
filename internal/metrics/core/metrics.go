@@ -50,14 +50,14 @@ var (
 	GMetricClient *metricClient
 )
 
-func Init(cfg map[string]interface{}) {
+func Init(cfg map[string]string) {
 	GMetricClient = &metricClient{}
 	GMetricClient.client = resty.NewWithClient(common.GetHttpClient())
 
-	GMetricClient.PromeAddr = cfg[CURVEBS_MONITOR_ADDRESS].(string)
-	GMetricClient.EtcdAddr = strings.Split(cfg[CURVEBS_ETCD_ADDRESS].(string), common.CURVEBS_ADDRESS_DELIMITER)
-	GMetricClient.MdsDummyAddr = strings.Split(cfg[CURVEBS_MDS_DUMMY_ADDRESS].(string), common.CURVEBS_ADDRESS_DELIMITER)
-	GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(cfg[CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS].(string),
+	GMetricClient.PromeAddr = cfg[CURVEBS_MONITOR_ADDRESS]
+	GMetricClient.EtcdAddr = strings.Split(cfg[CURVEBS_ETCD_ADDRESS], common.CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.MdsDummyAddr = strings.Split(cfg[CURVEBS_MDS_DUMMY_ADDRESS], common.CURVEBS_ADDRESS_DELIMITER)
+	GMetricClient.SnapShotCloneServerDummyAddr = strings.Split(cfg[CURVEBS_SNAPSHOT_CLONE_DUMMY_ADDRESS],
 		common.CURVEBS_ADDRESS_DELIMITER)
 }
 

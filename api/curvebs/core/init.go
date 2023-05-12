@@ -44,7 +44,9 @@ func Init(cfg *pigeon.Configure, logger *pigeon.Logger) error {
 	if err != nil {
 		return err
 	}
-	err = agent.InitClients()
+
+	// init clients
+	err = agent.InitClients(logger)
 	if err != nil {
 		return err
 	}
