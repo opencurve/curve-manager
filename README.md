@@ -1,62 +1,80 @@
-## 背景
-Curve 作为一个存储底座，除了功能上的不断丰富和对极致性能的追求，**易用性**同样是我们关注的重点。Curve 控制台（curve-manager /curve-mgr）是一个相对独立的 Web 服务，提供基于 Web 的集群管理能力，使得存储集群的部署和管理门槛进相对 CLI方式一步降低，提供一种更加清晰直观的视图。
+### English | [简体中文](README_cn.md)
 
-接下来我们将通过从**架构设计**、**系统特性**、**部署使用**进行展开介绍。
+## Background
 
-## 架构设计
-curve-manager 整体架构如下所示，主要由控制层和数据层组成，各模块的职责如下：
+As a storage foundation, Curve not only focuses on enriching its functionality and pursuing ultimate performance but also on **usability**. Curve-Manager is a relatively independent web service that provides web-based cluster management capabilities, reducing the deployment and management thresholds of storage clusters compared to CLI methods and providing a more clear and intuitive view.
 
-* 用户管理（user manager）：负责系统用户的创建，查看，权限管理，删除等。
-* 数据管理（data manager）：负责集群信息和各服务状态的展示、集群操作（卷，快照等）、审计日志管理、系统告警管理。
-* 部署管理（deploy manager）：负责集群的可视化部署，通过发送请求到 CurveAdm 实现集群的部署。
-数据层的 **_DB_** 主要存储控制台系统用户信息、审计日志和系统告警信息；**_Prometheus_** 是属于 Curve 集群监控的组件，这里主要为控制台提供存储集群的监控数据；**_Curve Cluster_** 是控制台访问的核心对象，提供集群信息并接收处理集群操作请求。
+Next, we will introduce from **architectural design**, **system features**, **compilation and packaging** and **deployment**.
+
+## Architectural Design
+
+The overall architecture of curve-manager is as follows, mainly composed of the control layer and the data layer, and the responsibilities of each module are as follows:
+
+* User Management: Responsible for creating, viewing, managing permissions, and deleting system users.
+* Data Management: Responsible for displaying cluster information and service statuses, cluster operations (volumes, snapshots, etc.), audit log management, and system alarm management.
+* Deployment Management : Responsible for the visual deployment of the cluster, and deploys the cluster by sending requests to CurveAdm. The **_DB_** in the data layer mainly stores web system user information, audit logs, and storage system alarm information; **_Prometheus_** is a component of Curve cluster monitoring, which mainly provides monitoring data of storage clusters for the curve-manager; **_Curve Cluster_** is the core object accessed by the curve-manager, providing cluster information and receiving and processing cluster operation requests.
 
 ![curve-manager-structure.png](doc/image/curve-manager-structure.png)
 
-## 系统特性
-#### 主要特性
+## System Features
 
-**多用户和权限管理**： 控制台支持具有不同权限（角色）的多个用户账户，可通过 UI 进行用户的增删改查操作，对用户密码强度有一定限制并进行加密存储，来提高账户的安全性。
+### Main Features
 
-**登录限制**：为了满足对存储系统操作限制的不同要求，控制台提供灵活的配置，可限制同一时间只有单一具有写权限的用户登录，限制同一用户在不同机器中的多次登录，新的登录会迫使之前的退出。
+**Multi-user and permission management**: The curve-manager supports multiple user accounts with different permissions (roles), and users can be added, deleted, modified, and queried through the UI. The password strength of the account is restricted and encrypted storage is used to improve the security of the account.
 
-**SSL/TLS支持**：Web 浏览器和控制台之间的所有 HTTP 通信都通过 SSL 进行保护。可以使用内置的自签名证书，但生产环境建议导入由 CA 签名颁发的证书。
+**Login restriction**: To meet different requirements for restricting storage system operations, the console provides flexible configuration, which can restrict only one user with write permission to log in at the same time, and restrict the same user from logging in multiple times on different machines. Each new login will force the previous one to log out.
 
-**审计**：控制台系统默认启用审计功能，对系统所有非读操作都会记录审计日志，便于对异常事件的发现、分析和追踪溯源。
+**SSL/TLS support**: All HTTP communication between the web browser and the curve-manager is protected by SSL. An internally signed certificate can be used, but it is recommended to import a certificate signed by a CA in a production environment.
 
-**多语言支持**：目前系统主要考虑支持简体中文和英文。
+**Audit**: The curve-manager enables audit by default. Audit logs are recorded for all non-read operations in the system, making it easier to discover, analyze, and trace anomalous events.
 
-#### 核心监控和管理功能
+**Multi-language support**: Currently, the system mainly supports Simplified Chinese and English.
 
-**多集群管理**：控制台支持同时管理多个存储集群，可一键切换集群。
+### Core Monitoring and Management Functions
 
-**集群概览**：提供集群级别的视图，包括对集群健康状态，集群服务状态，集群容量和集群总性能的监控显示。
+**Multi-cluster management**: The curve-manager supports managing multiple storage clusters simultaneously and can switch between clusters with one click.
 
-**集群管理**：包括拓扑管理、服务器管理和磁盘管理。集群拓扑以层级结构展示存储系统内部的 pool、zone、server、chunkserver间的所属关系和各级的详细信息；服务器管理提供集群中服务器的管理、基本信息和性能的展示；磁盘管理提供对集群中服务器上磁盘的管理能力。
+**Cluster Overview**: Provides a cluster-level view, including monitoring display of cluster health status, service status, capacity, and overall performance.
 
-**存储池管理**：提供存储池级别的视图，包括存储池的基本信息（属性信息，包含的serve、chunkserver、copyset、容量等信息）。
+**Cluster Management**: Includes topology management, server management, and disk management. The cluster topology displays the hierarchical relationship between pool, zone, server, and chunkserver in the storage system and the detailed information at each level. Server management provides the management, basic information, and performance display of servers in the cluster, while disk management provides the management capability of disks on servers in the cluster.
 
-**块存储管理**：包括卷管理和快照管理。卷管理是针对卷的增删改查，同样的，快照管理是对存储系统中快照的操作。
+**Storage Pool Management**: Provides a view at the storage pool level, including the basic information of the storage pool (attribute information, including serve, chunkserver, copyset, capacity, etc.).
 
-**告警管理**：支持存储系统设置告警规则信息，添加告警接收人员，接收和查看系统告警信息，配置过期信息自动删除。
+**Block Storage Management**: Includes volume management and snapshot management. Volume management is for adding, deleting, modifying, and querying volumes, and similarly, snapshot management is for operations on snapshots in the storage system.
 
-**审计管理**：提供对审计信息的展示，筛选和过期删除功能。
+**Alarm Management**: Supports setting alarm rule information for the storage system, adding alarm recipients, receiving and viewing system alarm information, and configuring automatic deletion of expired information.
 
-**集群部署**：该模块承担 Web 化部署的职责，接收用户的集群部署请求，并将该请求转发给 CurveAdm 完成操作并返回结果。
+**Audit Management**: Provides display, filtering, and expiration deletion capabilities for audit information.
 
-## 部署使用
+**Cluster Deployment**: This module is responsible for web-based deployment, receiving user cluster deployment requests, and forwarding the request to CurveAdm to complete the operation and return the result.
 
-部署使用参考：[控制台部署使用文档](https://github.com/opencurve/curveadm/wiki/curve-website-deployment)
+## Compilation and Packaging
 
+```
+# clone code
+git clone --recursive git@github.com:opencurve/curve-manager.git
 
-## 页面预览
+# go version >= v1.19.0
+# build
+make build
 
-目前控制台功能首先适配的是 CurveBS，下面可以简单通过几张图来预览下 Curve 控制台
+# make image
+make image tag=<DOCKERHUB_USERNAME>/<REPOSITORY_NAME>:<TAG>
+docker push <DOCKERHUB_USERNAME>/<REPOSITORY_NAME>:<TAG>
+```
 
-Curve 控制台登录页
+## Deployment and Usage
+
+Deployment and usage reference: [Console Deployment and Usage Documentation](https://github.com/opencurve/curveadm/wiki/curve-website-deployment)
+
+## Page Preview
+
+Currently, the curve-manager is first adapted to CurveBS, and a few pictures can be used to preview it.
+
+Login Page
 
 ![curve-manager-login.jpg](doc/image/curve-manager-login.jpg)
 
-Curve 控制台概览页
+Overview Page
 
 ![curve-manager-overview.jpeg](doc/image/curve-manager-overview.jpeg)

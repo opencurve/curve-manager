@@ -1,4 +1,4 @@
-.PHONY: init build debug test clean image
+.PHONY: init proto build debug test clean image
 
 tag?= "curve-manager:unknown"
 
@@ -53,7 +53,10 @@ RPC_PATH = external/curve-go-rpc
 init:
 	$(GO) mod init
 
-build:
+proto:
+	cd $(RPC_PATH) && make proto
+
+build: proto
 	$(GOENV) $(GO) build -o $(OUTPUT) $(BUILD_FLAGS) $(PACKAGES)
 
 debug:
