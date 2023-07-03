@@ -32,8 +32,6 @@ The overall architecture of curve-manager is as follows, mainly composed of the 
 
 ### Core Monitoring and Management Functions
 
-**Multi-cluster management**: The curve-manager supports managing multiple storage clusters simultaneously and can switch between clusters with one click.
-
 **Cluster Overview**: Provides a cluster-level view, including monitoring display of cluster health status, service status, capacity, and overall performance.
 
 **Cluster Management**: Includes topology management, server management, and disk management. The cluster topology displays the hierarchical relationship between pool, zone, server, and chunkserver in the storage system and the detailed information at each level. Server management provides the management, basic information, and performance display of servers in the cluster, while disk management provides the management capability of disks on servers in the cluster.
