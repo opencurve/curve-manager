@@ -61,14 +61,15 @@ func Entrypoint(r *pigeon.Request) bool {
 	}
 
 	defaults.SetDefaults(data)
-	if core.NeedRecordLog(r) {
-		c, _ := json.Marshal(data)
-		r.HeadersIn[comm.HEADER_LOG_CONTENT] = string(c)
-		r.HeadersIn[comm.HEADER_LOG_USER] = storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
-	}
-
 	if e := core.AccessAllowed(r, data); e != errno.OK {
 		return core.Exit(r, e)
+	}
+
+	if core.NeedRecordLog(r) {
+		c, _ := json.Marshal(data)
+		r.HeadersIn[comm.HEADER_LOG_ENABLE] = "true"
+		r.HeadersIn[comm.HEADER_LOG_CONTENT] = string(c)
+		r.HeadersIn[comm.HEADER_LOG_USER] = storage.GetLoginUserByToken(r.HeadersIn[comm.HEADER_AUTH_TOKEN])
 	}
 
 	return request.handler(r, &Context{data})

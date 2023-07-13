@@ -30,6 +30,7 @@ const (
 	HEADER_AUTH_TIMESTAMP        = "X-Pigeon-Auth-Timestamp"
 	HEADER_CURVE_CONSOLE_VERSION = "X-Pigeon-Curve-Manager-Version"
 
+	HEADER_LOG_ENABLE   = "X-Pigeon-Log-Enable"
 	HEADER_LOG_USER     = "X-Pigeon-Log-User"
 	HEADER_LOG_CONTENT  = "X-Pigeon-Log-Content"
 )

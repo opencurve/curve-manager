@@ -113,7 +113,7 @@ func Exit(r *pigeon.Request, code errno.Errno) bool {
 	if code != errno.OK {
 		r.HeadersOut[comm.HEADER_ERROR_CODE] = strconv.Itoa(code.Code())
 	}
-	if NeedRecordLog(r) {
+	if r.HeadersIn[comm.HEADER_LOG_ENABLE] == "true" {
 		agent.WriteSystemLog(r.Context.ClientIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
 			r.Args[METHOD], code.Description(), r.HeadersIn[comm.HEADER_LOG_CONTENT], code.Code())
 	}
@@ -131,7 +131,7 @@ func ExitSuccessWithData(r *pigeon.Request, data interface{}) bool {
 		"errorCode": "0",
 		"errorMsg":  "success",
 	})
-	if NeedRecordLog(r) {
+	if r.HeadersIn[comm.HEADER_LOG_ENABLE] == "true" {
 		agent.WriteSystemLog(r.Context.ClientIP(), r.HeadersIn[comm.HEADER_LOG_USER], BELONG[r.Args[METHOD]],
 			r.Args[METHOD], "success", r.HeadersIn[comm.HEADER_LOG_CONTENT], 0)
 	}
