@@ -1,7 +1,8 @@
 *.log
 bin/*
 .vscode
-external/*
+external/curve-go-rpc/*
+external/website/*
 docker/pigeon
 docker/website
 docker/pigeon.yaml
