@@ -107,9 +107,9 @@ type ListVolumeRequest struct {
 
 type GetVolumeRequest struct {
 	VolumeName string `json:"volumeName" binding:"required"`
-	Start      uint64 `json:"start" binding:"required"`
-	End        uint64 `json:"end" binding:"required"`
-	Interval   uint64 `json:"interval" binding:"required"`
+	Start      uint64 `json:"start" default:"0"`
+	End        uint64 `json:"end" default:"0"`
+	Interval   uint64 `json:"interval" default:"0"`
 }
 
 type ListSnapshotRequest struct {
@@ -236,14 +236,14 @@ type UpdateAlertConfRequest struct {
 	Times    uint32 `json:"times" binding:"required"`
 	Enable   *bool  `json:"enable" binding:"required"`
 	Rule     string `json:"rule" binding:"required"`
+	AlertUsers []string `json:"alertUsers" binding:"required"`
 }
 
 type GetAlertCandidateRequest struct{}
 
 type UpdateAlertUserRequest struct {
 	Alert     string `json:"alert" binding:"required"`
-	User      string `json:"user" binding:"required"`
-	Operation int    `json:"operation" binding:"required"`
+	User      []string `json:"user" binding:"required"`
 }
 
 var requests = []Request{

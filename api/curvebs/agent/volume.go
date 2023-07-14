@@ -417,18 +417,20 @@ func GetVolume(r *pigeon.Request, volumeName string, start, end, interval uint64
 	}
 
 	// get performance of the volume
-	e = getVolumePerformance(path, &volumes, start, end, interval)
-	if e != nil {
-		r.Logger().Error("GetVolume getVolumePerformance failed",
-			pigeon.Field("fileName", volumeName),
-			pigeon.Field("error", err),
-			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-		return nil, errno.GET_VOLUME_PERFORMANCE_FAILED
+	if start != 0 && end != 0 && interval != 0 { 
+		e = getVolumePerformance(path, &volumes, start, end, interval)
+		if e != nil {
+			r.Logger().Error("GetVolume getVolumePerformance failed",
+				pigeon.Field("fileName", volumeName),
+				pigeon.Field("error", err),
+				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+			return nil, errno.GET_VOLUME_PERFORMANCE_FAILED
+		}
+		// ensure performance data is time sequence
+		sort.Slice(volumes[0].Performance, func(i, j int) bool {
+			return volumes[0].Performance[i].Timestamp < volumes[0].Performance[j].Timestamp
+		})
 	}
-	// ensure performance data is time sequence
-	sort.Slice(volumes[0].Performance, func(i, j int) bool {
-		return volumes[0].Performance[i].Timestamp < volumes[0].Performance[j].Timestamp
-	})
 	return volumes[0], errno.OK
 }
 

@@ -492,7 +492,6 @@ func GetPerformance(name string, start, end, interval uint64) ([]Performance, er
 					}
 				}
 			}
-			break
 		}
 		count += 1
 		if count >= requestSize {

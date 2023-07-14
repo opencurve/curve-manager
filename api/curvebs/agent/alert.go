@@ -836,7 +836,8 @@ func GetAlertConf(r *pigeon.Request) (interface{}, errno.Errno) {
 	return listConfs, errno.OK
 }
 
-func UpdateAlertConf(r *pigeon.Request, enable bool, interval, times uint32, rule string, name string) errno.Errno {
+func UpdateAlertConf(r *pigeon.Request, enable bool, interval, times uint32,
+	rule, name string, alertUsers []string) errno.Errno {
 	flag := 1
 	if !enable {
 		flag = 0
@@ -860,7 +861,7 @@ func UpdateAlertConf(r *pigeon.Request, enable bool, interval, times uint32, rul
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.UPDATE_ALERT_CONF_FAILED
 	}
-	return errno.OK
+	return UpdateAlertUser(r, name, alertUsers)
 }
 
 func GetAlertCandidate(r *pigeon.Request) (interface{}, errno.Errno) {
@@ -874,27 +875,48 @@ func GetAlertCandidate(r *pigeon.Request) (interface{}, errno.Errno) {
 	return users, errno.OK
 }
 
-func UpdateAlertUser(r *pigeon.Request, alert, user string, op int) errno.Errno {
-	if op == 1 {
-		err := storage.AddAlertUser(currentClusterId, alert, []string{user})
-		if err != nil {
-			r.Logger().Error("AddAlertUser failed",
-				pigeon.Field("alert", alert),
-				pigeon.Field("user", user),
-				pigeon.Field("error", err),
-				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-			return errno.ADD_ALERT_USER_FAILED
+func UpdateAlertUser(r *pigeon.Request, alert string, users []string) errno.Errno {
+	alerters, err := storage.GetAlertUser(currentClusterId, alert)
+	if err != nil {
+		r.Logger().Error("GetAlertUser failed",
+			pigeon.Field("alert", alert),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.GET_ALERT_USER_FAILED
+	}
+	var user2Add []string
+	var user2Del []string
+	var tmap = make(map[string]bool)
+	for _, v := range alerters {
+		tmap[v] = true
+	}
+	for _, v := range users {
+		if _, ok := tmap[v]; !ok {
+			user2Add = append(user2Add, v)
+		} else {
+			delete(tmap, v)
 		}
-	} else if op == -1 {
-		err := storage.DeleteAlertUser(currentClusterId, alert, []string{user})
-		if err != nil {
-			r.Logger().Error("DeleteAlertUser failed",
-				pigeon.Field("alert", alert),
-				pigeon.Field("user", user),
-				pigeon.Field("error", err),
-				pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
-			return errno.DELETE_ALERT_USER_FAILED
-		}
+	}
+	for k := range tmap {
+		user2Del = append(user2Del, k)
+	}
+
+	err = storage.AddAlertUser(currentClusterId, alert, user2Add)
+	if err != nil {
+		r.Logger().Error("AddAlertUser failed",
+			pigeon.Field("alert", alert),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.ADD_ALERT_USER_FAILED
+	}
+
+	err = storage.DeleteAlertUser(currentClusterId, alert, user2Del)
+	if err != nil {
+		r.Logger().Error("DeleteAlertUser failed",
+			pigeon.Field("alert", alert),
+			pigeon.Field("error", err),
+			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
+		return errno.DELETE_ALERT_USER_FAILED
 	}
 	return errno.OK
 }

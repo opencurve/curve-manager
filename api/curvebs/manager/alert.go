@@ -62,7 +62,8 @@ func GetAlertConf(r *pigeon.Request, ctx *Context) bool {
 
 func UpdateAlertConf(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*UpdateAlertConfRequest)
-	err := agent.UpdateAlertConf(r, *data.Enable, data.Interval, data.Times, data.Rule, data.Name)
+	err := agent.UpdateAlertConf(r, *data.Enable, data.Interval, data.Times,
+		data.Rule, data.Name, data.AlertUsers)
 	return core.Exit(r, err)
 }
 
@@ -76,6 +77,6 @@ func GetAlertCandidate(r *pigeon.Request, ctx *Context) bool {
 
 func UpdateAlertUser(r *pigeon.Request, ctx *Context) bool {
 	data := ctx.Data.(*UpdateAlertUserRequest)
-	err := agent.UpdateAlertUser(r, data.Alert, data.User, data.Operation)
+	err := agent.UpdateAlertUser(r, data.Alert, data.User)
 	return core.Exit(r, err)
 }
