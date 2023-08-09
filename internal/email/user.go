@@ -31,54 +31,59 @@ import (
 )
 
 const (
-	EMAIL_ADDRESS = "email.addr"
-	EMAIL_AUTH    = "email.auth"
-
-	EMAIL_SERVER_163             = "smtp.163.com"
-	EMAIL_SERVER_163_ENDPOINT    = "smtp.163.com:25"
+	SMTP_ADDRESS                 = "smtp.address"
+	SMTP_PORT                    = "smtp.port"
+	SMTP_USERNAME                = "smtp.username"
+	SMTP_PASSWORD                = "smtp.password"
 	EMAIL_SUBJECT_RESET_PASSWORD = "Curve-Manager Reset Password"
 	EMAIL_SUBJECT_ALERT          = "Curve-Manager Alert"
 )
 
 var (
-	email_addr string
-	email_auth string
+	smtp_address  string
+	smtp_port     string
+	smtp_username string
+	smtp_password string
 )
 
 func Init(cfg *pigeon.Configure) {
-	email_addr = cfg.GetConfig().GetString(EMAIL_ADDRESS)
-	email_auth = cfg.GetConfig().GetString(EMAIL_AUTH)
+	smtp_address = cfg.GetConfig().GetString(SMTP_ADDRESS)
+	smtp_port = cfg.GetConfig().GetString(SMTP_PORT)
+	smtp_username = cfg.GetConfig().GetString(SMTP_USERNAME)
+	smtp_password = cfg.GetConfig().GetString(SMTP_PASSWORD)
 }
 
 func SendNewPassWord(name, to, passwd string) error {
-	if email_addr == "" || email_auth == "" {
+	if smtp_address == "" || smtp_port == "" || smtp_username == "" || smtp_password == "" {
 		return fmt.Errorf("the manage email info not set")
 	}
 	content := fmt.Sprintf("The password of Curve-Manager has been reset successfully.\n"+
 		"UserName: %s\nNewPassWord: %s\n", name, passwd)
 
 	e := email.Email{
-		From:    email_addr,
+		From:    smtp_username,
 		To:      []string{to},
 		Subject: EMAIL_SUBJECT_RESET_PASSWORD,
 		Text:    []byte(content),
 	}
-	return e.Send(EMAIL_SERVER_163_ENDPOINT, smtp.PlainAuth("", email_addr, email_auth, EMAIL_SERVER_163))
+	return e.Send(fmt.Sprintf("%v:%v", smtp_address, smtp_port),
+		smtp.PlainAuth("", smtp_username, smtp_password, smtp_address))
 }
 
 func SendAlert2Users(content string, tos []string) error {
-	if email_addr == "" || email_auth == "" {
+	if smtp_address == "" || smtp_port == "" || smtp_username == "" || smtp_password == "" {
 		return fmt.Errorf("the manage email info not set")
 	}
 	var errors error
 	for _, to := range tos {
 		e := email.Email{
-			From:    email_addr,
+			From:    smtp_username,
 			To:      []string{to},
 			Subject: EMAIL_SUBJECT_ALERT,
 			Text:    []byte(content),
 		}
-		err := e.Send(EMAIL_SERVER_163_ENDPOINT, smtp.PlainAuth("", email_addr, email_auth, EMAIL_SERVER_163))
+		err := e.Send(fmt.Sprintf("%v:%v", smtp_address, smtp_port),
+			smtp.PlainAuth("", smtp_username, smtp_password, smtp_address))
 		if err != nil {
 			errors = fmt.Errorf("dest: %s, error: %s, %s", to, err.Error(), errors.Error())
 		}

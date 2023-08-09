@@ -19,5 +19,7 @@ servers:
       system.alert.expiration.days: 30
       curveadm.service.address: 127.0.0.1:11000
       db.sqlite.filepath: /curve-manager/db/curvebs.db
-      email.addr: example@163.com
-      email.auth: password or authCode
+      smtp_address: smtp.163.com
+      smtp_port: 465
+      smtp_username: username@163.com
+      smtp_password: password
