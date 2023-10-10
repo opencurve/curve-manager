@@ -185,8 +185,8 @@ func GetNetWorkTraffic(instance string, start, end, interval uint64) (interface{
 	transmitName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
 		GetNodeNetWorkReveiveName(NODE_NETWORK_TRANSMIT_BYTES_TOTAL, instance, interval), start, end, interval)
 
-	go QueryRangeMetric(receiveName, &results)
-	go QueryRangeMetric(transmitName, &results)
+	go QueryRangeMetric(receiveName,start,end,interval, &results)
+	go QueryRangeMetric(transmitName,start,end,interval, &results)
 
 	count := 0
 	for res := range results {

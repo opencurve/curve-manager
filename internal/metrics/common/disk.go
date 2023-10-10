@@ -69,10 +69,10 @@ func GetDiskPerformance(instance string, start, end, interval uint64) (interface
 	readBPSName := fmt.Sprintf("%s&start=%d&end=%d&step=%ds",
 		GetNodeDiskPerformanceName(NODE_DISK_READ_BYTES_TOTAL, instance, interval), start, end, interval)
 
-	go QueryRangeMetric(writeIOPSName, &results)
-	go QueryRangeMetric(writeBPSName, &results)
-	go QueryRangeMetric(readIOPSName, &results)
-	go QueryRangeMetric(readBPSName, &results)
+	go QueryRangeMetric(writeIOPSName,start,end,interval, &results)
+	go QueryRangeMetric(writeBPSName,start,end,interval, &results)
+	go QueryRangeMetric(readIOPSName,start,end,interval, &results)
+	go QueryRangeMetric(readBPSName,start,end,interval, &results)
 
 	count := 0
 	for res := range results {
