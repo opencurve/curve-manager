@@ -89,18 +89,18 @@ type FileSystemInfo struct {
 }
 
 /*
-	 prometheus http api resonse data struct
+prometheus http api resonse data struct
 
-		 {
-		   "status": "success" | "error",
-		   "data": <data>,
+{
+  "status": "success" | "error",
+  "data": <data>,
 
-		   // Only set if status is "error". The data field may still hold additional data.
-		   "errorType": "<string>",
-		   "error": "<string>"
-		 }
+  // Only set if status is "error". The data field may still hold additional data.
+  "errorType": "<string>",
+  "error": "<string>"
+}
 
-	 data struct: https://prometheus.io/docs/prometheus/latest/querying/api/#expression-query-result-formats
+data struct: https://prometheus.io/docs/prometheus/latest/querying/api/#expression-query-result-formats
 */
 type QueryResponseOfVector struct {
 	Status string `json:"status"`
