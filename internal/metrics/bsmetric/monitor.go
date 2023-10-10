@@ -221,8 +221,8 @@ func GetClusterSpace(start, end, interval uint64) ([]metricomm.SpaceTrend, error
 	results := make(chan metricomm.MetricResult, requestSize)
 	totalName := fmt.Sprintf("%s&start=%d&end=%d&step=%d", CLUSTER_LOGICAL_CAPACITY, start, end, interval)
 	usedName := fmt.Sprintf("%s&start=%d&end=%d&step=%d", CLUSTER_LOGICAL_ALLOC, start, end, interval)
-	go metricomm.QueryRangeMetric(totalName, &results)
-	go metricomm.QueryRangeMetric(usedName, &results)
+	go metricomm.QueryRangeMetric(totalName, start, end, interval, &results)
+	go metricomm.QueryRangeMetric(usedName, start, end, interval, &results)
 
 	count := 0
 	for res := range results {

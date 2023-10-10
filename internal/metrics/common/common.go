@@ -400,10 +400,38 @@ func QueryInstantMetric(name string, results *chan MetricResult) {
 	}
 }
 
-func QueryRangeMetric(name string, results *chan MetricResult) {
+func MergeQueryResponseOfMatrix(matrix *QueryResponseOfMatrix, ofMatrix *QueryResponseOfMatrix) {
+	matrix.Status = ofMatrix.Status
+	matrix.Data.ResultType = ofMatrix.Data.ResultType
+	for _, v := range ofMatrix.Data.Result {
+		matrix.Data.Result = append(matrix.Data.Result, v)
+	}
+}
+
+func QueryRangeMetric(name string, start, end, interval uint64, results *chan MetricResult) {
 	var res QueryResponseOfMatrix
-	err := core.GMetricClient.GetMetricFromPrometheus(
-		RANGE_METRIC_PATH, VECTOR_METRIC_QUERY_KEY, name, &res)
+	var err error
+	if (end-start)/interval <= 11000 {
+		err = core.GMetricClient.GetMetricFromPrometheus(
+			RANGE_METRIC_PATH, VECTOR_METRIC_QUERY_KEY, name, &res)
+	} else {
+		num := ((end-start)/interval)/11000 + 1
+		for i := uint64(0); i < num; i++ {
+			var tempRes QueryResponseOfMatrix
+			seg := interval * 11000
+			intervalStart := start + i*seg
+			intervalEnd := start + (i+1)*seg
+			if intervalEnd > end {
+				intervalEnd = end
+			}
+			str := strings.Split(name,"&")[0]
+			splitName := fmt.Sprintf("%s&start=%d&end=%d&step=%d", str, intervalStart, intervalEnd, interval)
+			err = core.GMetricClient.GetMetricFromPrometheus(
+				RANGE_METRIC_PATH, VECTOR_METRIC_QUERY_KEY, splitName, &tempRes)
+			MergeQueryResponseOfMatrix(&res, &tempRes)
+		}
+	}
+
 	*results <- MetricResult{
 		Key:    name,
 		Err:    err,
@@ -416,7 +444,7 @@ func GetUtilization(name string, start, end, interval uint64) (map[string][]Rang
 	utilization := make(map[string][]RangeMetricItem)
 	requestSize := 1
 	results := make(chan MetricResult, requestSize)
-	QueryRangeMetric(metricName, &results)
+	QueryRangeMetric(metricName, start, end, interval, &results)
 	count := 0
 	for res := range results {
 		if res.Err != nil {
@@ -443,10 +471,10 @@ func GetPerformance(name string, start, end, interval uint64) ([]Performance, er
 	readIOPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_IOPS, start, end, interval)
 	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_REAT, start, end, interval)
 
-	go QueryRangeMetric(writeIOPSName, &results)
-	go QueryRangeMetric(writeBPSName, &results)
-	go QueryRangeMetric(readIOPSName, &results)
-	go QueryRangeMetric(readBPSName, &results)
+	go QueryRangeMetric(writeIOPSName, start, end, interval, &results)
+	go QueryRangeMetric(writeBPSName, start, end, interval, &results)
+	go QueryRangeMetric(readIOPSName, start, end, interval, &results)
+	go QueryRangeMetric(readBPSName, start, end, interval, &results)
 
 	count := 0
 	for res := range results {
@@ -517,10 +545,10 @@ func GetUserPerformance(name string, start, end, interval uint64) ([]UserPerform
 	readQPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_QPS, start, end, interval)
 	readBPSName := fmt.Sprintf("%s%s&start=%d&end=%d&step=%ds", name, READ_BPS, start, end, interval)
 
-	go QueryRangeMetric(writeQPSName, &results)
-	go QueryRangeMetric(writeBPSName, &results)
-	go QueryRangeMetric(readQPSName, &results)
-	go QueryRangeMetric(readBPSName, &results)
+	go QueryRangeMetric(writeQPSName, start, end, interval, &results)
+	go QueryRangeMetric(writeBPSName, start, end, interval, &results)
+	go QueryRangeMetric(readQPSName, start, end, interval, &results)
+	go QueryRangeMetric(readBPSName, start, end, interval, &results)
 
 	count := 0
 	for res := range results {
