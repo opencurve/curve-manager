@@ -23,15 +23,15 @@
 package agent
 
 import (
+	"github.com/opencurve/curve-manager/internal/http/curvebs"
 	"sort"
 
-	"github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
+	bshttp "github.com/opencurve/curve-manager/internal/http/curvebs"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
-	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/pigeon"
 )
 
@@ -92,7 +92,7 @@ func listChunkServer(pools *[]Pool, size int) error {
 		for zIndex, zone := range pool.Zones {
 			for sIndex, server := range zone.Servers {
 				go func(id uint32, addr *Server) {
-					chunkservers, err := bsrpc.GMdsClient.ListChunkServer(id)
+					chunkservers, err := bshttp.GMdsClient.ListChunkServer(id)
 					ret <- common.QueryResult{
 						Key:    addr,
 						Result: chunkservers,
@@ -125,7 +125,7 @@ func listZoneServer(pools *[]Pool, size int) error {
 	for pIndex, pool := range *pools {
 		for zIndex, zone := range pool.Zones {
 			go func(id uint32, addr *Zone) {
-				servers, err := bsrpc.GMdsClient.ListZoneServer(id)
+				servers, err := bshttp.GMdsClient.ListZoneServer(id)
 				ret <- common.QueryResult{
 					Key:    addr,
 					Result: servers,
@@ -165,7 +165,7 @@ func listPoolZone(pools *[]Pool) error {
 	number := 0
 	for index, pool := range *pools {
 		go func(id uint32, addr *Pool) {
-			zones, err := bsrpc.GMdsClient.ListPoolZone(id)
+			zones, err := bshttp.GMdsClient.ListPoolZone(id)
 			ret <- common.QueryResult{
 				Key:    addr,
 				Result: zones,
@@ -194,7 +194,7 @@ func listPoolZone(pools *[]Pool) error {
 
 func getPoolSpace(pools *[]PoolInfo) error {
 	// get can be recycled space
-	_, recycledSize, err := bsrpc.GMdsClient.GetFileAllocatedSize(RECYCLEBIN_DIR)
+	_, recycledSize, err := bshttp.GMdsClient.GetFileAllocatedSize(RECYCLEBIN_DIR)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func sortTopology(pools []Pool) {
 func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 	result := []PoolInfo{}
 	// get info from mds
-	pools, err := bsrpc.GMdsClient.ListLogicalPool()
+	pools, err := bshttp.GMdsClient.ListLogicalPool()
 	if err != nil {
 		r.Logger().Error("ListLogicalPool bsrpc.ListLogicalPool failed",
 			pigeon.Field("error", err),
@@ -353,7 +353,7 @@ func ListLogicalPool(r *pigeon.Request) (interface{}, errno.Errno) {
 }
 
 func GetLogicalPool(r *pigeon.Request, poolId uint32, start, end, interval uint64) (interface{}, errno.Errno) {
-	pool, err := bsrpc.GMdsClient.GetLogicalPool(poolId)
+	pool, err := bshttp.GMdsClient.GetLogicalPool(poolId)
 	if err != nil {
 		r.Logger().Error("GetLogicalPool bsrpc.GetLogicalPool failed",
 			pigeon.Field("poolId", poolId),
@@ -411,7 +411,7 @@ func GetLogicalPool(r *pigeon.Request, poolId uint32, start, end, interval uint6
 
 func ListTopology(r *pigeon.Request) (interface{}, errno.Errno) {
 	result := []Pool{}
-	logicalPools, err := bsrpc.GMdsClient.ListLogicalPool()
+	logicalPools, err := bshttp.GMdsClient.ListLogicalPool()
 	if err != nil {
 		r.Logger().Error("ListTopology bsrpc.ListLogicalPool failed",
 			pigeon.Field("error", err),

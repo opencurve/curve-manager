@@ -24,13 +24,12 @@ package agent
 
 import (
 	"fmt"
+	bshttp "github.com/opencurve/curve-manager/internal/http/curvebs"
 
-	"github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
-	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/pigeon"
 )
 
@@ -91,7 +90,7 @@ func GetSnapShotCloneServerStatus(r *pigeon.Request) (interface{}, errno.Errno) 
 func GetChunkServerStatus(l *pigeon.Logger, rId string) (interface{}, errno.Errno) {
 	var result ChunkServerStatus
 	// get chunkserver form mds
-	chunkservers, err := bsrpc.GMdsClient.GetChunkServerInCluster()
+	chunkservers, err := bshttp.GMdsClient.GetChunkServerInCluster()
 	if err != nil {
 		l.Error("GetChunkServerStatus bsrpc.GetChunkServerInCluster failed",
 			pigeon.Field("error", err),
@@ -103,7 +102,7 @@ func GetChunkServerStatus(l *pigeon.Logger, rId string) (interface{}, errno.Errn
 	var endponits []string
 	for _, cs := range chunkservers {
 		endpoint := fmt.Sprintf("%s:%d", cs.HostIp, cs.Port)
-		if cs.OnlineStatus == curvebs.ONLINE_STATUS {
+		if cs.OnlineStatus == bshttp.ONLINE_STATUS {
 			online += 1
 			endponits = append(endponits, endpoint)
 		} else {

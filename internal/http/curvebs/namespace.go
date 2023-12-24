@@ -110,7 +110,7 @@ type FileInfo struct {
 	MountPoints          []string         `json:"mountPoints"`
 }
 
-func (cli *MdsClient) GetFileAllocatedSizeHTTP(filename string) (uint64, map[uint32]uint64, error) {
+func (cli *MdsClient) GetFileAllocatedSize(filename string) (uint64, map[uint32]uint64, error) {
 	var host = cli.addrs
 	//todo checkHost
 	var path = GET_FILE_ALLOC_SIZE_FUNC_http
@@ -228,7 +228,7 @@ func getThrottleType(t string) nameserver2.ThrottleType {
 	}
 }
 
-func (cli *MdsClient) ListDirHTTP(filename, owner, sig string, date uint64) ([]FileInfo, error) {
+func (cli *MdsClient) ListDir(filename, owner, sig string, date uint64) ([]FileInfo, error) {
 	var host = cli.addrs
 	//todo check URL
 	var path = LIST_DIR_FUNC_http
@@ -285,7 +285,7 @@ func (cli *MdsClient) ListDirHTTP(filename, owner, sig string, date uint64) ([]F
 	return infos, nil
 }
 
-func (cli *MdsClient) GetFileInfoHTTP(filename, owner, sig string, date uint64) (FileInfo, error) {
+func (cli *MdsClient) GetFileInfo(filename, owner, sig string, date uint64) (FileInfo, error) {
 	info := FileInfo{}
 	var host = cli.addrs
 	// todo check URL
@@ -339,7 +339,7 @@ func (cli *MdsClient) GetFileInfoHTTP(filename, owner, sig string, date uint64) 
 	return info, nil
 }
 
-func (cli *MdsClient) GetFileSizeHTTP(fileName string) (uint64, error) {
+func (cli *MdsClient) GetFileSize(fileName string) (uint64, error) {
 	var size uint64
 	var host = cli.addrs
 	var path = GET_FILE_SIZE_http
@@ -364,7 +364,7 @@ func (cli *MdsClient) GetFileSizeHTTP(fileName string) (uint64, error) {
 	return size, nil
 }
 
-func (cli *MdsClient) DeleteFileHTTP(filename, owner, sig string, fileId, date uint64, forceDelete bool) error {
+func (cli *MdsClient) DeleteFile(filename, owner, sig string, fileId, date uint64, forceDelete bool) error {
 	var host = cli.addrs
 	var path = DELETE_FILE_http
 	//todo checkURL
@@ -394,7 +394,7 @@ func (cli *MdsClient) DeleteFileHTTP(filename, owner, sig string, fileId, date u
 	return nil
 }
 
-func (cli *MdsClient) RecoverFileHTTP(filename, owner, sig string, fileId, date uint64) error {
+func (cli *MdsClient) RecoverFile(filename, owner, sig string, fileId, date uint64) error {
 	var host = cli.addrs
 	var path = RECOVER_FILE_http
 	//todo checkURL
@@ -423,7 +423,7 @@ func (cli *MdsClient) RecoverFileHTTP(filename, owner, sig string, fileId, date 
 	return nil
 }
 
-func (cli *MdsClient) CreateFileHTTP(filename, ftype, owner, sig string, length, date, stripeUnit, stripeCount uint64) error {
+func (cli *MdsClient) CreateFile(filename, ftype, owner, sig string, length, date, stripeUnit, stripeCount uint64) error {
 	var host = cli.addrs
 	var path = CREATE_FILE_http
 	//todo: generating param
@@ -444,7 +444,7 @@ func (cli *MdsClient) CreateFileHTTP(filename, ftype, owner, sig string, length,
 	return nil
 }
 
-func (cli *MdsClient) ExtendFileHTTP(filename, owner, sig string, newSize, date uint64) error {
+func (cli *MdsClient) ExtendFile(filename, owner, sig string, newSize, date uint64) error {
 	var host = cli.addrs
 	var path = EXTEND_FILE_http
 	//todo: checkURL
@@ -469,7 +469,7 @@ func (cli *MdsClient) ExtendFileHTTP(filename, owner, sig string, newSize, date 
 	return nil
 }
 
-func (cli *MdsClient) UpdateFileThrottleParamsHttp(filename, owner, sig string, date uint64, params ThrottleParams) error {
+func (cli *MdsClient) UpdateFileThrottleParams(filename, owner, sig string, date uint64, params ThrottleParams) error {
 	var host = cli.addrs
 	var path = UPDATE_FILE_THROTTLE_PARAMS_http
 
@@ -494,7 +494,7 @@ func (cli *MdsClient) UpdateFileThrottleParamsHttp(filename, owner, sig string, 
 	return nil
 }
 
-func (cli *MdsClient) FindFileMountPointHttp(filename string) ([]string, error) {
+func (cli *MdsClient) FindFileMountPoint(filename string) ([]string, error) {
 	info := []string{}
 
 	var host = cli.addrs

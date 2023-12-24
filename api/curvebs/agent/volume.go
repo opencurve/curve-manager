@@ -33,13 +33,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SeanHai/curve-go-rpc/rpc/curvebs"
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
+	bshttp "github.com/opencurve/curve-manager/internal/http/curvebs"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
 	metricomm "github.com/opencurve/curve-manager/internal/metrics/common"
-	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/pigeon"
 )
@@ -75,14 +74,14 @@ type VolumePoolInfo struct {
 	Alloc uint32 `json:"alloc" binding:"required"`
 }
 type VolumeInfo struct {
-	Info        curvebs.FileInfo            `json:"info" binding:"required"`
+	Info        bshttp.FileInfo             `json:"info" binding:"required"`
 	Pools       []VolumePoolInfo            `json:"pools"`
 	Performance []metricomm.UserPerformance `json:"performance" binding:"required"`
 }
 
 type ListVolumeInfo struct {
-	Total int                `json:"total" binding:"required"`
-	Info  []curvebs.FileInfo `json:"info" binding:"required"`
+	Total int               `json:"total" binding:"required"`
+	Info  []bshttp.FileInfo `json:"info" binding:"required"`
 }
 
 func getUpPath(dir string) string {
@@ -122,7 +121,7 @@ func getAuthInfoOfRoot() (*AuthInfo, string) {
 	}, ""
 }
 
-func sortFile(files []curvebs.FileInfo, orderKey string, direction int) {
+func sortFile(files []bshttp.FileInfo, orderKey string, direction int) {
 	sort.Slice(files, func(i, j int) bool {
 		switch orderKey {
 		case ORDER_BY_CTIME:
@@ -150,7 +149,7 @@ func getVolumeAllocSize(dir string, volumes *[]VolumeInfo) error {
 	ret := make(chan common.QueryResult, size)
 	for index, volume := range *volumes {
 		go func(vname string, addr *VolumeInfo) {
-			_, poolSize, err := bsrpc.GMdsClient.GetFileAllocatedSize(vname)
+			_, poolSize, err := bshttp.GMdsClient.GetFileAllocatedSize(vname)
 			ret <- common.QueryResult{
 				Key:    addr,
 				Result: poolSize,
@@ -181,12 +180,12 @@ func getVolumeAllocSize(dir string, volumes *[]VolumeInfo) error {
 }
 
 func getVolumePoolInfo(volumes *[]VolumeInfo) error {
-	pools, err := bsrpc.GMdsClient.ListLogicalPool()
+	pools, err := bshttp.GMdsClient.ListLogicalPool()
 	if err != nil {
 		return fmt.Errorf("getVolumePoolInfo failed, %s", err)
 	}
 
-	poolMap := make(map[uint32]*curvebs.LogicalPool)
+	poolMap := make(map[uint32]*bshttp.LogicalPool)
 	for index, pool := range pools {
 		poolMap[pool.Id] = &pools[index]
 	}
@@ -234,9 +233,9 @@ func getVolumeSpaceSize(dir string, size int, volumes *[]VolumeInfo) error {
 	}
 	ret := make(chan common.QueryResult, size)
 	for index, volume := range *volumes {
-		if volume.Info.FileType == curvebs.INODE_DIRECTORY {
+		if volume.Info.FileType == bshttp.INODE_DIRECTORY {
 			go func(vname string, addr *VolumeInfo) {
-				size, err := bsrpc.GMdsClient.GetFileSize(vname)
+				size, err := bshttp.GMdsClient.GetFileSize(vname)
 				ret <- common.QueryResult{
 					Key:    addr,
 					Result: size,
@@ -264,7 +263,7 @@ func findVolumeMountPoints(dir string, volumes *[]VolumeInfo) error {
 	ret := make(chan common.QueryResult, size)
 	for index, volume := range *volumes {
 		go func(vname string, addr *VolumeInfo) {
-			infos, err := bsrpc.GMdsClient.FindFileMountPoint(vname)
+			infos, err := bshttp.GMdsClient.FindFileMountPoint(vname)
 			ret <- common.QueryResult{
 				Key:    addr,
 				Result: infos,
@@ -288,7 +287,7 @@ func findVolumeMountPoints(dir string, volumes *[]VolumeInfo) error {
 
 func ListVolume(r *pigeon.Request, size, page uint32, path, key string, direction int) (interface{}, errno.Errno) {
 	listVolumeInfo := ListVolumeInfo{
-		Info: []curvebs.FileInfo{},
+		Info: []bshttp.FileInfo{},
 	}
 	authInfo, err := getAuthInfoOfRoot()
 	if err != "" {
@@ -297,7 +296,7 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_ROOT_AUTH_FAILED
 	}
-	fileInfos, e := bsrpc.GMdsClient.ListDir(path, authInfo.userName, authInfo.signatrue, authInfo.date)
+	fileInfos, e := bshttp.GMdsClient.ListDir(path, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
 		r.Logger().Error("ListVolume bsrpc.ListDir failed",
 			pigeon.Field("path", path),
@@ -309,7 +308,7 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 		return nil, errno.LIST_VOLUME_FAILED
 	}
 	// exclude /RecycleBin and /clone
-	var tmpSlice []curvebs.FileInfo
+	var tmpSlice []bshttp.FileInfo
 	if path == ROOT_DIR {
 		for i := range fileInfos {
 			if fileInfos[i].FileName == RECYCLEBIN_NAME || fileInfos[i].FileName == CLONE_NAME {
@@ -338,7 +337,7 @@ func ListVolume(r *pigeon.Request, size, page uint32, path, key string, directio
 		tmpVolumes = append(tmpVolumes, VolumeInfo{
 			Info: v,
 		})
-		if v.FileType == curvebs.INODE_DIRECTORY {
+		if v.FileType == bshttp.INODE_DIRECTORY {
 			dirSize++
 		}
 	}
@@ -380,7 +379,7 @@ func GetVolume(r *pigeon.Request, volumeName string, start, end, interval uint64
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return nil, errno.GET_ROOT_AUTH_FAILED
 	}
-	fileInfo, e := bsrpc.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
+	fileInfo, e := bshttp.GMdsClient.GetFileInfo(volumeName, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
 		if e.Error() == FILE_NOT_EXIST || e.Error() == PARAM_ERROR {
 			return nil, errno.OK
@@ -417,7 +416,7 @@ func GetVolume(r *pigeon.Request, volumeName string, start, end, interval uint64
 	}
 
 	// get performance of the volume
-	if start != 0 && end != 0 && interval != 0 { 
+	if start != 0 && end != 0 && interval != 0 {
 		e = getVolumePerformance(path, &volumes, start, end, interval)
 		if e != nil {
 			r.Logger().Error("GetVolume getVolumePerformance failed",
@@ -434,7 +433,7 @@ func GetVolume(r *pigeon.Request, volumeName string, start, end, interval uint64
 	return volumes[0], errno.OK
 }
 
-func needDelete(file *curvebs.FileInfo, expiration uint64) bool {
+func needDelete(file *bshttp.FileInfo, expiration uint64) bool {
 	if file == nil {
 		return false
 	}
@@ -459,7 +458,7 @@ func CleanRecycleBin(r *pigeon.Request, expiration uint64) errno.Errno {
 		return errno.GET_ROOT_AUTH_FAILED
 	}
 
-	fileInfos, e := bsrpc.GMdsClient.ListDir(RECYCLEBIN_DIR, authInfo.userName, authInfo.signatrue, authInfo.date)
+	fileInfos, e := bshttp.GMdsClient.ListDir(RECYCLEBIN_DIR, authInfo.userName, authInfo.signatrue, authInfo.date)
 	if e != nil {
 		r.Logger().Error("CleanRecycleBin bsrpc.ListDir failed",
 			pigeon.Field("error", e),
@@ -470,7 +469,7 @@ func CleanRecycleBin(r *pigeon.Request, expiration uint64) errno.Errno {
 	for _, file := range fileInfos {
 		if needDelete(&file, expiration) {
 			fileName := path.Join(RECYCLEBIN_DIR, file.FileName)
-			e = bsrpc.GMdsClient.DeleteFile(fileName, authInfo.userName, authInfo.signatrue, 0, authInfo.date, true)
+			e = bshttp.GMdsClient.DeleteFile(fileName, authInfo.userName, authInfo.signatrue, 0, authInfo.date, true)
 			if e != nil {
 				r.Logger().Error("CleanRecycleBin bsrpc.DeleteFile failed",
 					pigeon.Field("fileName", fileName),
@@ -499,7 +498,7 @@ func CreateNameSpace(r *pigeon.Request, name, user, passwrord string) errno.Errn
 	if user == authInfo.userName && passwrord != "" {
 		sig = authInfo.signatrue
 	}
-	e := bsrpc.GMdsClient.CreateFile(name, curvebs.INODE_DIRECTORY, user, sig, 0, authInfo.date, 0, 0)
+	e := bshttp.GMdsClient.CreateFile(name, bshttp.INODE_DIRECTORY, user, sig, 0, authInfo.date, 0, 0)
 	if e != nil {
 		r.Logger().Error("CreateNameSpace failed",
 			pigeon.Field("name", name),
@@ -524,7 +523,7 @@ func CreateVolume(r *pigeon.Request, name, user string, passwrord string, length
 	if user == authInfo.userName && passwrord != "" {
 		sig = authInfo.signatrue
 	}
-	e := bsrpc.GMdsClient.CreateFile(name, curvebs.INODE_PAGEFILE, user, sig, length*common.GiB, authInfo.date, stripUnit, stripCount)
+	e := bshttp.GMdsClient.CreateFile(name, bshttp.INODE_PAGEFILE, user, sig, length*common.GiB, authInfo.date, stripUnit, stripCount)
 	if e != nil {
 		r.Logger().Error("CreateVolume failed",
 			pigeon.Field("name", name),
@@ -548,7 +547,7 @@ func ExtendVolume(r *pigeon.Request, name string, length uint64) errno.Errno {
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.GET_ROOT_AUTH_FAILED
 	}
-	e := bsrpc.GMdsClient.ExtendFile(name, authInfo.userName, authInfo.signatrue, length*common.GiB, authInfo.date)
+	e := bshttp.GMdsClient.ExtendFile(name, authInfo.userName, authInfo.signatrue, length*common.GiB, authInfo.date)
 	if e != nil {
 		r.Logger().Error("ExtendVolume failed",
 			pigeon.Field("name", name),
@@ -569,8 +568,8 @@ func VolumeThrottle(r *pigeon.Request, name, throttleType string, limit, burst, 
 			pigeon.Field("requestId", r.HeadersIn[comm.HEADER_REQUEST_ID]))
 		return errno.GET_ROOT_AUTH_FAILED
 	}
-	e := bsrpc.GMdsClient.UpdateFileThrottleParams(name, authInfo.userName, authInfo.signatrue, authInfo.date,
-		curvebs.ThrottleParams{
+	e := bshttp.GMdsClient.UpdateFileThrottleParams(name, authInfo.userName, authInfo.signatrue, authInfo.date,
+		bshttp.ThrottleParams{
 			Type:        throttleType,
 			Limit:       limit,
 			Burst:       burst,
@@ -593,8 +592,8 @@ func VolumeThrottle(r *pigeon.Request, name, throttleType string, limit, burst, 
 func deleteVolume(r *pigeon.Request, volumes *map[string]string, force bool, auth *AuthInfo) bool {
 	success := true
 	for name, ftype := range *volumes {
-		if ftype == curvebs.INODE_DIRECTORY {
-			fileInfos, e := bsrpc.GMdsClient.ListDir(name, auth.userName, auth.signatrue, auth.date)
+		if ftype == bshttp.INODE_DIRECTORY {
+			fileInfos, e := bshttp.GMdsClient.ListDir(name, auth.userName, auth.signatrue, auth.date)
 			if e != nil {
 				r.Logger().Error("DeleteVolume ListDir failed",
 					pigeon.Field("path", name),
@@ -607,7 +606,7 @@ func deleteVolume(r *pigeon.Request, volumes *map[string]string, force bool, aut
 			}
 			deleteVolume(r, &v, force, auth)
 		}
-		e := bsrpc.GMdsClient.DeleteFile(name, auth.userName, auth.signatrue, 0, auth.date, force)
+		e := bshttp.GMdsClient.DeleteFile(name, auth.userName, auth.signatrue, 0, auth.date, force)
 		if e != nil {
 			r.Logger().Error("DeleteVolume failed",
 				pigeon.Field("name", name),
@@ -652,7 +651,7 @@ func RecoverVolume(r *pigeon.Request, ids map[string]uint64) errno.Errno {
 	}
 	success := true
 	for name, id := range ids {
-		e := bsrpc.GMdsClient.RecoverFile(name, authInfo.userName, authInfo.signatrue, id, authInfo.date)
+		e := bshttp.GMdsClient.RecoverFile(name, authInfo.userName, authInfo.signatrue, id, authInfo.date)
 		if e != nil {
 			r.Logger().Error("RecoverVolume failed",
 				pigeon.Field("name", name),

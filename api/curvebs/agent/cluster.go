@@ -28,8 +28,8 @@ import (
 	comm "github.com/opencurve/curve-manager/api/common"
 	"github.com/opencurve/curve-manager/internal/common"
 	"github.com/opencurve/curve-manager/internal/errno"
+	bshttp "github.com/opencurve/curve-manager/internal/http/curvebs"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
-	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/pigeon"
 )
 
@@ -47,7 +47,7 @@ type ClusterStatus struct {
 func GetClusterSpace(l *pigeon.Logger, rId string) (interface{}, errno.Errno) {
 	result := Space{}
 	// get logical pools form mds
-	pools, err := bsrpc.GMdsClient.ListLogicalPool()
+	pools, err := bshttp.GMdsClient.ListLogicalPool()
 	if err != nil {
 		l.Error("GetClusterSpace bsrpc.ListLogicalPool failed",
 			pigeon.Field("error", err),
@@ -111,7 +111,7 @@ func GetClusterPerformance(r *pigeon.Request, start, end, interval uint64) (inte
 func GetClusterStatus(l *pigeon.Logger, rId string) interface{} {
 	clusterStatus := ClusterStatus{}
 	// 1. get pool numbers in cluster
-	pools, err := bsrpc.GMdsClient.ListLogicalPool()
+	pools, err := bshttp.GMdsClient.ListLogicalPool()
 	if err != nil {
 		clusterStatus.Healthy = false
 		clusterStatus.PoolNum = 0

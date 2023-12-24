@@ -163,7 +163,7 @@ type CopySetServerInfo struct {
 	CsLocs    []ChunkServerLocation `json:"csLocs" binding:"required"`
 }
 
-func (cli *MdsClient) ListPhysicalPool_http() ([]PhysicalPool, error) {
+func (cli *MdsClient) ListPhysicalPool() ([]PhysicalPool, error) {
 	var host = cli.addrs
 	var path = HTTP_Service + "/" + LIST_PHYSICAL_POOL_FUNC_HTTP
 	ret := cli.baseClient_http.SendHTTP(host, path)
@@ -218,9 +218,9 @@ func getLogicalPoolAllocateStatus(s topology.AllocateStatus) string {
 	}
 }
 
-func (cli *MdsClient) ListLogicalPool_http() ([]LogicalPool, error) {
+func (cli *MdsClient) ListLogicalPool() ([]LogicalPool, error) {
 	// list physical pool and get pool id
-	physicalPools, err := cli.ListPhysicalPool_http()
+	physicalPools, err := cli.ListPhysicalPool()
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (cli *MdsClient) ListLogicalPool_http() ([]LogicalPool, error) {
 	return pools, nil
 }
 
-func (cli *MdsClient) GetLogicalPool_http(poolId uint32) (LogicalPool, error) {
+func (cli *MdsClient) GetLogicalPool(poolId uint32) (LogicalPool, error) {
 	info := LogicalPool{}
 	var host = cli.addrs
 	var path = HTTP_Service + "/" + GET_LOGICAL_POOL_HTTP
@@ -332,7 +332,7 @@ func (cli *MdsClient) GetLogicalPool_http(poolId uint32) (LogicalPool, error) {
 
 // list zones of physical pool
 
-func (cli *MdsClient) ListPoolZone_http(poolId uint32) ([]Zone, error) {
+func (cli *MdsClient) ListPoolZone(poolId uint32) ([]Zone, error) {
 	var host = cli.addrs
 	//todo checkURL
 	var path = LIST_POOL_ZONE_FUNC_HTTP
@@ -369,7 +369,7 @@ func (cli *MdsClient) ListPoolZone_http(poolId uint32) ([]Zone, error) {
 
 // list servers of zone
 
-func (cli *MdsClient) ListZoneServer_http(zoneId uint32) ([]Server, error) {
+func (cli *MdsClient) ListZoneServer(zoneId uint32) ([]Server, error) {
 
 	var host = cli.addrs
 	var path = LIST_ZONE_SERVER_FUNC_HTTP
@@ -449,7 +449,7 @@ func getOnlineStatus(s topology.OnlineState) string {
 	}
 }
 
-func (cli *MdsClient) ListChunkServer_http(serverId uint32) ([]ChunkServer, error) {
+func (cli *MdsClient) ListChunkServer(serverId uint32) ([]ChunkServer, error) {
 	var host = cli.addrs
 	var path = HTTP_Service + "/" + LIST_CHUNKSERVER_FUNC_HTTP
 	//todo checkURL
@@ -492,7 +492,7 @@ func (cli *MdsClient) ListChunkServer_http(serverId uint32) ([]ChunkServer, erro
 	return infos, nil
 }
 
-func (cli *MdsClient) GetChunkServerInCluster_http() ([]ChunkServer, error) {
+func (cli *MdsClient) GetChunkServerInCluster() ([]ChunkServer, error) {
 	var host = cli.addrs
 	//todo check URL service
 	var path = HTTP_Service + GET_CHUNKSERVER_IN_CLUSTER_FUNC_HTTP
@@ -532,7 +532,7 @@ func (cli *MdsClient) GetChunkServerInCluster_http() ([]ChunkServer, error) {
 	return infos, nil
 }
 
-func (cli *MdsClient) GetCopySetsInChunkServer_http(ip string, port uint32) ([]CopySetInfo, error) {
+func (cli *MdsClient) GetCopySetsInChunkServer(ip string, port uint32) ([]CopySetInfo, error) {
 	var host = cli.addrs
 	//todo checkURL
 	var path = GET_COPYSET_IN_CHUNKSERVER_FUNC_HTTP
@@ -564,7 +564,7 @@ func (cli *MdsClient) GetCopySetsInChunkServer_http(ip string, port uint32) ([]C
 	return infos, nil
 }
 
-func (cli *MdsClient) GetChunkServerListInCopySets_http(logicalPoolId uint32, copysetIds []uint32) ([]CopySetServerInfo, error) {
+func (cli *MdsClient) GetChunkServerListInCopySets(logicalPoolId uint32, copysetIds []uint32) ([]CopySetServerInfo, error) {
 	var host = cli.addrs
 	//todo checkURL
 	var path = HTTP_Service + "/" + GET_CHUNKSERVER_LIST_IN_COPYSETS_HTTP
@@ -600,7 +600,7 @@ func (cli *MdsClient) GetChunkServerListInCopySets_http(logicalPoolId uint32, co
 	return infos, nil
 }
 
-func (cli *MdsClient) GetCopySetsInCluster_http() ([]CopySetInfo, error) {
+func (cli *MdsClient) GetCopySetsInCluster() ([]CopySetInfo, error) {
 	var host = cli.addrs
 	//todo checkURL
 	var path = HTTP_Service + "/" + LIST_PHYSICAL_POOL_FUNC_HTTP

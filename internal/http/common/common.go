@@ -1,9 +1,7 @@
 package common
 
 import (
-	"fmt"
 	"google.golang.org/protobuf/runtime/protoimpl"
-	"strings"
 )
 
 const (
@@ -95,17 +93,4 @@ func (x *ChunkServerLocation) GetExternalIp() string {
 		return *x.ExternalIp
 	}
 	return ""
-}
-
-func ParseBvarMetric(value string) (*map[string]string, error) {
-	ret := make(map[string]string)
-	lines := strings.Split(value, "\n")
-	for _, line := range lines {
-		items := strings.Split(line, " : ")
-		if len(items) != 2 {
-			return nil, fmt.Errorf("parseBvarMetric failed, line: %s", line)
-		}
-		ret[strings.TrimSpace(items[0])] = strings.Trim(strings.TrimSpace(items[1]), "\"")
-	}
-	return &ret, nil
 }
