@@ -23,12 +23,13 @@
 package curvebs
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/SeanHai/curve-go-rpc/rpc/common"
+	"github.com/go-resty/resty/v2"
+	"github.com/opencurve/curve-manager/internal/http/common"
+	"github.com/opencurve/curve-manager/internal/http/nameserver2"
 	"strconv"
 	"time"
-
-	"github.com/SeanHai/curve-go-rpc/curvebs_proto/proto/nameserver2"
 )
 
 const (
@@ -111,6 +112,7 @@ type FileInfo struct {
 
 func (cli *MdsClient) GetFileAllocatedSizeHTTP(filename string) (uint64, map[uint32]uint64, error) {
 	var host = cli.addrs
+	//todo checkHost
 	var path = GET_FILE_ALLOC_SIZE_FUNC_http
 	path = path + "FileName=" + filename
 
@@ -118,7 +120,12 @@ func (cli *MdsClient) GetFileAllocatedSizeHTTP(filename string) (uint64, map[uin
 	if ret.Err != nil {
 		return 0, nil, ret.Err
 	}
-	response := ret.Result.(*nameserver2.GetAllocatedSizeResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *nameserver2.GetAllocatedSizeResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return 0, nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return 0, nil, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -223,17 +230,23 @@ func getThrottleType(t string) nameserver2.ThrottleType {
 
 func (cli *MdsClient) ListDirHTTP(filename, owner, sig string, date uint64) ([]FileInfo, error) {
 	var host = cli.addrs
+	//todo check URL
 	var path = LIST_DIR_FUNC_http
 	path = path + "FileName=" + filename + "&Owner=" + owner + "&Date=" + strconv.Itoa(int(date))
 	if sig != "" {
-		path = fmt.Sprintf("%s %s %s", path, "Signature=", &sig)
+		path = fmt.Sprintf("%s %s %d", path, "Signature=", &sig)
 	}
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*nameserver2.ListDirResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *nameserver2.ListDirResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return nil, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -275,17 +288,23 @@ func (cli *MdsClient) ListDirHTTP(filename, owner, sig string, date uint64) ([]F
 func (cli *MdsClient) GetFileInfoHTTP(filename, owner, sig string, date uint64) (FileInfo, error) {
 	info := FileInfo{}
 	var host = cli.addrs
+	// todo check URL
 	var path = GET_FILE_SIZE_http
 	path = path + "FileName=" + filename + "&Owner=" + owner + "&Date=" + strconv.Itoa(int(date))
 	if sig != "" {
-		path = fmt.Sprintf("%s %s %s", path, "Signature=", &sig)
+		path = fmt.Sprintf("%s %s %d", path, "Signature=", &sig)
 	}
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return info, ret.Err
 	}
-	response := ret.Result.(*nameserver2.GetFileInfoResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.GetFileInfoResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return info, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return info, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -324,13 +343,19 @@ func (cli *MdsClient) GetFileSizeHTTP(fileName string) (uint64, error) {
 	var size uint64
 	var host = cli.addrs
 	var path = GET_FILE_SIZE_http
-	path = fmt.Sprintf("%s %s %s", path, "FileName=", &fileName)
+	// todo checkURL
+	path = fmt.Sprintf("%s %s %s", path, "FileName=", fileName)
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return size, ret.Err
 	}
 
-	response := ret.Result.(*nameserver2.GetFileSizeResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.GetFileSizeResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return 0, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return size, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -342,12 +367,13 @@ func (cli *MdsClient) GetFileSizeHTTP(fileName string) (uint64, error) {
 func (cli *MdsClient) DeleteFileHTTP(filename, owner, sig string, fileId, date uint64, forceDelete bool) error {
 	var host = cli.addrs
 	var path = DELETE_FILE_http
+	//todo checkURL
 	path = path + "FileName=" + filename + "&Date=" + strconv.Itoa(int(date)) + "&ForceDelete=" + strconv.FormatBool(forceDelete)
 	if sig != "" {
-		path = fmt.Sprintf("%s %s %s", path, "Signature=", &sig)
+		path = fmt.Sprintf("%s %s %s", path, "Signature=", sig)
 	}
 	if fileId != 0 {
-		path = fmt.Sprintf("%s %s %s", path, "FileId=", &fileId)
+		path = fmt.Sprintf("%s %s %d", path, "FileId=", &fileId)
 	}
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
@@ -355,7 +381,12 @@ func (cli *MdsClient) DeleteFileHTTP(filename, owner, sig string, fileId, date u
 	if ret.Err != nil {
 		return ret.Err
 	}
-	response := ret.Result.(*nameserver2.DeleteFileResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.DeleteFileResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -366,19 +397,25 @@ func (cli *MdsClient) DeleteFileHTTP(filename, owner, sig string, fileId, date u
 func (cli *MdsClient) RecoverFileHTTP(filename, owner, sig string, fileId, date uint64) error {
 	var host = cli.addrs
 	var path = RECOVER_FILE_http
+	//todo checkURL
 	path = path + "FileName=" + filename + "&Owner=" + owner + "&Date" + strconv.Itoa(int(date))
 	if sig != "" {
-		path = fmt.Sprintf("%s %s %s", path, "Signature=", &sig)
+		path = fmt.Sprintf("%s %s %s", path, "?Signature=", sig)
 	}
 	if fileId != 0 {
-		path = fmt.Sprintf("%s %s %s", path, "FileId=", &fileId)
+		path = fmt.Sprintf("%s %s %d", path, "?FileId=", &fileId)
 	}
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return ret.Err
 	}
-	response := ret.Result.(*nameserver2.RecoverFileResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.RecoverFileResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -394,7 +431,12 @@ func (cli *MdsClient) CreateFileHTTP(filename, ftype, owner, sig string, length,
 	if ret.Err != nil {
 		return ret.Err
 	}
-	response := ret.Result.(*nameserver2.CreateFileResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.CreateFileResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -405,16 +447,21 @@ func (cli *MdsClient) CreateFileHTTP(filename, ftype, owner, sig string, length,
 func (cli *MdsClient) ExtendFileHTTP(filename, owner, sig string, newSize, date uint64) error {
 	var host = cli.addrs
 	var path = EXTEND_FILE_http
-
+	//todo: checkURL
 	path = path + "FileName=" + filename + "&NewSize=" + strconv.Itoa(int(newSize)) + "&Owner=" + owner + "&Date" + strconv.Itoa(int(date))
 	if sig != "" {
-		path = fmt.Sprintf("%s %s %s", path, "Signature=", &sig)
+		path = fmt.Sprintf("%s %s %s", path, "Signature=", sig)
 	}
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return ret.Err
 	}
-	response := ret.Result.(*nameserver2.ExtendFileResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.ExtendFileResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -428,13 +475,18 @@ func (cli *MdsClient) UpdateFileThrottleParamsHttp(filename, owner, sig string, 
 
 	//todo : generating paramt
 	if sig != "" {
-		path = fmt.Sprintf("%s %s %s", path, "Signature=", &sig)
+		path = fmt.Sprintf("%s %s %s", path, "Signature=", sig)
 	}
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return ret.Err
 	}
-	response := ret.Result.(*nameserver2.UpdateFileThrottleParamsResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.UpdateFileThrottleParamsResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])
@@ -446,14 +498,20 @@ func (cli *MdsClient) FindFileMountPointHttp(filename string) ([]string, error) 
 	info := []string{}
 
 	var host = cli.addrs
+	//todo: checkURL
 	var path = FIND_FILE_MOUNTPOINT_http
-	path = fmt.Sprintf("%s %s %s", path, "FileName=", &filename)
+	path = fmt.Sprintf("%s %s %s", path, "FileName=", filename)
 	ret := cli.baseClient_http.SendHTTP(host, path)
 
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*nameserver2.FindFileMountPointResponse)
+	tmp := ret.Result.(*resty.Response).String()
+	var response *nameserver2.FindFileMountPointResponse
+	err := json.Unmarshal([]byte(tmp), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != nameserver2.StatusCode_kOK {
 		return info, fmt.Errorf(nameserver2.StatusCode_name[int32(statusCode)])

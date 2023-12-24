@@ -23,14 +23,20 @@
 package curvebs
 
 import (
+	"encoding/json"
+	_ "encoding/json"
 	"fmt"
-	"github.com/SeanHai/curve-go-rpc/rpc/baserpc"
+	"github.com/go-resty/resty/v2"
+	_ "github.com/go-resty/resty/v2"
+	"github.com/opencurve/curve-manager/internal/http/baseHttp"
 	"github.com/opencurve/curve-manager/internal/http/common"
+	_ "github.com/opencurve/curve-manager/internal/http/common"
+	"github.com/opencurve/curve-manager/internal/http/statuscode"
+	"github.com/opencurve/curve-manager/internal/http/topology"
 	"strconv"
+	_ "strconv"
 	"time"
-
-	"github.com/SeanHai/curve-go-rpc/curvebs_proto/proto/topology"
-	"github.com/SeanHai/curve-go-rpc/curvebs_proto/proto/topology/statuscode"
+	_ "time"
 )
 
 const (
@@ -73,7 +79,8 @@ const (
 	GET_LOGICAL_POOL                 = "GetLogicalPool"
 
 	//http path
-	LIST_PHYSICAL_POOL_FUNC_HTTP          = "host.list"
+	HTTP_Service                          = "TopologyService"
+	LIST_PHYSICAL_POOL_FUNC_HTTP          = "ListPhysicalPool"
 	LIST_LOGICAL_POOL_FUNC_HTTP           = "ListLogicalPool"
 	LIST_POOL_ZONE_FUNC_HTTP              = "ListPoolZone"
 	LIST_ZONE_SERVER_FUNC_HTTP            = "ListZoneServer"
@@ -158,12 +165,19 @@ type CopySetServerInfo struct {
 
 func (cli *MdsClient) ListPhysicalPool_http() ([]PhysicalPool, error) {
 	var host = cli.addrs
-	var path = LIST_PHYSICAL_POOL_FUNC_HTTP
+	var path = HTTP_Service + "/" + LIST_PHYSICAL_POOL_FUNC_HTTP
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.ListPhysicalPoolResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.ListPhysicalPoolResponse
+	res := json.Unmarshal([]byte(v), &response)
+	//response := ret.Result.(*topology.ListPhysicalPoolResponse)
+	//statusCode := response.GetStatusCode()
+	if res != nil {
+		return nil, res
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -182,11 +196,11 @@ func (cli *MdsClient) ListPhysicalPool_http() ([]PhysicalPool, error) {
 
 func getLogicalPoolType(t topology.LogicalPoolType) string {
 	switch t {
-	case topology.LogicalPoolType_PAGEFILE:
+	case topology.PAGEFILE:
 		return PAGEFILE_TYPE
-	case topology.LogicalPoolType_APPENDFILE:
+	case topology.APPENDFILE:
 		return APPENDFILE_TYPE
-	case topology.LogicalPoolType_APPENDECFILE:
+	case topology.APPENDECFILE:
 		return APPENDECFILE_TYPE
 	default:
 		return INVALID
@@ -195,9 +209,9 @@ func getLogicalPoolType(t topology.LogicalPoolType) string {
 
 func getLogicalPoolAllocateStatus(s topology.AllocateStatus) string {
 	switch s {
-	case topology.AllocateStatus_ALLOW:
+	case topology.ALLOW:
 		return ALLOW_STATUS
-	case topology.AllocateStatus_DENY:
+	case topology.DENY:
 		return DENY_STATUS
 	default:
 		return INVALID
@@ -211,46 +225,57 @@ func (cli *MdsClient) ListLogicalPool_http() ([]LogicalPool, error) {
 		return nil, err
 	}
 	size := len(physicalPools)
-	results := make(chan baserpc.RpcResult, size)
+	results := make(chan baseHttp.HttpResult, size)
 	for _, pool := range physicalPools {
 		go func(id uint32) {
 			var host = cli.addrs
-			var path = LIST_LOGICAL_POOL_FUNC_HTTP
-			path = fmt.Sprintf("%s %s %s", path, "PhysicalPoolId=", &id)
+			// todo: checkURL
+			var path = HTTP_Service + "/" + LIST_LOGICAL_POOL_FUNC_HTTP + "?" + "physicalPoolID="
+			path = fmt.Sprintf("%s %d", path, &id)
 
 			ret := cli.baseClient_http.SendHTTP(host, path)
 			if ret.Err != nil {
-				results <- baserpc.RpcResult{
+				results <- baseHttp.HttpResult{
 					Key:    id,
 					Err:    fmt.Errorf("%s: %v", ret.Key, ret.Err),
 					Result: nil,
 				}
 			} else {
-				response := ret.Result.(*topology.ListLogicalPoolResponse)
-				statusCode := response.GetStatusCode()
-				if statusCode != int32(statuscode.TopoStatusCode_Success) {
-					results <- baserpc.RpcResult{
+				v := ret.Result.(*resty.Response).String()
+				var response *topology.ListLogicalPoolResponse
+				err := json.Unmarshal([]byte(v), &response)
+				if err != nil {
+					results <- baseHttp.HttpResult{
 						Key:    id,
-						Err:    fmt.Errorf("%s", statuscode.TopoStatusCode_name[statusCode]),
+						Err:    err,
 						Result: nil,
 					}
 				} else {
-					var pools []LogicalPool
-					for _, pool := range response.GetLogicalPoolInfos() {
-						info := LogicalPool{}
-						info.Id = pool.GetLogicalPoolID()
-						info.Name = pool.GetLogicalPoolName()
-						info.PhysicalPoolId = pool.GetPhysicalPoolID()
-						info.Type = getLogicalPoolType(pool.GetType())
-						info.CreateTime = time.Unix(int64(pool.GetCreateTime()), 0).Format(common.TIME_FORMAT)
-						info.AllocateStatus = getLogicalPoolAllocateStatus(pool.GetAllocateStatus())
-						info.ScanEnable = pool.GetScanEnable()
-						pools = append(pools, info)
-					}
-					results <- baserpc.RpcResult{
-						Key:    id,
-						Err:    nil,
-						Result: &pools,
+					statusCode := response.GetStatusCode()
+					if statusCode != int32(statuscode.TopoStatusCode_Success) {
+						results <- baseHttp.HttpResult{
+							Key:    id,
+							Err:    fmt.Errorf("%s", statuscode.TopoStatusCode_name[statusCode]),
+							Result: nil,
+						}
+					} else {
+						var pools []LogicalPool
+						for _, pool := range response.GetLogicalPoolInfos() {
+							info := LogicalPool{}
+							info.Id = pool.GetLogicalPoolID()
+							info.Name = pool.GetLogicalPoolName()
+							info.PhysicalPoolId = pool.GetPhysicalPoolID()
+							info.Type = getLogicalPoolType(pool.GetType())
+							info.CreateTime = time.Unix(int64(pool.GetCreateTime()), 0).Format(common.TIME_FORMAT)
+							info.AllocateStatus = getLogicalPoolAllocateStatus(pool.GetAllocateStatus())
+							info.ScanEnable = pool.GetScanEnable()
+							pools = append(pools, info)
+						}
+						results <- baseHttp.HttpResult{
+							Key:    id,
+							Err:    nil,
+							Result: &pools,
+						}
 					}
 				}
 			}
@@ -275,15 +300,21 @@ func (cli *MdsClient) ListLogicalPool_http() ([]LogicalPool, error) {
 func (cli *MdsClient) GetLogicalPool_http(poolId uint32) (LogicalPool, error) {
 	info := LogicalPool{}
 	var host = cli.addrs
-	var path = GET_LOGICAL_POOL_HTTP
-	path = fmt.Sprintf("%s %s %s", path, "LogicPoolId=", &poolId)
+	var path = HTTP_Service + "/" + GET_LOGICAL_POOL_HTTP
+	//todo: checkURL
+	path = fmt.Sprintf("%s %s %d", path, "?LogicPoolId=", &poolId)
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 
 	if ret.Err != nil {
 		return info, ret.Err
 	}
-	response := ret.Result.(*topology.GetLogicalPoolResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.GetLogicalPoolResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return info, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return info, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -303,15 +334,21 @@ func (cli *MdsClient) GetLogicalPool_http(poolId uint32) (LogicalPool, error) {
 
 func (cli *MdsClient) ListPoolZone_http(poolId uint32) ([]Zone, error) {
 	var host = cli.addrs
+	//todo checkURL
 	var path = LIST_POOL_ZONE_FUNC_HTTP
-	path = fmt.Sprintf("%s %s %s", path, "PhysicalPoolId=", &poolId)
+	path = fmt.Sprintf("%s %s %d", path, "PhysicalPoolId=", &poolId)
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.ListPoolZoneResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.ListPoolZoneResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -336,13 +373,19 @@ func (cli *MdsClient) ListZoneServer_http(zoneId uint32) ([]Server, error) {
 
 	var host = cli.addrs
 	var path = LIST_ZONE_SERVER_FUNC_HTTP
-	path = fmt.Sprintf("%s %s %s", path, "ZoneId=", &zoneId)
+	path = fmt.Sprintf("%s %s %d", path, "ZoneId=", &zoneId)
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.ListZoneServerResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.ListZoneServerResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
+
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -368,13 +411,14 @@ func (cli *MdsClient) ListZoneServer_http(zoneId uint32) ([]Server, error) {
 }
 
 // list chunkservers of server
+
 func getChunkServerStatus(s topology.ChunkServerStatus) string {
 	switch s {
-	case topology.ChunkServerStatus_READWRITE:
+	case topology.READWRITE:
 		return READWRITE_STATUS
-	case topology.ChunkServerStatus_PENDDING:
+	case topology.PENDDING:
 		return PENDDING_STATUS
-	case topology.ChunkServerStatus_RETIRED:
+	case topology.RETIRED:
 		return RETIRED_STATUS
 	default:
 		return INVALID
@@ -383,9 +427,9 @@ func getChunkServerStatus(s topology.ChunkServerStatus) string {
 
 func getDiskStatus(s topology.DiskState) string {
 	switch s {
-	case topology.DiskState_DISKNORMAL:
+	case topology.DISKNORMAL:
 		return DISKNORMAL_STATUS
-	case topology.DiskState_DISKERROR:
+	case topology.DISKERROR:
 		return DISKERROR_STATUS
 	default:
 		return INVALID
@@ -394,11 +438,11 @@ func getDiskStatus(s topology.DiskState) string {
 
 func getOnlineStatus(s topology.OnlineState) string {
 	switch s {
-	case topology.OnlineState_ONLINE:
+	case topology.ONLINE:
 		return ONLINE_STATUS
-	case topology.OnlineState_OFFLINE:
+	case topology.OFFLINE:
 		return OFFLINE_STATUS
-	case topology.OnlineState_UNSTABLE:
+	case topology.UNSTABLE:
 		return UNSTABLE_STATUS
 	default:
 		return INVALID
@@ -407,14 +451,20 @@ func getOnlineStatus(s topology.OnlineState) string {
 
 func (cli *MdsClient) ListChunkServer_http(serverId uint32) ([]ChunkServer, error) {
 	var host = cli.addrs
-	var path = LIST_CHUNKSERVER_FUNC_HTTP
-	path = fmt.Sprintf("%s %s %s", path, "ServerId=", &serverId)
+	var path = HTTP_Service + "/" + LIST_CHUNKSERVER_FUNC_HTTP
+	//todo checkURL
+	path = fmt.Sprintf("%s %s %d", path, "?serverId=", &serverId)
 	ret := cli.baseClient_http.SendHTTP(host, path)
 
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.ListChunkServerResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.ListChunkServerResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -422,7 +472,7 @@ func (cli *MdsClient) ListChunkServer_http(serverId uint32) ([]ChunkServer, erro
 
 	infos := []ChunkServer{}
 	for _, cs := range response.GetChunkServerInfos() {
-		if cs.GetStatus() == topology.ChunkServerStatus_RETIRED {
+		if cs.GetStatus() == topology.RETIRED {
 			continue
 		}
 		info := ChunkServer{}
@@ -444,19 +494,25 @@ func (cli *MdsClient) ListChunkServer_http(serverId uint32) ([]ChunkServer, erro
 
 func (cli *MdsClient) GetChunkServerInCluster_http() ([]ChunkServer, error) {
 	var host = cli.addrs
-	var path = GET_CHUNKSERVER_IN_CLUSTER_FUNC_HTTP
+	//todo check URL service
+	var path = HTTP_Service + GET_CHUNKSERVER_IN_CLUSTER_FUNC_HTTP
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.GetChunkServerInClusterResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.GetChunkServerInClusterResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
 	}
 	infos := []ChunkServer{}
 	for _, cs := range response.GetChunkServerInfos() {
-		if cs.GetStatus() == topology.ChunkServerStatus_RETIRED {
+		if cs.GetStatus() == topology.RETIRED {
 			continue
 		}
 		info := ChunkServer{}
@@ -478,13 +534,19 @@ func (cli *MdsClient) GetChunkServerInCluster_http() ([]ChunkServer, error) {
 
 func (cli *MdsClient) GetCopySetsInChunkServer_http(ip string, port uint32) ([]CopySetInfo, error) {
 	var host = cli.addrs
+	//todo checkURL
 	var path = GET_COPYSET_IN_CHUNKSERVER_FUNC_HTTP
 
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.GetCopySetsInChunkServerResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.GetCopySetsInChunkServerResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -504,13 +566,19 @@ func (cli *MdsClient) GetCopySetsInChunkServer_http(ip string, port uint32) ([]C
 
 func (cli *MdsClient) GetChunkServerListInCopySets_http(logicalPoolId uint32, copysetIds []uint32) ([]CopySetServerInfo, error) {
 	var host = cli.addrs
-	var path = GET_CHUNKSERVER_LIST_IN_COPYSETS_HTTP
-	path = fmt.Sprintf("%s %s %s", path, "LogicPoolId=", &logicalPoolId)
+	//todo checkURL
+	var path = HTTP_Service + "/" + GET_CHUNKSERVER_LIST_IN_COPYSETS_HTTP
+	path = fmt.Sprintf("%s %s %d", path, "LogicPoolId=", &logicalPoolId)
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.GetChunkServerListInCopySetsResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.GetChunkServerListInCopySetsResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])
@@ -534,12 +602,18 @@ func (cli *MdsClient) GetChunkServerListInCopySets_http(logicalPoolId uint32, co
 
 func (cli *MdsClient) GetCopySetsInCluster_http() ([]CopySetInfo, error) {
 	var host = cli.addrs
-	var path = LIST_PHYSICAL_POOL_FUNC_HTTP
+	//todo checkURL
+	var path = HTTP_Service + "/" + LIST_PHYSICAL_POOL_FUNC_HTTP
 	ret := cli.baseClient_http.SendHTTP(host, path)
 	if ret.Err != nil {
 		return nil, ret.Err
 	}
-	response := ret.Result.(*topology.GetCopySetsInClusterResponse)
+	v := ret.Result.(*resty.Response).String()
+	var response *topology.GetCopySetsInClusterResponse
+	err := json.Unmarshal([]byte(v), &response)
+	if err != nil {
+		return nil, err
+	}
 	statusCode := response.GetStatusCode()
 	if statusCode != int32(statuscode.TopoStatusCode_Success) {
 		return nil, fmt.Errorf(statuscode.TopoStatusCode_name[statusCode])

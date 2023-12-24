@@ -2,6 +2,7 @@ package baseHttp
 
 import (
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net/url"
 	"time"
 )
@@ -13,7 +14,7 @@ type HttpResult struct {
 }
 
 type BaseHttp struct {
-	client     *resty.Client
+	Client     *resty.Client
 	Timeout    time.Duration
 	RetryTimes uint32
 }
@@ -34,23 +35,22 @@ func (cli *BaseHttp) SendHTTP(host []string, path string) *HttpResult {
 	}
 	results := make(chan HttpResult, size)
 	for _, host := range host {
-		go func(addr string) {
-			url := (&url.URL{
-				Scheme: "http",
-				Host:   addr,
-				Path:   path,
-			}).String()
-			resp, err := cli.client.R().
-				SetHeader("Connection", "Keep-Alive").
-				SetHeader("Content-Type", "application/json").
-				SetHeader("User-Agent", "curl/7.52.1").
-				Execute("GET", url)
-			results <- HttpResult{
-				Key:    addr,
-				Err:    err,
-				Result: resp,
-			}
-		}(host)
+		url := (&url.URL{
+			Scheme: "http",
+			Host:   host,
+			Path:   path,
+		}).String()
+
+		resp, err := cli.Client.R().
+			SetHeader("Connection", "Keep-Alive").
+			SetHeader("Content-Type", "application/json").
+			SetHeader("User-Agent", "curl/7.52.1").
+			Execute("GET", url)
+		results <- HttpResult{
+			Key:    host,
+			Err:    err,
+			Result: resp,
+		}
 	}
 	var count = 0
 	var httpErr string
