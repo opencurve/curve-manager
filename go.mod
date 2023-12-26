@@ -3,7 +3,6 @@ module github.com/opencurve/curve-manager
 go 1.18
 
 require (
-	github.com/SeanHai/curve-go-rpc v0.0.0-20230327062842-ff4a19bed139
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.0
@@ -114,4 +113,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/SeanHai/curve-go-rpc => ./external/curve-go-rpc

@@ -29,8 +29,8 @@ import (
 
 	set "github.com/deckarep/golang-set/v2"
 	"github.com/opencurve/curve-manager/internal/common"
+	bshttp "github.com/opencurve/curve-manager/internal/http/curvebs"
 	"github.com/opencurve/curve-manager/internal/metrics/bsmetric"
-	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 )
 
 const (
@@ -121,7 +121,7 @@ func (cs *Copyset) updatePeerOfflineCopysets(csAddr string) error {
 	if err != nil {
 		return err
 	}
-	copysets, err := bsrpc.GMdsClient.GetCopySetsInChunkServer(item[0], uint32(port))
+	copysets, err := bshttp.GMdsClient.GetCopySetsInChunkServer(item[0], uint32(port))
 	if err != nil {
 		return fmt.Errorf("GetCopySetsInChunkServer failed, %s", err)
 	}
@@ -134,7 +134,7 @@ func (cs *Copyset) updatePeerOfflineCopysets(csAddr string) error {
 	if len(copysets) > 0 {
 		logicalPoolId = copysets[0].LogicalPoolId
 	}
-	memberInfo, err := bsrpc.GMdsClient.GetChunkServerListInCopySets(logicalPoolId, copysetIds)
+	memberInfo, err := bshttp.GMdsClient.GetChunkServerListInCopySets(logicalPoolId, copysetIds)
 	if err != nil {
 		return fmt.Errorf("GetChunkServerListInCopySets failed, %s", err)
 	}
@@ -184,7 +184,7 @@ func (cs *Copyset) ifChunkServerInCopysets(csAddr string, groupIds *set.Set[stri
 		logicalPoolId = getPoolIdFormGroupId(ngid)
 		copysetIds = append(copysetIds, getCopysetIdFromGroupId(ngid))
 	}
-	memberInfo, err := bsrpc.GMdsClient.GetChunkServerListInCopySets(logicalPoolId, copysetIds)
+	memberInfo, err := bshttp.GMdsClient.GetChunkServerListInCopySets(logicalPoolId, copysetIds)
 	if err != nil {
 		return nil, fmt.Errorf("GetChunkServerListInCopySets failed, %s", err)
 	}
@@ -365,7 +365,7 @@ func (cs *Copyset) checkCopysetsOnChunkServer(csAddr string, status []map[string
 
 func (cs *Copyset) checkCopysetsWithMds() (bool, error) {
 	// get copysets in cluster
-	csInfos, err := bsrpc.GMdsClient.GetCopySetsInCluster()
+	csInfos, err := bshttp.GMdsClient.GetCopySetsInCluster()
 	if err != nil {
 		return false, fmt.Errorf("GetCopySetsInCluster failed, %s", err)
 	}
@@ -410,7 +410,7 @@ func (cs *Copyset) checkCopysetsWithMds() (bool, error) {
 func (cs *Copyset) checkCopysetsInCluster() (bool, error) {
 	healthy := true
 	// 2.1 get chunkservers in cluster
-	chunkservers, err := bsrpc.GMdsClient.GetChunkServerInCluster()
+	chunkservers, err := bshttp.GMdsClient.GetChunkServerInCluster()
 	if err != nil {
 		return false, fmt.Errorf("GetChunkServerInCluster failed, %s", err)
 	}

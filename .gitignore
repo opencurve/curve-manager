@@ -1,7 +1,6 @@
 *.log
 bin/*
 .vscode
-external/curve-go-rpc/*
 external/website/*
 docker/pigeon
 docker/website

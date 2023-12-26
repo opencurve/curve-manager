@@ -23,8 +23,8 @@
 package agent
 
 import (
+	bshttp "github.com/opencurve/curve-manager/internal/http/curvebs"
 	metrics "github.com/opencurve/curve-manager/internal/metrics/core"
-	bsrpc "github.com/opencurve/curve-manager/internal/rpc/curvebs"
 	"github.com/opencurve/curve-manager/internal/snapshotclone"
 	"github.com/opencurve/curve-manager/internal/storage"
 	"github.com/opencurve/pigeon"
@@ -75,7 +75,7 @@ func InitClients(logger *pigeon.Logger) error {
 	}
 
 	// init mds rpc client
-	bsrpc.Init(clusterAddrs.Addrs)
+	bshttp.Init(clusterAddrs.Addrs)
 
 	// init metric client
 	metrics.Init(clusterAddrs.Addrs)
@@ -86,7 +86,7 @@ func InitClients(logger *pigeon.Logger) error {
 	if currentClusterId <= 0 && clusterAddrs.ClusterId > 0 {
 		currentClusterId = clusterAddrs.ClusterId
 		return initAlerts(alertExpirationDays, logger)
-	} 
+	}
 	if currentClusterId > 0 {
 		stopAlertTasks()
 		currentClusterId = clusterAddrs.ClusterId

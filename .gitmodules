@@ -1,6 +1,3 @@
-[submodule "external/curve-go-rpc"]
-	path = external/curve-go-rpc
-	url = git@github.com:SeanHai/curve-go-rpc.git
 [submodule "external/website"]
 	path = external/website
 	url = git@github.com:opencurve/curve-dashboard.git
